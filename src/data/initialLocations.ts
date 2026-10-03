@@ -1,0 +1,108 @@
+import { WorkLocation } from '../types';
+
+export const INITIAL_WORK_LOCATIONS: WorkLocation[] = [
+  {
+    id: 1,
+    slotNumber: 1,
+    name: "Slot 1: Mako Utama Satpol PP & Command Center",
+    code: "POS-01-MAKO",
+    category: "Markas Komando",
+    address: "Jl. Kebon Sirih No. 18, Gambir, Jakarta Pusat",
+    latitude: -6.1825,
+    longitude: 106.8285,
+    radiusMeters: 15, // Radius sangat dekat: pintu pos jaga mako
+    description: "Pusat Komando Operasional, Ruang Gelar Pasukan, & Logistik Satpol PP.",
+    isActive: true,
+  },
+  {
+    id: 2,
+    slotNumber: 2,
+    name: "Slot 2: Kompleks Balai Kota & Kantor Pemerintahan",
+    code: "POS-02-BALAIKOTA",
+    category: "Objek Vital Daerah",
+    address: "Jl. Medan Merdeka Selatan No. 8-9, Gambir",
+    latitude: -6.1818,
+    longitude: 106.8290,
+    radiusMeters: 20, // Radius sangat dekat: pintu gerbang masuk balai kota
+    description: "Pengamanan ring dalam dan luar gedung perkantoran pimpinan daerah & dinas teknis.",
+    isActive: true,
+  },
+  {
+    id: 3,
+    slotNumber: 3,
+    name: "Slot 3: Posko Terpadu Bundaran Simpang Protokol",
+    code: "POS-03-PROTOKOL",
+    category: "Titik Simpul Utama",
+    address: "Kawasan Bundaran HI & Koridor Jl. M.H. Thamrin",
+    latitude: -6.1950,
+    longitude: 106.8230,
+    radiusMeters: 15, // Radius sangat dekat: gazebo posko pantau
+    description: "Penjagaan ketertiban umum jalur protokol, aksi penyampaian aspirasi, & CFD.",
+    isActive: true,
+  },
+  {
+    id: 4,
+    slotNumber: 4,
+    name: "Slot 4: Pos Pengamanan Terminal Terpadu & Stasiun",
+    code: "POS-04-TRANSPORTASI",
+    category: "Fasilitas Publik",
+    address: "Area Akses Stasiun Terpadu & Hub Transportasi Massal",
+    latitude: -6.1767,
+    longitude: 106.8306,
+    radiusMeters: 20, // Radius sangat dekat: posko pintu transit
+    description: "Penertiban pedagang kaki lima liar, angkutan liar, dan sterilisasi trotoar publik.",
+    isActive: true,
+  },
+  {
+    id: 5,
+    slotNumber: 5,
+    name: "Slot 5: Pos Ketertiban Pasar Induk & Pusat Niaga",
+    code: "POS-05-PASAR",
+    category: "Pusat Perekonomian",
+    address: "Kawasan Sentra Niaga & Pasar Tradisional Induk",
+    latitude: -6.1755,
+    longitude: 106.8430,
+    radiusMeters: 25, // Radius sangat dekat: pos jaga gerbang barat
+    description: "Pengawasan penegakan Perda zonasi pedagang, parkir liar, dan kelancaran akses niaga.",
+    isActive: true,
+  },
+  {
+    id: 6,
+    slotNumber: 6,
+    name: "Slot 6: Pos Pengawalan Rumah Dinas Pimpinan Daerah",
+    code: "POS-06-RUMDIN",
+    category: "Kediaman Resmi",
+    address: "Kompleks Rumah Dinas Pimpinan Daerah, Menteng",
+    latitude: -6.2005,
+    longitude: 106.8320,
+    radiusMeters: 15, // Radius sangat dekat: pos jaga utama rumdin
+    description: "Regu piket pengamanan 24 jam kediaman resmi dan tamu kehormatan.",
+    isActive: true,
+  },
+  {
+    id: 7,
+    slotNumber: 7,
+    name: "Slot 7: Pos Penertiban Wisata, Monumen & RTH",
+    code: "POS-07-PARIWISATA",
+    category: "Ruang Terbuka Hijau",
+    address: "Kawasan Monumen Nasional & Taman Publik Kota",
+    latitude: -6.1754,
+    longitude: 106.8272,
+    radiusMeters: 20, // Radius sangat dekat: pos pam pameran & cagar budaya
+    description: "Patroli ketenteraman wisatawan, pencegahan vandalisme, dan sterilisasi RTH.",
+    isActive: true,
+  },
+  {
+    id: 8,
+    slotNumber: 8,
+    name: "Slot 8: Pos Pengawasan Wilayah Batas & Patroli Perda",
+    code: "POS-08-PERBATASAN",
+    category: "Pos Perbatasan",
+    address: "Gerbang Koridor Batas Kota & Jalur Inspeksi",
+    latitude: -6.1600,
+    longitude: 106.8200,
+    radiusMeters: 25, // Radius sangat dekat: pos pemantauan yustisi
+    description: "Pos pantau operasi yustisi kependudukan, pengawasan miras, dan penegakan Perda 24 jam.",
+    isActive: true,
+  },
+];

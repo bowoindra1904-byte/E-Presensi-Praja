@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Pegawai Satpol PP
+    match /employees/{employeeId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // 8 Pos Slot Lokasi Dinas
+    match /locations/{locationId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Rekapitulasi Presensi Masuk & Pulang
+    match /attendance/{recordId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if true;
+    }
+    
+    // Log Audit Keamanan
+    match /security_logs/{logId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+    
+    // Pengaturan Sistem & PIN
+    match /system_settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Health check test doc
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

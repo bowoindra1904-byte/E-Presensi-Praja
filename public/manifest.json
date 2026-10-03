@@ -1,0 +1,17 @@
+{
+  "name": "SI-PRAJA Satpol PP Bangka Barat",
+  "short_name": "SI-PRAJA",
+  "description": "Sistem Informasi Presensi Digital Satpol PP Bangka Barat Berbasis GPS Geofence & Kunci Perangkat",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

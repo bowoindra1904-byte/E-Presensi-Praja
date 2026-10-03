@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "Employee": {
+      "title": "Employee",
+      "description": "Profil dan penempatan personel Satpol PP Bangka Barat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nip": { "type": "string" },
+        "rank": { "type": "string" },
+        "role": { "type": "string" },
+        "regu": { "type": "string" },
+        "scheduleType": { "type": "string" },
+        "locationSlotId": { "type": "number" },
+        "boundDeviceId": { "type": "string" },
+        "boundDeviceName": { "type": "string" },
+        "boundAt": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "nip", "regu", "scheduleType", "locationSlotId", "status"]
+    },
+    "WorkLocation": {
+      "title": "WorkLocation",
+      "description": "8 Pos slot lokasi dinas Satpol PP",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "slotNumber": { "type": "number" },
+        "name": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "radiusMeters": { "type": "number" },
+        "address": { "type": "string" },
+        "type": { "type": "string" }
+      },
+      "required": ["id", "slotNumber", "name", "latitude", "longitude", "radiusMeters"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Rekaman presensi masuk dan pulang personel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "employeeNip": { "type": "string" },
+        "date": { "type": "string" },
+        "scheduleType": { "type": "string" },
+        "locationSlotId": { "type": "number" },
+        "locationName": { "type": "string" },
+        "checkInTime": { "type": "string" },
+        "checkInStatus": { "type": "string" },
+        "checkInDistance": { "type": "number" },
+        "checkInPhoto": { "type": "string" },
+        "checkInDeviceId": { "type": "string" },
+        "checkOutTime": { "type": "string" },
+        "checkOutStatus": { "type": "string" },
+        "checkOutDistance": { "type": "number" },
+        "checkOutPhoto": { "type": "string" },
+        "checkOutDeviceId": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "employeeId", "date", "scheduleType", "locationSlotId"]
+    },
+    "SecurityLog": {
+      "title": "SecurityLog",
+      "description": "Log audit keamanan dan pelanggaran device lock / spoofing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "type": { "type": "string" },
+        "details": { "type": "string" },
+        "deviceId": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "actionTaken": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "type", "details", "deviceId", "actionTaken"]
+    },
+    "SystemSetting": {
+      "title": "SystemSetting",
+      "description": "Pengaturan keamanan dan PIN Admin",
+      "type": "object",
+      "properties": {
+        "adminPin": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/employees/{employeeId}": {
+      "schema": { "$ref": "#/entities/Employee" },
+      "description": "Koleksi data personel Satpol PP"
+    },
+    "/locations/{locationId}": {
+      "schema": { "$ref": "#/entities/WorkLocation" },
+      "description": "Koleksi 8 slot lokasi dinas Satpol PP"
+    },
+    "/attendance/{recordId}": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Koleksi transaksi presensi personel harian dan shift"
+    },
+    "/security_logs/{logId}": {
+      "schema": { "$ref": "#/entities/SecurityLog" },
+      "description": "Koleksi rekaman audit keamanan dan device lock"
+    },
+    "/system_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SystemSetting" },
+      "description": "Pengaturan sistem dan PIN admin"
+    }
+  }
+}
