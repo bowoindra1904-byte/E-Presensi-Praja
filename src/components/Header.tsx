@@ -13,10 +13,12 @@ import {
   KeyRound,
   MapPin,
   Cloud,
-  BookOpen
+  BookOpen,
+  Music
 } from 'lucide-react';
 import { NotificationItem, Employee } from '../types';
 import { NotificationCenter } from './NotificationCenter';
+import { musicEngine } from '../services/musicEngine';
 
 interface HeaderProps {
   currentRole: 'pegawai' | 'admin';
@@ -33,6 +35,7 @@ interface HeaderProps {
   onOpenAdminPinModal?: () => void;
   onOpenPrintModal?: () => void;
   onOpenGuideModal?: () => void;
+  onOpenMusicModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,7 +53,16 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAdminPinModal,
   onOpenPrintModal,
   onOpenGuideModal,
+  onOpenMusicModal,
 }) => {
+  const [isMusicActive, setIsMusicActive] = React.useState<boolean>(musicEngine.getIsPlaying());
+
+  React.useEffect(() => {
+    const unsub = musicEngine.subscribe(() => {
+      setIsMusicActive(musicEngine.getIsPlaying());
+    });
+    return () => unsub();
+  }, []);
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-md">
       
@@ -183,6 +195,26 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <BookOpen className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span className="hidden sm:inline">Panduan</span>
+            </button>
+          )}
+
+          {/* Musik / Mars Dinas Button */}
+          {onOpenMusicModal && (
+            <button
+              type="button"
+              onClick={onOpenMusicModal}
+              title="Buka Pemutar Musik & Mars Kedinasan Satpol PP"
+              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 shadow-sm border ${
+                isMusicActive
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-amber-500/10'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:text-white'
+              }`}
+            >
+              <Music className={`w-3.5 h-3.5 text-amber-400 shrink-0 ${isMusicActive ? 'animate-bounce' : ''}`} />
+              <span className="hidden sm:inline">Musik</span>
+              {isMusicActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+              )}
             </button>
           )}
 

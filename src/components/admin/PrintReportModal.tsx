@@ -134,6 +134,26 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
     timeStyle: 'medium'
   });
 
+  // Location resolver matching string or number ID / slotNumber
+  const getLocForEmployee = (slotId: number | string | undefined): WorkLocation | undefined => {
+    if (slotId === undefined || slotId === null) return undefined;
+    return locations.find(l => 
+      String(l.id) === String(slotId) || 
+      Number(l.slotNumber) === Number(slotId) || 
+      Number(l.id) === Number(slotId)
+    );
+  };
+
+  const getPosPenugasanLabel = (emp: Employee): string => {
+    const loc = getLocForEmployee(emp.locationSlotId);
+    if (loc && loc.name) {
+      const cleanName = loc.name.replace(/^Slot \d+:\s*/i, '').trim();
+      const slotNo = loc.slotNumber || emp.locationSlotId || 1;
+      return `Slot ${slotNo}: ${cleanName}`;
+    }
+    return emp.locationSlotId ? `Slot ${emp.locationSlotId}` : '-';
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -146,57 +166,69 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
     if (activeMenu === 'daily') {
       filename = `Rekap_Presensi_Harian_${filterDate}.csv`;
-      headers = ["No", "NIP", "Nama Personel", "Pangkat", "Jabatan", "Regu", "Slot Pos", "Jam Masuk", "Status Masuk", "Jarak GPS (m)", "Jam Pulang", "Status Pulang", "ID Perangkat"];
+      headers = ["No", "NIP", "Nama Personel", "Pangkat", "Jabatan", "Regu", "Pos Penugasan", "Jam Masuk", "Status Masuk", "Jarak GPS (m)", "Jam Pulang", "Status Pulang", "ID Perangkat"];
       const records = attendanceRecords.filter(r => r.date === filterDate);
-      rows = employees.map((emp, idx) => {
-        const rec = records.find(r => r.employeeId === emp.id);
-        const loc = locations.find(l => l.id === emp.locationSlotId);
-        return [
-          String(idx + 1),
-          `"${emp.nip}"`,
-          `"${emp.name}"`,
-          `"${emp.rank}"`,
-          `"${emp.role}"`,
-          `"${emp.regu}"`,
-          `"Slot ${emp.locationSlotId}: ${loc?.name || ''}"`,
-          rec?.checkInTime || "-",
-          rec?.checkInStatus || "Belum Absen",
-          rec?.checkInDistance !== undefined ? String(rec.checkInDistance) : "-",
-          rec?.checkOutTime || "-",
-          rec?.checkOutStatus || "-",
-          `"${rec?.checkInDeviceId || emp.boundDeviceId || ''}"`
-        ];
-      });
+      rows = employees
+        .filter(emp => {
+          const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+          const matchSlot = filterSlot === 'all' || String(emp.locationSlotId) === String(filterSlot) || Number(emp.locationSlotId) === Number(filterSlot);
+          return matchRegu && matchSlot;
+        })
+        .map((emp, idx) => {
+          const rec = records.find(r => r.employeeId === emp.id);
+          const posText = getPosPenugasanLabel(emp);
+          return [
+            String(idx + 1),
+            `"${emp.nip}"`,
+            `"${emp.name}"`,
+            `"${emp.rank}"`,
+            `"${emp.role}"`,
+            `"${emp.regu}"`,
+            `"${posText}"`,
+            rec?.checkInTime || "-",
+            rec?.checkInStatus || "Belum Absen",
+            rec?.checkInDistance !== undefined ? String(rec.checkInDistance) : "-",
+            rec?.checkOutTime || "-",
+            rec?.checkOutStatus || "-",
+            `"${rec?.checkInDeviceId || emp.boundDeviceId || ''}"`
+          ];
+        });
     } else if (activeMenu === 'monthly') {
       filename = `Laporan_Bulanan_Satpol_PP_${filterMonth}.csv`;
-      headers = ["No", "NIP", "Nama Personel", "Pangkat", "Jabatan", "Regu", "Slot Pos", "Hari Hadir", "Total Jam Kerja", "Terlambat", "Tingkat Disiplin", "Pola Absensi"];
-      rows = employees.map((emp, idx) => {
-        const empRecords = attendanceRecords.filter(r => r.employeeId === emp.id && r.date.startsWith(filterMonth));
-        const presentDays = empRecords.filter(r => !!r.checkInTime).length;
-        const lateCount = empRecords.filter(r => r.checkInStatus === 'terlambat').length;
-        const disciplineRate = presentDays > 0 ? Math.round(((presentDays - lateCount) / presentDays) * 100) : 100;
-        const loc = locations.find(l => l.id === emp.locationSlotId);
-        const totalHours = (presentDays * (emp.scheduleType === 'shift' ? 12 : 8.5)).toFixed(1);
-        return [
-          String(idx + 1),
-          `"${emp.nip}"`,
-          `"${emp.name}"`,
-          `"${emp.rank}"`,
-          `"${emp.role}"`,
-          `"${emp.regu}"`,
-          `"Slot ${emp.locationSlotId}: ${loc?.name || ''}"`,
-          String(presentDays),
-          totalHours,
-          String(lateCount),
-          `${disciplineRate}%`,
-          disciplineRate >= 90 ? "Sangat Baik" : disciplineRate >= 75 ? "Cukup Disiplin" : "Perlu Pembinaan"
-        ];
-      });
+      headers = ["No", "NIP", "Nama Personel", "Pangkat", "Jabatan", "Regu", "Pos Penugasan", "Hari Hadir", "Total Jam Kerja", "Terlambat", "Tingkat Disiplin", "Pola Absensi"];
+      rows = employees
+        .filter(emp => {
+          const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+          const matchSlot = filterSlot === 'all' || String(emp.locationSlotId) === String(filterSlot) || Number(emp.locationSlotId) === Number(filterSlot);
+          return matchRegu && matchSlot;
+        })
+        .map((emp, idx) => {
+          const empRecords = attendanceRecords.filter(r => r.employeeId === emp.id && r.date.startsWith(filterMonth));
+          const presentDays = empRecords.filter(r => !!r.checkInTime).length;
+          const lateCount = empRecords.filter(r => r.checkInStatus === 'terlambat').length;
+          const disciplineRate = presentDays > 0 ? Math.round(((presentDays - lateCount) / presentDays) * 100) : 100;
+          const posText = getPosPenugasanLabel(emp);
+          const totalHours = (presentDays * (emp.scheduleType === 'shift' ? 12 : 8.5)).toFixed(1);
+          return [
+            String(idx + 1),
+            `"${emp.nip}"`,
+            `"${emp.name}"`,
+            `"${emp.rank}"`,
+            `"${emp.role}"`,
+            `"${emp.regu}"`,
+            `"${posText}"`,
+            String(presentDays),
+            totalHours,
+            String(lateCount),
+            `${disciplineRate}%`,
+            disciplineRate >= 90 ? "Sangat Baik" : disciplineRate >= 75 ? "Cukup Disiplin" : "Perlu Pembinaan"
+          ];
+        });
     } else if (activeMenu === 'locations') {
       filename = `Daftar_8_Pos_Lokasi_Kerja_Satpol_PP.csv`;
       headers = ["Slot", "Kode", "Nama Pos", "Kategori", "Alamat", "Latitude", "Longitude", "Radius Geofence (m)", "Jumlah Personel Terploting"];
       rows = locations.map(loc => {
-        const count = employees.filter(e => e.locationSlotId === loc.id).length;
+        const count = employees.filter(e => String(e.locationSlotId) === String(loc.id) || Number(e.locationSlotId) === Number(loc.slotNumber)).length;
         return [
           String(loc.slotNumber),
           loc.code,
@@ -211,23 +243,25 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
       });
     } else if (activeMenu === 'regu') {
       filename = `Daftar_Regu_Patroli_Satpol_PP.csv`;
-      headers = ["No", "ID", "NIP", "Nama Personel", "Regu", "Tipe Kerja", "Pangkat", "Jabatan", "Slot Pos", "Status Kunci HP", "No. Telepon / HT"];
-      rows = employees.map((emp, idx) => {
-        const loc = locations.find(l => l.id === emp.locationSlotId);
-        return [
-          String(idx + 1),
-          emp.id,
-          `"${emp.nip}"`,
-          `"${emp.name}"`,
-          emp.regu,
-          emp.scheduleType,
-          `"${emp.rank}"`,
-          `"${emp.role}"`,
-          `"Slot ${emp.locationSlotId}: ${loc?.name || ''}"`,
-          emp.boundDeviceId ? "TERKUNCI" : "BELUM",
-          `"${emp.phone || '-'}"`
-        ];
-      });
+      headers = ["No", "ID", "NIP", "Nama Personel", "Regu", "Tipe Kerja", "Pangkat", "Jabatan", "Pos Penugasan", "Status Kunci HP", "No. Telepon / HT"];
+      rows = employees
+        .filter(emp => filterRegu === 'all' || emp.regu === filterRegu)
+        .map((emp, idx) => {
+          const posText = getPosPenugasanLabel(emp);
+          return [
+            String(idx + 1),
+            emp.id,
+            `"${emp.nip}"`,
+            `"${emp.name}"`,
+            emp.regu,
+            emp.scheduleType,
+            `"${emp.rank}"`,
+            `"${emp.role}"`,
+            `"${posText}"`,
+            emp.boundDeviceId ? "TERKUNCI" : "BELUM",
+            `"${emp.phone || '-'}"`
+          ];
+        });
     } else if (activeMenu === 'security') {
       filename = `Log_Audit_Keamanan_Perangkat_${todayStr}.csv`;
       headers = ["No", "Timestamp", "Nama Personel", "ID Pegawai", "Tipe Insiden", "ID Perangkat", "Rincian Investigasi"];
@@ -446,6 +480,20 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   <option value="Regu 3">Regu 3</option>
                   <option value="Regu 4">Regu 4</option>
                   <option value="Harian">Harian</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400">Filter Pos:</span>
+                <select
+                  value={filterSlot}
+                  onChange={(e) => setFilterSlot(e.target.value)}
+                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500 max-w-[180px] truncate"
+                >
+                  <option value="all">Semua 8 Pos Kerja</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={String(l.id)}>Slot {l.slotNumber}: {l.name.replace(/^Slot \d+:\s*/, '')}</option>
+                  ))}
                 </select>
               </div>
             </>
@@ -883,8 +931,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                             <td className="p-1.5 border border-slate-300 font-semibold text-slate-800">
                               {emp.regu} ({emp.scheduleType === 'shift' ? '12 Jam' : 'Harian'})
                             </td>
-                            <td className="p-1.5 border border-slate-300">
-                              Slot {emp.locationSlotId}: {loc?.name.replace(/^Slot \d+:\s*/, '')}
+                            <td className="p-1.5 border border-slate-300 font-medium">
+                              {getPosPenugasanLabel(emp)}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-semibold">
                               {rec?.checkInTime || "-"}
@@ -933,13 +981,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   </thead>
                   <tbody>
                     {employees
-                      .filter(emp => filterRegu === 'all' || emp.regu === filterRegu)
+                      .filter(emp => {
+                        const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+                        const matchSlot = filterSlot === 'all' || String(emp.locationSlotId) === String(filterSlot) || Number(emp.locationSlotId) === Number(filterSlot);
+                        return matchRegu && matchSlot;
+                      })
                       .map((emp, idx) => {
                         const empRecords = attendanceRecords.filter(r => r.employeeId === emp.id && r.date.startsWith(filterMonth));
                         const presentDays = empRecords.filter(r => !!r.checkInTime).length;
                         const lateCount = empRecords.filter(r => r.checkInStatus === 'terlambat').length;
                         const disciplineRate = presentDays > 0 ? Math.round(((presentDays - lateCount) / presentDays) * 100) : 100;
-                        const loc = locations.find(l => l.id === emp.locationSlotId);
                         const totalHours = (presentDays * (emp.scheduleType === 'shift' ? 12 : 8.5)).toFixed(1);
 
                         return (
@@ -950,7 +1001,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                               <div className="text-slate-500 text-[9px]">NIP: {emp.nip}</div>
                             </td>
                             <td className="p-1.5 border border-slate-300 font-semibold">{emp.regu}</td>
-                            <td className="p-1.5 border border-slate-300">Slot {emp.locationSlotId}: {loc?.code}</td>
+                            <td className="p-1.5 border border-slate-300 font-medium">
+                              {getPosPenugasanLabel(emp)}
+                            </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-bold">{presentDays} Hari</td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono">{totalHours} Jam</td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 font-bold">{lateCount}x</td>
@@ -1055,8 +1108,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                                 {emp.scheduleType === 'shift' ? 'Pola Shift 12 Jam' : 'Pola Staf Harian'}
                               </span>
                             </td>
-                            <td className="p-1.5 border border-slate-300 text-[9px]">
-                              Slot {emp.locationSlotId}: {loc?.name.replace(/^Slot \d+:\s*/, '')}
+                            <td className="p-1.5 border border-slate-300 text-[9px] font-medium">
+                              {getPosPenugasanLabel(emp)}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-bold text-[9px]">
                               {emp.boundDeviceId ? (

@@ -55,7 +55,11 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   // Compute monthly report metrics for each employee
   const monthlyReports: MonthlyEmployeeReport[] = useMemo(() => {
     return employees.map((emp) => {
-      const loc = locations.find(l => l.id === emp.locationSlotId) || locations[0];
+      const loc = locations.find(l => 
+        String(l.id) === String(emp.locationSlotId) || 
+        Number(l.slotNumber) === Number(emp.locationSlotId) || 
+        Number(l.id) === Number(emp.locationSlotId)
+      ) || locations[0];
       
       // Filter records for this employee in selected month
       const empRecords = attendanceRecords.filter(
@@ -119,7 +123,9 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   // Filtered reports
   const filteredReports = useMemo(() => {
     return monthlyReports.filter((item) => {
-      const matchSlot = selectedSlot === 'all' || item.locationSlotId === Number(selectedSlot);
+      const matchSlot = selectedSlot === 'all' || 
+        String(item.locationSlotId) === String(selectedSlot) || 
+        Number(item.locationSlotId) === Number(selectedSlot);
       const matchSchedule = selectedSchedule === 'all' || item.scheduleType === selectedSchedule;
       const matchSearch = 
         item.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||

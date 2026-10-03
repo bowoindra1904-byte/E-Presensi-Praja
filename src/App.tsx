@@ -31,8 +31,11 @@ import { TimeSimulatorModal } from './components/TimeSimulatorModal';
 import { AdminPinModal } from './components/admin/AdminPinModal';
 import { PrintReportModal, PrintMenuType } from './components/admin/PrintReportModal';
 import { OperationalGuideModal } from './components/OperationalGuideModal';
+import { MusicPlayerModal } from './components/music/MusicPlayerModal';
+import { FloatingMusicBar } from './components/music/FloatingMusicBar';
 import { Shield, Sparkles, FileText, Printer, KeyRound, Cloud } from 'lucide-react';
 import { testFirestoreConnection } from './services/firebase';
+import { getOrCreateDeviceId } from './utils/deviceLock';
 import {
   subscribeEmployees,
   subscribeLocations,
@@ -142,7 +145,7 @@ export default function App() {
     return 'pegawai';
   });
 
-  // 8. Login status
+  // 8. Login status (Must default to false so any new device lands on LoginPortal)
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
@@ -150,7 +153,7 @@ export default function App() {
     } catch {
       // ignore
     }
-    return true; // default logged in for seamless demo/testing
+    return false; // Perangkat baru wajib login terlebih dahulu
   });
 
   // 9. Active Admin Sub-tab
@@ -175,6 +178,7 @@ export default function App() {
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+  const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [printDefaultMenu, setPrintDefaultMenu] = useState<PrintMenuType>('daily');
 
   // Ref to track if reminder was already dispatched today
@@ -327,6 +331,44 @@ export default function App() {
       // ignore
     }
   }, [activeEmployeeId, currentRole, isLoggedIn]);
+
+  // Real-time device lock enforcement:
+  // If an officer is in 'pegawai' mode, ensure their boundDeviceId strictly matches the current physical device fingerprint.
+  // If their account was locked to another phone, immediately revoke access and return to LoginPortal with security alert.
+  useEffect(() => {
+    if (isLoggedIn && currentRole === 'pegawai') {
+      const currentDev = getOrCreateDeviceId();
+      const currentEmp = employees.find(e => e.id === activeEmployeeId);
+      if (currentEmp && currentEmp.boundDeviceId && currentEmp.boundDeviceId !== currentDev.deviceId) {
+        setIsLoggedIn(false);
+        try {
+          localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'false');
+        } catch {}
+
+        const evictLog: SecurityLog = {
+          id: `SEC-EVICT-${Date.now()}`,
+          timestamp: `Hari Ini, ${currentTimeString} WIB`,
+          employeeId: currentEmp.id,
+          employeeName: currentEmp.name,
+          eventType: 'device_mismatch',
+          details: `AKSES DIPUTUS: Sesi personel ${currentEmp.name} (NIP: ${currentEmp.nip}) diputus otomatis karena akun terikat pada perangkat resmi [${currentEmp.boundDeviceId}], sedangkan perangkat saat ini adalah [${currentDev.deviceId}].`,
+          deviceId: currentDev.deviceId
+        };
+        setSecurityLogs(prev => [evictLog, ...prev]);
+        syncSaveSecurityLog(evictLog).catch(console.error);
+
+        handleAddNotification({
+          id: `NOTIF-EVICT-${Date.now()}`,
+          targetRole: 'admin',
+          type: 'security',
+          title: `Akses HP Lain Diputus: ${currentEmp.name}`,
+          message: `Sesi ${currentEmp.name} diputus paksa di perangkat [${currentDev.deviceName}] karena akun telah terkunci di perangkat dinas resmi lain.`,
+          timestamp: `${currentTimeString} WIB`,
+          read: false
+        });
+      }
+    }
+  }, [isLoggedIn, currentRole, activeEmployeeId, employees, currentTimeString]);
 
   // Handlers
   const handleAddNotification = (notif: NotificationItem) => {
@@ -647,6 +689,8 @@ export default function App() {
         configuredAdminPin={adminPin}
         onResetDeviceLock={handleResetDeviceLock}
         onUpdateEmployee={handleUpdateEmployee}
+        onAddSecurityLog={handleAddSecurityLog}
+        onAddNotification={handleAddNotification}
       />
     );
   }
@@ -669,6 +713,7 @@ export default function App() {
         onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
         onOpenAdminPinModal={() => setIsAdminPinModalOpen(true)}
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
+        onOpenMusicModal={() => setIsMusicModalOpen(true)}
         onOpenPrintModal={() => {
           const mapping: Record<string, PrintMenuType> = {
             monitoring: 'daily',
@@ -837,6 +882,17 @@ export default function App() {
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
         currentRole={currentRole}
+      />
+
+      {/* Pemutar Musik & Mars Dinas Satpol PP */}
+      <MusicPlayerModal
+        isOpen={isMusicModalOpen}
+        onClose={() => setIsMusicModalOpen(false)}
+      />
+
+      {/* Floating Music Bar Widget (Bottom Right Quick Control) */}
+      <FloatingMusicBar
+        onOpenFullModal={() => setIsMusicModalOpen(true)}
       />
 
     </div>
