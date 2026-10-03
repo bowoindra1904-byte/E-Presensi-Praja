@@ -18,7 +18,10 @@ import {
   MapPin, 
   Filter,
   Camera,
-  Printer
+  Printer,
+  RotateCcw,
+  Trash2,
+  X
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -28,6 +31,7 @@ interface AdminDashboardProps {
   securityLogs: SecurityLog[];
   currentDate: Date;
   onOpenPrintMenu?: (menu: 'daily') => void;
+  onResetDailyAttendance?: (recordIds: string[], dateLabel: string) => Promise<void>;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -37,11 +41,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   securityLogs,
   currentDate,
   onOpenPrintMenu,
+  onResetDailyAttendance,
 }) => {
   const [selectedSlotFilter, setSelectedSlotFilter] = useState<string>('all');
   const [selectedScheduleFilter, setSelectedScheduleFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<string | null>(null);
+
+  // Reset Daily Attendance State
+  const [isResetDailyModalOpen, setIsResetDailyModalOpen] = useState(false);
+  const [resetScope, setResetScope] = useState<'all' | 'filtered'>('all');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState('');
 
   const todayStr = currentDate.toISOString().split('T')[0];
 
@@ -98,6 +109,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const filteredTodayRecords = useMemo(() => {
+    return filteredRecords.filter(r => r.date === todayStr);
+  }, [filteredRecords, todayStr]);
+
+  const targetResetRecords = resetScope === 'filtered' ? filteredTodayRecords : todayRecords;
+
+  const handleConfirmResetDaily = async () => {
+    if (!onResetDailyAttendance) return;
+    if (targetResetRecords.length === 0) return;
+
+    try {
+      setIsResetting(true);
+      const targetIds = targetResetRecords.map(r => r.id);
+      const label = currentDate.toLocaleDateString('id-ID', { dateStyle: 'full' });
+      await onResetDailyAttendance(targetIds, label);
+      setResetSuccessMessage(`Berhasil me-reset ${targetIds.length} data presensi harian.`);
+      setTimeout(() => {
+        setIsResetDailyModalOpen(false);
+        setResetSuccessMessage('');
+        setIsResetting(false);
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -208,7 +246,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {onResetDailyAttendance && (
+              <button
+                onClick={() => {
+                  setIsResetDailyModalOpen(true);
+                  setResetSuccessMessage('');
+                }}
+                className="px-3.5 py-1.5 text-xs font-semibold bg-rose-950/70 hover:bg-rose-900/90 text-rose-300 hover:text-white rounded-xl border border-rose-800/60 transition-colors flex items-center gap-1.5 shadow-sm"
+                title="Reset dan kosongkan data presensi masuk & pulang hari ini"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                <span>Reset Rekap Harian</span>
+              </button>
+            )}
             {onOpenPrintMenu && (
               <button
                 onClick={() => onOpenPrintMenu('daily')}
@@ -410,6 +461,115 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="text-[11px] text-slate-400 text-center">
               Foto seragam dinas tervalidasi dengan cap waktu dan GPS digital.
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Daily Attendance Modal */}
+      {isResetDailyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                <RotateCcw className="w-5 h-5 text-rose-500" />
+                <span>Reset Rekapitulasi Presensi Harian</span>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isResetting) {
+                    setIsResetDailyModalOpen(false);
+                    setResetSuccessMessage('');
+                  }
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {resetSuccessMessage ? (
+              <div className="p-4 bg-emerald-950/70 border border-emerald-500/50 rounded-2xl text-emerald-200 text-xs flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <span className="font-semibold">{resetSuccessMessage}</span>
+              </div>
+            ) : (
+              <div className="space-y-3.5 text-xs text-slate-300">
+                <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800 space-y-1.5 font-mono text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-sans">Tanggal Target:</span>
+                    <span className="font-bold text-white font-sans">
+                      {currentDate.toLocaleDateString('id-ID', { dateStyle: 'full' })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-sans">Total Absen Terdata:</span>
+                    <span className="font-bold text-amber-400">{todayRecords.length} Personel</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-sans">Hadir / Terlambat:</span>
+                    <span className="text-slate-200">{hadirCount} Tepat Waktu / {terlambatCount} Terlambat</span>
+                  </div>
+                </div>
+
+                {/* Scope selection if active filter exists */}
+                {(selectedSlotFilter !== 'all' || selectedScheduleFilter !== 'all' || searchQuery) && (
+                  <div className="space-y-1.5 p-3 rounded-xl bg-slate-950/50 border border-slate-800 text-[11px]">
+                    <span className="font-semibold text-slate-400 block mb-1">Pilih Lingkup Reset:</span>
+                    <label className="flex items-center gap-2 cursor-pointer text-slate-200">
+                      <input
+                        type="radio"
+                        name="dailyResetScope"
+                        checked={resetScope === 'all'}
+                        onChange={() => setResetScope('all')}
+                        className="text-rose-500"
+                      />
+                      <span>Reset Seluruh Presensi Hari Ini ({todayRecords.length} data)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-slate-200">
+                      <input
+                        type="radio"
+                        name="dailyResetScope"
+                        checked={resetScope === 'filtered'}
+                        onChange={() => setResetScope('filtered')}
+                        className="text-rose-500"
+                      />
+                      <span>Reset Hanya Sesuai Filter Aktif ({filteredTodayRecords.length} data)</span>
+                    </label>
+                  </div>
+                )}
+
+                <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl text-rose-200 leading-relaxed text-[11px]">
+                  <span className="font-bold block text-rose-300 mb-0.5">⚠️ Konfirmasi Penghapusan:</span>
+                  Tindakan ini akan mengosongkan rekaman jam masuk, jam pulang, dan status absensi hari ini. Personel akan kembali berstatus <strong>Belum Absen</strong> sehingga dapat melakukan presensi ulang.
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    disabled={isResetting}
+                    onClick={() => setIsResetDailyModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isResetting || targetResetRecords.length === 0}
+                    onClick={handleConfirmResetDaily}
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-40"
+                  >
+                    {isResetting ? (
+                      <span>Memproses...</span>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Kosongkan & Reset ({targetResetRecords.length})</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

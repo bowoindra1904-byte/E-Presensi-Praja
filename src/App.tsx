@@ -600,6 +600,47 @@ export default function App() {
     });
   };
 
+  // Reset Attendance Handler (Daily or Monthly)
+  const handleResetAttendance = async (
+    scope: 'daily' | 'monthly',
+    label: string,
+    recordIds: string[]
+  ) => {
+    if (recordIds.length === 0) return;
+
+    // 1. Delete records from Cloud Firestore in batch
+    await syncArchiveAndCleanupAttendance(recordIds, 'delete_all');
+
+    // 2. Remove from local state
+    setAttendanceRecords(prev => prev.filter(r => !recordIds.includes(r.id)));
+
+    // 3. Security Audit Log
+    const log: SecurityLog = {
+      id: `SEC-RESET-ATT-${Date.now()}`,
+      timestamp: `Hari Ini, ${currentTimeString} WIB`,
+      employeeId: 'ADMIN-KOMANDO',
+      employeeName: 'Admin Komando',
+      eventType: 'device_reset',
+      details: scope === 'daily'
+        ? `RESET REKAP HARIAN: ${recordIds.length} rekaman presensi tanggal ${label} telah dihapus/dikosongkan oleh Admin Komando.`
+        : `RESET REKAP BULANAN: ${recordIds.length} rekaman presensi periode bulan ${label} telah dihapus/dikosongkan oleh Admin Komando.`,
+      deviceId: 'PORTAL-KOMANDO'
+    };
+    setSecurityLogs(prev => [log, ...prev]);
+    syncSaveSecurityLog(log).catch(console.error);
+
+    // 4. Notification
+    handleAddNotification({
+      id: `NOTIF-RESET-ATT-${Date.now()}`,
+      targetRole: 'admin',
+      type: 'warning',
+      title: scope === 'daily' ? 'Reset Rekap Harian Berhasil' : 'Reset Rekap Bulanan Berhasil',
+      message: `${recordIds.length} data presensi (${label}) berhasil dikosongkan. Hasil rekapitulasi telah di-reset ke 0.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+  };
+
   // Open specific print menu
   const handleOpenPrintMenu = (menu: PrintMenuType) => {
     setPrintDefaultMenu(menu);
@@ -773,6 +814,7 @@ export default function App() {
                 securityLogs={securityLogs}
                 currentDate={effectiveCurrentDate}
                 onOpenPrintMenu={handleOpenPrintMenu}
+                onResetDailyAttendance={(recordIds, label) => handleResetAttendance('daily', label, recordIds)}
               />
             )}
 
@@ -805,6 +847,7 @@ export default function App() {
                 attendanceRecords={attendanceRecords}
                 onOpenPrintMenu={handleOpenPrintMenu}
                 onExecuteArchive={handleExecuteArchive}
+                onResetMonthlyAttendance={(recordIds, label) => handleResetAttendance('monthly', label, recordIds)}
               />
             )}
 
