@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Employee, SecurityLog, NotificationItem } from '../types';
 import { getOrCreateDeviceId } from '../utils/deviceLock';
+import { SatpolPPLogo } from './SatpolPPLogo';
 import { 
   Shield, 
   Smartphone, 
@@ -287,10 +288,8 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
         
         {/* Satpol PP Crest Branding */}
         <div className="text-center mb-5 sm:mb-6">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-xl flex items-center justify-center mb-2.5">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-amber-500" />
-            </div>
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-700/20 p-1 border border-amber-500/30 shadow-xl flex items-center justify-center mb-2.5">
+            <SatpolPPLogo className="w-full h-full rounded-xl object-contain drop-shadow" />
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
             SI-PRAJA POL PP
@@ -545,7 +544,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
 
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
               <span className="text-amber-400 font-semibold block mb-0.5">Otoritas Komando Satpol PP:</span>
-              Mengatur 8 slot pos lokasi penugasan, pembagian Regu 1-4 & Harian, PIN keamanan, audit kunci perangkat, dan laporan resmi.
+              Mengatur 12 slot pos lokasi penugasan, pembagian Regu 1-4 & Harian, PIN keamanan, audit kunci perangkat, dan laporan resmi.
             </div>
 
             <button

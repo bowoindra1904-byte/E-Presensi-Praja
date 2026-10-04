@@ -6,6 +6,7 @@ import {
   SecurityLog,
   ReguType
 } from '../../types';
+import { SatpolPPLogo } from '../SatpolPPLogo';
 import { 
   Printer, 
   Download, 
@@ -384,7 +385,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>3. Penempatan 8 Slot Pos Lokasi</span>
+            <span>3. Penempatan {locations.length} Slot Pos Lokasi</span>
           </button>
 
           <button
@@ -786,9 +787,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 
                 {/* Logo Perisai Satpol PP */}
                 <div className="w-16 h-16 shrink-0 flex items-center justify-center">
-                  <div className="w-14 h-14 rounded-full border-2 border-slate-800 flex items-center justify-center font-bold text-slate-800">
-                    <Shield className="w-9 h-9 text-slate-800" />
-                  </div>
+                  <SatpolPPLogo className="w-16 h-16 object-contain" />
                 </div>
 
                 {/* Kop Text: SATPOL PP KABUPATEN BANGKA BARAT (Alamat Dihapus Sesuai Instruksi) */}

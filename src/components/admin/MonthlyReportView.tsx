@@ -378,7 +378,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
               onChange={(e) => setSelectedSlot(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
             >
-              <option value="all">Semua Unit (8 Slot Pos)</option>
+              <option value="all">Semua Unit ({locations.length} Slot Pos)</option>
               {locations.map((loc) => (
                 <option key={loc.id} value={loc.id}>
                   Slot {loc.slotNumber}: {loc.name.replace(/^Slot \d+:\s*/, '')}

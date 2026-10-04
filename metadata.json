@@ -1,6 +1,6 @@
 {
   "name": "Si-Praja Presensi GPS Satpol PP",
-  "description": "Sistem Informasi Presensi Digital Satpol PP (150 Personel) dengan pelacak GPS geofence anti-spoofing, sistem kunci perangkat (device lock), dan manajemen 8 slot pos kerja shift & harian.",
+  "description": "Sistem Informasi Presensi Digital Satpol PP (150 Personel) dengan pelacak GPS geofence anti-spoofing, sistem kunci perangkat (device lock), dan manajemen 12 slot pos kerja shift & harian.",
   "requestFramePermissions": [
     "camera",
     "geolocation"

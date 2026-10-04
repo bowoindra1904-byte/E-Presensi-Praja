@@ -80,7 +80,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({
           <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 text-emerald-400 font-bold">
               <MapPin className="w-4 h-4" />
-              <span>2. Aturan Geofence Lokasi Dinas (8 Pos Slot)</span>
+              <span>2. Aturan Geofence Lokasi Dinas (12 Pos Slot)</span>
             </div>
             <p className="text-slate-300 leading-relaxed">
               Presensi hanya valid apabila personel berada di dalam radius resmi pos tugas yang telah ditentukan (radius 50–100 meter dari titik koordinat pos). Pastikan fitur GPS/Lokasi Akurasi Tinggi di HP aktif dan browser diizinkan mengakses lokasi.

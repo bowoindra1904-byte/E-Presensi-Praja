@@ -209,7 +209,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             Pengaturan Personel Satpol PP (Total: {employees.length} Pegawai)
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Atur pembagian Regu 1, 2, 3, 4 atau Harian, penempatan 8 slot pos lokasi, dan audit perangkat
+            Atur pembagian Regu 1, 2, 3, 4 atau Harian, penempatan {locations.length} slot pos lokasi, dan audit perangkat
           </p>
         </div>
 

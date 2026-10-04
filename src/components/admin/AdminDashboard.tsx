@@ -212,7 +212,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Radio className="w-4 h-4 text-amber-500" />
-              Monitoring Peta Lapangan 8 Slot Pos Satpol PP
+              Monitoring Peta Lapangan {locations.length} Slot Pos Satpol PP
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
               Pusat komando pemantauan radius geofence pos dan sebaran personel

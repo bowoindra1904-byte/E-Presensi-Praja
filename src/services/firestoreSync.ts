@@ -41,13 +41,13 @@ export function subscribeEmployees(onData: (employees: Employee[]) => void) {
   });
 }
 
-// 2. Subscribe to 8 Locations with auto-seed
+// 2. Subscribe to Work Locations with auto-seed and slot sync
 export function subscribeLocations(onData: (locations: WorkLocation[]) => void) {
   const locationsCol = collection(db, 'locations');
   
   return onSnapshot(locationsCol, async (snapshot) => {
     if (snapshot.empty) {
-      console.log('Firestore locations empty. Seeding initial 8 locations...');
+      console.log('Firestore locations empty. Seeding initial locations...');
       await seedInitialLocations();
       return;
     }
@@ -56,6 +56,24 @@ export function subscribeLocations(onData: (locations: WorkLocation[]) => void) 
     snapshot.forEach(docSnap => {
       items.push(docSnap.data() as WorkLocation);
     });
+
+    // Check if newly added initial slots (Slot 9-12) are missing from Firestore
+    const existingIds = new Set(items.map(l => l.id));
+    const missing = INITIAL_WORK_LOCATIONS.filter(l => !existingIds.has(l.id));
+    if (missing.length > 0) {
+      console.log(`Auto-seeding ${missing.length} newly added slots to Firestore...`);
+      try {
+        const batch = writeBatch(db);
+        for (const loc of missing) {
+          const docRef = doc(db, 'locations', String(loc.id));
+          batch.set(docRef, cleanFirestoreData(loc), { merge: true });
+          items.push(loc);
+        }
+        await batch.commit();
+      } catch (e) {
+        console.error('Error auto-seeding missing slots to Firestore:', e);
+      }
+    }
 
     items.sort((a, b) => a.slotNumber - b.slotNumber);
     onData(items);
@@ -140,6 +158,11 @@ export async function syncDeleteEmployee(employeeId: string): Promise<void> {
 export async function syncSaveLocation(location: WorkLocation): Promise<void> {
   const docRef = doc(db, 'locations', String(location.id));
   await setDoc(docRef, cleanFirestoreData(location), { merge: true });
+}
+
+export async function syncDeleteLocation(locationId: number | string): Promise<void> {
+  const docRef = doc(db, 'locations', String(locationId));
+  await deleteDoc(docRef);
 }
 
 export async function syncSaveAttendance(record: AttendanceRecord): Promise<void> {

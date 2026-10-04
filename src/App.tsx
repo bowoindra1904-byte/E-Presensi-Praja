@@ -43,6 +43,7 @@ import {
   syncSaveEmployee,
   syncDeleteEmployee,
   syncSaveLocation,
+  syncDeleteLocation,
   syncSaveAttendance,
   syncSaveSecurityLog,
   syncSaveAdminPin,
@@ -74,11 +75,21 @@ export default function App() {
     return INITIAL_EMPLOYEES;
   });
 
-  // 2. State: 8 Work Location Slots
+  // 2. State: Work Location Slots (12 Slots)
   const [locations, setLocations] = useState<WorkLocation[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LOCATIONS);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as WorkLocation[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map(l => l.id));
+          const missing = INITIAL_WORK_LOCATIONS.filter(l => !existingIds.has(l.id));
+          if (missing.length > 0) {
+            return [...parsed, ...missing].sort((a, b) => (a.slotNumber || a.id) - (b.slotNumber || b.id));
+          }
+          return parsed;
+        }
+      }
     } catch {
       // ignore
     }
@@ -492,8 +503,78 @@ export default function App() {
   };
 
   const handleUpdateLocation = (updated: WorkLocation) => {
-    setLocations(prev => prev.map(l => l.id === updated.id ? updated : l));
+    setLocations(prev => {
+      const next = prev.map(l => l.id === updated.id ? updated : l);
+      try {
+        localStorage.setItem(STORAGE_KEYS.LOCATIONS, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     syncSaveLocation(updated).catch(console.error);
+  };
+
+  const handleAddLocation = (newLoc: WorkLocation) => {
+    setLocations(prev => {
+      const next = [...prev, newLoc].sort((a, b) => (a.slotNumber || a.id) - (b.slotNumber || b.id));
+      try {
+        localStorage.setItem(STORAGE_KEYS.LOCATIONS, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    syncSaveLocation(newLoc).catch(console.error);
+
+    handleAddNotification({
+      id: `NOTIF-LOC-ADD-${Date.now()}`,
+      targetRole: 'admin',
+      type: 'success',
+      title: 'Pos Lokasi Baru Ditambahkan',
+      message: `Pos ${newLoc.name} (${newLoc.code}) berhasil ditambahkan ke daftar pos tugas.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+  };
+
+  const handleDeleteLocation = (locationId: number) => {
+    const locToDelete = locations.find(l => l.id === locationId);
+    if (!locToDelete) return;
+
+    const remaining = locations.filter(l => l.id !== locationId);
+    setLocations(remaining);
+    try {
+      localStorage.setItem(STORAGE_KEYS.LOCATIONS, JSON.stringify(remaining));
+    } catch {}
+    syncDeleteLocation(locationId).catch(console.error);
+
+    // If any employees were assigned to this location, reassign them to the first remaining location
+    const fallbackLocId = remaining[0]?.id || 1;
+    setEmployees(prev => {
+      let changed = false;
+      const updated = prev.map(e => {
+        if (e.locationSlotId === locationId) {
+          changed = true;
+          const updatedEmp = { ...e, locationSlotId: fallbackLocId };
+          syncSaveEmployee(updatedEmp).catch(console.error);
+          return updatedEmp;
+        }
+        return e;
+      });
+      if (changed) {
+        try {
+          localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    handleAddNotification({
+      id: `NOTIF-LOC-DEL-${Date.now()}`,
+      targetRole: 'admin',
+      type: 'warning',
+      title: 'Pos Lokasi Dihapus',
+      message: `Pos ${locToDelete.name} telah dihapus dari sistem. Personel terkait telah dialihkan.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
   };
 
   const handleAddAttendance = (record: AttendanceRecord) => {
@@ -700,7 +781,7 @@ export default function App() {
 
   // Reset demo data back to default initial dataset
   const handleResetDemoData = () => {
-    if (window.confirm("Kembalikan seluruh data ke awal (150 Personel Satpol PP, 8 Slot Pos Lokasi, Presensi, dan Notifikasi)?")) {
+    if (window.confirm("Kembalikan seluruh data ke awal (150 Personel Satpol PP, 12 Slot Pos Lokasi, Presensi, dan Notifikasi)?")) {
       setEmployees(INITIAL_EMPLOYEES);
       setLocations(INITIAL_WORK_LOCATIONS);
       setAttendanceRecords(generateInitialAttendanceRecords());
@@ -751,6 +832,8 @@ export default function App() {
         onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
         onOpenAdminPinModal={() => setIsAdminPinModalOpen(true)}
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
+        locationsCount={locations.length}
+        employeesCount={employees.length}
         onOpenPrintModal={() => {
           const mapping: Record<string, PrintMenuType> = {
             monitoring: 'daily',
@@ -819,6 +902,8 @@ export default function App() {
                 locations={locations}
                 employees={employees}
                 onUpdateLocation={handleUpdateLocation}
+                onAddLocation={handleAddLocation}
+                onDeleteLocation={handleDeleteLocation}
                 onOpenPrintMenu={handleOpenPrintMenu}
               />
             )}

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { NotificationItem, Employee } from '../types';
 import { NotificationCenter } from './NotificationCenter';
+import { SatpolPPLogo } from './SatpolPPLogo';
 
 interface HeaderProps {
   currentRole: 'pegawai' | 'admin';
@@ -35,6 +36,8 @@ interface HeaderProps {
   onOpenAdminPinModal?: () => void;
   onOpenPrintModal?: () => void;
   onOpenGuideModal?: () => void;
+  locationsCount?: number;
+  employeesCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -52,6 +55,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAdminPinModal,
   onOpenPrintModal,
   onOpenGuideModal,
+  locationsCount,
+  employeesCount,
 }) => {
   const [isMobileAdminMenuOpen, setIsMobileAdminMenuOpen] = useState(false);
 
@@ -63,10 +68,8 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Zone 1: Brand Wordmark */}
         <div className="flex items-center gap-2 shrink-0 min-w-0">
-          <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-md flex items-center justify-center shrink-0">
-            <div className="w-full h-full bg-slate-950 rounded-[9px] sm:rounded-[10px] flex items-center justify-center">
-              <Shield className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-500" />
-            </div>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-700/20 p-0.5 border border-amber-500/30 shadow-md flex items-center justify-center shrink-0">
+            <SatpolPPLogo className="w-full h-full rounded-[9px] sm:rounded-[10px] object-contain drop-shadow" />
           </div>
           <div className="truncate">
             <div className="flex items-center gap-1 sm:gap-1.5">
@@ -345,7 +348,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                <span>8 Pos Lokasi</span>
+                <span>{locationsCount ?? 12} Pos Lokasi</span>
               </button>
 
               <button
@@ -358,7 +361,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Users className="w-3.5 h-3.5 text-amber-400" />
-                <span>150 Pegawai</span>
+                <span>{employeesCount ?? 150} Pegawai</span>
               </button>
 
               <button

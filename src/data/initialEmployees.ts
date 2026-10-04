@@ -84,8 +84,8 @@ export function generate150SatpolPPEmployees(): Employee[] {
     const lIdx = (i * 13) % LAST_NAMES.length;
     const roleObj = ROLES[i % ROLES.length];
     
-    // Distribute evenly among 8 slots (1 to 8)
-    const locationSlotId = ((i - 1) % 8) + 1;
+    // Distribute evenly among 12 slots (1 to 12)
+    const locationSlotId = ((i - 1) % 12) + 1;
     
     // Distribute regu: Regu 1, Regu 2, Regu 3, Regu 4, or Harian
     const isHarian = (i % 5 === 0 || i % 5 === 2);
