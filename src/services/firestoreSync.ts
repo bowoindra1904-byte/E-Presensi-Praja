@@ -57,25 +57,7 @@ export function subscribeLocations(onData: (locations: WorkLocation[]) => void) 
       items.push(docSnap.data() as WorkLocation);
     });
 
-    // Check if newly added initial slots (Slot 9-12) are missing from Firestore
-    const existingIds = new Set(items.map(l => l.id));
-    const missing = INITIAL_WORK_LOCATIONS.filter(l => !existingIds.has(l.id));
-    if (missing.length > 0) {
-      console.log(`Auto-seeding ${missing.length} newly added slots to Firestore...`);
-      try {
-        const batch = writeBatch(db);
-        for (const loc of missing) {
-          const docRef = doc(db, 'locations', String(loc.id));
-          batch.set(docRef, cleanFirestoreData(loc), { merge: true });
-          items.push(loc);
-        }
-        await batch.commit();
-      } catch (e) {
-        console.error('Error auto-seeding missing slots to Firestore:', e);
-      }
-    }
-
-    items.sort((a, b) => a.slotNumber - b.slotNumber);
+    items.sort((a, b) => (a.slotNumber || a.id) - (b.slotNumber || b.id));
     onData(items);
   }, (err) => {
     console.error('Error subscribing to locations:', err);

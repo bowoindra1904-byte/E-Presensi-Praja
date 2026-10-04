@@ -23,7 +23,7 @@
     },
     "WorkLocation": {
       "title": "WorkLocation",
-      "description": "8 Pos slot lokasi dinas Satpol PP",
+      "description": "Slot pos lokasi dinas Satpol PP (dinamis)",
       "type": "object",
       "properties": {
         "id": { "type": "number" },

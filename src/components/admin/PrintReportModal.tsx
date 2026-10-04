@@ -841,7 +841,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'locations' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    DAFTAR DISTRIBUSI PENUGASAN 8 SLOT POS LOKASI KERJA GEOFENCE
+                    DAFTAR DISTRIBUSI PENUGASAN {locations.length} SLOT POS LOKASI KERJA GEOFENCE
                   </h3>
                   <p className="text-[11px] text-slate-600 mt-1">
                     Sistem Pelacak Koordinat Google Maps Presisi Tinggi & Radius Geofence Sedekat Mungkin

@@ -75,19 +75,14 @@ export default function App() {
     return INITIAL_EMPLOYEES;
   });
 
-  // 2. State: Work Location Slots (12 Slots)
+  // 2. State: Work Location Slots (Dinamis sesuai inputan/kelolaan admin)
   const [locations, setLocations] = useState<WorkLocation[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LOCATIONS);
       if (saved) {
         const parsed = JSON.parse(saved) as WorkLocation[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const existingIds = new Set(parsed.map(l => l.id));
-          const missing = INITIAL_WORK_LOCATIONS.filter(l => !existingIds.has(l.id));
-          if (missing.length > 0) {
-            return [...parsed, ...missing].sort((a, b) => (a.slotNumber || a.id) - (b.slotNumber || b.id));
-          }
-          return parsed;
+          return parsed.sort((a, b) => (a.slotNumber || a.id) - (b.slotNumber || b.id));
         }
       }
     } catch {

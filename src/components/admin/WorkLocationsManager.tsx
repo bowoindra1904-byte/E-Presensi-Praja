@@ -215,6 +215,60 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
     setIsAddingLocation(false);
   };
 
+  const handleQuickAddSlot = () => {
+    if (!onAddLocation) return;
+    const nextSlot = (locations.length > 0 ? Math.max(...locations.map(l => l.slotNumber || l.id)) : 0) + 1;
+    const nextId = (locations.length > 0 ? Math.max(...locations.map(l => l.id)) : 0) + 1;
+
+    const lastLoc = locations[locations.length - 1];
+    const baseLat = lastLoc ? lastLoc.latitude + (Math.random() * 0.002 - 0.001) : -6.1825;
+    const baseLng = lastLoc ? lastLoc.longitude + (Math.random() * 0.002 - 0.001) : 106.8285;
+
+    const newLoc: WorkLocation = {
+      id: nextId,
+      slotNumber: nextSlot,
+      name: `Slot ${nextSlot}: Pos Operasional ${nextSlot}`,
+      code: `POS-${String(nextSlot).padStart(2, '0')}-UNIT`,
+      category: 'Pos Pengamanan & Penertiban',
+      address: 'Wilayah Penugasan Operasional Satpol PP',
+      latitude: Number(baseLat.toFixed(6)),
+      longitude: Number(baseLng.toFixed(6)),
+      radiusMeters: 20,
+      description: 'Pengawasan ketertiban umum dan perlindungan masyarakat oleh personel Satpol PP.',
+      isActive: true,
+    };
+
+    onAddLocation(newLoc);
+    setSelectedLocationId(newLoc.id);
+  };
+
+  const handleReduceLastSlot = () => {
+    if (locations.length <= 1) {
+      alert("Minimal harus ada 1 pos lokasi tugas yang aktif.");
+      return;
+    }
+    const lastLoc = locations[locations.length - 1];
+    setLocationToDelete(lastLoc);
+  };
+
+  const handleRenumberSlots = () => {
+    if (!window.confirm(`Rapikan penomoran slot agar berurutan rapi dari Slot 01 sampai Slot ${String(locations.length).padStart(2, '0')}?`)) return;
+    
+    locations.forEach((loc, index) => {
+      const newSlotNo = index + 1;
+      if (loc.slotNumber !== newSlotNo) {
+        const updatedName = loc.name.replace(/^Slot \d+:\s*/i, `Slot ${newSlotNo}: `);
+        const updatedCode = loc.code.replace(/POS-\d+-/i, `POS-${String(newSlotNo).padStart(2, '0')}-`);
+        onUpdateLocation({
+          ...loc,
+          slotNumber: newSlotNo,
+          name: updatedName.startsWith(`Slot ${newSlotNo}:`) ? updatedName : `Slot ${newSlotNo}: ${loc.name}`,
+          code: updatedCode
+        });
+      }
+    });
+  };
+
   const handleConfirmDelete = () => {
     if (!locationToDelete || !onDeleteLocation) return;
     if (locations.length <= 1) {
@@ -234,42 +288,92 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
   return (
     <div className="space-y-6">
       
-      {/* Header Info */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-            <Radio className="w-5 h-5 text-amber-500" />
-            Manajemen {locations.length} Pos Lokasi Kerja Satpol PP
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Konfigurasi koordinat GPS dari Google Maps, radius geofence toleransi, dan kuota penempatan {employees.length} personel
-          </p>
-        </div>
+      {/* Header Info & Dynamic Slot Controls */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-lg space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+              <Radio className="w-5 h-5 text-amber-500" />
+              <span>Manajemen Pos Lokasi Kerja ({locations.length} Slot Pos Aktif)</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Jumlah slot pos sepenuhnya dinamis: Anda dapat menambah atau mengurangi pos sesuai kebutuhan penugasan lapangan
+            </p>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {onAddLocation && (
-            <button
-              onClick={handleOpenAddModal}
-              className="px-3.5 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-2xl shadow transition-colors flex items-center gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ Tambah Pos Baru</span>
-            </button>
-          )}
-
-          {onOpenPrintMenu && (
-            <button
-              onClick={() => onOpenPrintMenu('locations')}
-              className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-              <span>Cetak Daftar {locations.length} Pos</span>
-            </button>
-          )}
-
-          <div className="flex items-center gap-2 text-xs font-semibold bg-slate-950 px-3.5 py-2 rounded-2xl border border-slate-800 text-amber-400">
+          <div className="flex items-center gap-2 text-xs font-semibold bg-slate-950 px-3.5 py-2 rounded-2xl border border-slate-800 text-amber-400 shrink-0">
             <Shield className="w-4 h-4" />
             <span>{locations.length} Pos Terintegrasi GPS & Geofence</span>
+          </div>
+        </div>
+
+        {/* Dynamic Slot Quick Action Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+          
+          {/* Quick Slot Stepper */}
+          <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
+            <span className="text-xs font-bold text-slate-300 px-2.5">
+              Total Pos: <strong className="text-amber-400 font-mono text-sm">{locations.length}</strong> Pos
+            </span>
+
+            {onDeleteLocation && (
+              <button
+                type="button"
+                onClick={handleReduceLastSlot}
+                disabled={locations.length <= 1}
+                className="px-2.5 py-1 text-xs font-bold bg-rose-950/60 hover:bg-rose-900 disabled:opacity-40 text-rose-300 rounded-xl border border-rose-800/50 transition-colors flex items-center gap-1"
+                title="Kurangi 1 Slot Pos (Hapus slot terakhir)"
+              >
+                <span>− Kurangi Slot</span>
+              </button>
+            )}
+
+            {onAddLocation && (
+              <button
+                type="button"
+                onClick={handleQuickAddSlot}
+                className="px-2.5 py-1 text-xs font-bold bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 rounded-xl border border-emerald-800/50 transition-colors flex items-center gap-1"
+                title="Tambah 1 Slot Pos baru secara cepat"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Tambah 1 Slot</span>
+              </button>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            {onAddLocation && (
+              <button
+                type="button"
+                onClick={handleOpenAddModal}
+                className="px-3.5 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-2xl shadow transition-colors flex items-center gap-1.5"
+                title="Input pos baru dengan koordinat Google Maps"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Input Pos Baru (Maps)</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleRenumberSlots}
+              className="px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl border border-slate-700 transition-colors"
+              title="Rapikan penomoran slot agar berurutan 1 sampai N"
+            >
+              <span>Rapikan Nomor Slot</span>
+            </button>
+
+            {onOpenPrintMenu && (
+              <button
+                type="button"
+                onClick={() => onOpenPrintMenu('locations')}
+                className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                <span>Cetak Daftar {locations.length} Pos</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -295,9 +399,38 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
                   <span className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono font-bold text-xs flex items-center justify-center">
                     {String(loc.slotNumber).padStart(2, '0')}
                   </span>
-                  <span className="text-[11px] font-medium text-slate-400 bg-slate-950 px-2.5 py-0.5 rounded-full border border-slate-800">
-                    {loc.category}
-                  </span>
+                  
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-medium text-slate-400 bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800">
+                      {loc.category}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(loc);
+                      }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors"
+                      title="Edit Pos"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {onDeleteLocation && locations.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocationToDelete(loc);
+                        }}
+                        className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+                        title={`Hapus Pos ${loc.slotNumber}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <h3 className="text-sm font-bold text-white line-clamp-1">
