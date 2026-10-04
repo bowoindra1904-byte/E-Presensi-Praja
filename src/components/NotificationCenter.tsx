@@ -83,7 +83,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in duration-150">
+          <div className="fixed sm:absolute inset-x-2.5 sm:inset-x-auto top-14 sm:top-full mt-2 sm:right-0 sm:w-96 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in duration-150">
             {/* Popover Header */}
             <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
               <div className="flex items-center gap-2">

@@ -320,8 +320,88 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
+        {/* Mobile View: Card List (Optimized for HP) */}
+        <div className="sm:hidden space-y-3">
+          {filteredRecords.map((r) => (
+            <div key={r.id} className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-white text-xs truncate">{r.employeeName}</div>
+                  <div className="text-[10px] text-slate-400 font-mono">NIP: {r.employeeNip}</div>
+                </div>
+                {r.checkInPhoto ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPhotoPreview(r.checkInPhoto || null)}
+                    className="w-10 h-10 rounded-xl overflow-hidden border border-slate-700 hover:border-amber-500 shrink-0 shadow"
+                  >
+                    <img src={r.checkInPhoto} alt="Foto" className="w-full h-full object-cover" />
+                  </button>
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 shrink-0">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
+
+              <div className="text-[11px] text-slate-300 bg-slate-900/80 px-2.5 py-1.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                <span className="truncate max-w-[190px] font-medium">{r.locationName}</span>
+                <span className="text-[9.5px] font-mono text-amber-400 shrink-0 font-semibold">
+                  {r.scheduleType === 'harian' ? 'Harian' : 'Shift'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-900/50 p-2 rounded-xl border border-slate-800/80">
+                  <span className="text-[9.5px] text-slate-400 block">Absen Masuk</span>
+                  {r.checkInTime ? (
+                    <div>
+                      <span className="font-mono font-bold text-white text-[11px]">{r.checkInTime} WIB</span>
+                      <span className={`block text-[9.5px] font-semibold ${
+                        r.checkInStatus === 'terlambat' ? 'text-amber-400' : 'text-emerald-400'
+                      }`}>
+                        {r.checkInStatus === 'terlambat' ? 'Terlambat' : 'Tepat Waktu'}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-500 italic text-[10.5px]">Belum Hadir</span>
+                  )}
+                </div>
+
+                <div className="bg-slate-900/50 p-2 rounded-xl border border-slate-800/80">
+                  <span className="text-[9.5px] text-slate-400 block">Absen Pulang</span>
+                  {r.checkOutTime ? (
+                    <div>
+                      <span className="font-mono font-bold text-white text-[11px]">{r.checkOutTime} WIB</span>
+                      <span className="block text-[9.5px] font-semibold text-emerald-400">Selesai Dinas</span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-500 italic text-[10.5px]">Belum Pulang</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60 font-mono">
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-amber-500 shrink-0" />
+                  <span>{r.checkInDistance !== undefined ? `${r.checkInDistance}m dari pos` : '-'}</span>
+                </div>
+                <div className="truncate max-w-[130px]">
+                  <span>{r.checkInDeviceId ? `HP: ${r.checkInDeviceId.slice(0, 10)}...` : 'Belum Kunci'}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {filteredRecords.length === 0 && (
+            <div className="py-8 text-center text-slate-500 text-xs bg-slate-950/40 rounded-xl border border-slate-800">
+              Tidak ada rekaman presensi pada filter ini.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop & Tablet Table (Hidden on Mobile) */}
+        <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-800">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>

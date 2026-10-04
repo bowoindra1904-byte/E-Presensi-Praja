@@ -293,28 +293,34 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
       <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden print:m-0 print:p-0 print:border-none print:shadow-none print:w-full print:h-auto print:bg-white print:text-black">
         
         {/* Modal Top Header (Screen Only) */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/90 print:hidden shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <Printer className="w-5 h-5" />
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/90 print:hidden shrink-0">
+          <div className="flex items-center justify-between sm:justify-start gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                <Printer className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-xs sm:text-base font-bold text-white tracking-tight truncate">
+                  Pusat Cetak Dokumen Satpol PP
+                </h3>
+                <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+                  Format cetak dinas resmi sesuai menu
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                Pusat Cetak Dokumen Resmi Satpol PP
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-normal">
-                  Sesuai Menu Aplikasi
-                </span>
-              </h3>
-              <p className="text-xs text-slate-400">
-                Pilih format cetak spesifik berdasarkan menu untuk laporan kedinasan Satuan Polisi Pamong Praja
-              </p>
-            </div>
+
+            <button
+              onClick={onClose}
+              className="sm:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              className="flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
               title="Unduh format spreadsheet untuk menu ini"
             >
               <Download className="w-3.5 h-3.5 text-emerald-400" />
@@ -323,23 +329,23 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
             <button
               onClick={handlePrint}
-              className="px-4 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl shadow-lg transition-colors flex items-center gap-1.5"
+              className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Cetak / Simpan PDF</span>
+              <span>Cetak / PDF</span>
             </button>
 
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              className="hidden sm:block p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Menu Tabs Bar (Screen Only) */}
-        <div className="bg-slate-950/60 border-b border-slate-800/80 px-6 py-2.5 flex flex-wrap items-center gap-2 print:hidden shrink-0">
+        {/* Menu Tabs Bar (Screen Only - Touch Scrollable on HP) */}
+        <div className="bg-slate-950/60 border-b border-slate-800/80 px-3 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none print:hidden shrink-0">
           <span className="text-xs font-semibold text-slate-400 mr-2 flex items-center gap-1">
             <Filter className="w-3 h-3 text-amber-500" />
             Pilih Menu Cetak:

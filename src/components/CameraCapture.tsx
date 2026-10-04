@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle2, AlertCircle, Smartphone } from 'lucide-react';
 
 interface CameraCaptureProps {
   onPhotoCaptured: (dataUrl: string) => void;
@@ -14,6 +14,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [streamActive, setStreamActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -24,20 +25,30 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     setCameraError(null);
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Browser tidak mendukung akses kamera langsung.");
+        throw new Error("Browser HP tidak mendukung akses kamera langsung.");
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: "user"
-        },
-        audio: false
-      });
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "user" },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        });
+      } catch {
+        // Fallback to basic video stream without facingMode constraint
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch(() => {});
         setStreamActive(true);
       }
     } catch (err: unknown) {
@@ -95,6 +106,21 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     }
   };
 
+  // Handle mobile native camera file input
+  const handleNativeFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        stopCamera();
+        onPhotoCaptured(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Fallback photo generator in case browser/iframe blocks camera permission
   const generateSimulatedPhoto = () => {
     const canvas = canvasRef.current || document.createElement('canvas');
@@ -139,24 +165,34 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       ctx.fillText("SATPOL PP - SELFIE PRESENSI", 16, 380);
       ctx.fillStyle = '#94a3b8';
       ctx.font = '11px monospace';
-      ctx.fillText(new Date().toLocaleTimeString('id-ID') + " WIB", 270, 380);
+      ctx.fillText(new Date().toLocaleTimeString('id-ID') + " WIB", 280, 380);
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const simUrl = canvas.toDataURL('image/jpeg', 0.85);
       stopCamera();
-      onPhotoCaptured(dataUrl);
+      onPhotoCaptured(simUrl);
     }
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-950/70 rounded-2xl border border-slate-800 w-full max-w-sm mx-auto">
       <canvas ref={canvasRef} className="hidden" />
 
+      {/* Hidden native camera input for HP direct access */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        onChange={handleNativeFileInput}
+        className="hidden"
+      />
+
       {photoUrl ? (
-        <div className="relative rounded-xl overflow-hidden border-2 border-emerald-500/80 shadow-lg group">
+        <div className="w-full max-w-[260px] aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden bg-slate-900 border-2 border-emerald-500/80 relative shadow-xl">
           <img
             src={photoUrl}
-            alt="Foto Selfie Presensi"
-            className="w-48 h-48 sm:w-56 sm:h-56 object-cover"
+            alt="Swafoto Presensi"
+            className="w-full h-full object-cover"
           />
           <div className="absolute top-2 right-2 bg-emerald-600/90 text-white rounded-full p-1 shadow">
             <CheckCircle2 className="w-4 h-4" />
@@ -166,65 +202,99 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
               onClearPhoto();
               startCamera();
             }}
-            className="absolute bottom-2 left-2 right-2 bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-medium py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors border border-slate-700 backdrop-blur-sm"
+            className="absolute bottom-2 left-2 right-2 bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-slate-700 backdrop-blur-sm shadow-md"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Ambil Foto Ulang
           </button>
         </div>
       ) : (
-        <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 relative flex flex-col items-center justify-center shadow-inner">
+        <div className="w-full max-w-[260px] aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-slate-700 relative flex flex-col items-center justify-center shadow-inner">
           <video
             ref={videoRef}
+            autoPlay
             playsInline
             muted
             className={`w-full h-full object-cover ${streamActive ? 'block' : 'hidden'}`}
           />
 
           {!streamActive && (
-            <div className="p-4 text-center flex flex-col items-center">
+            <div className="p-3 text-center flex flex-col items-center justify-center space-y-2 w-full h-full">
               {cameraError ? (
                 <>
-                  <AlertCircle className="w-8 h-8 text-amber-500 mb-2" />
-                  <p className="text-xs text-slate-300 font-medium mb-2">Kamera Tidak Tersedia</p>
-                  <p className="text-[11px] text-slate-400 mb-3">Izin kamera dibatasi di browser atau belum aktif.</p>
-                  <button
-                    onClick={generateSimulatedPhoto}
-                    className="px-3 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors shadow"
-                  >
-                    Gunakan Foto Seragam Tugas
-                  </button>
+                  <AlertCircle className="w-7 h-7 text-amber-500 shrink-0" />
+                  <p className="text-xs text-slate-200 font-semibold">Gunakan Kamera HP</p>
+                  <p className="text-[10px] text-slate-400">Pilih salah satu metode di bawah:</p>
+                  <div className="flex flex-col gap-1.5 w-full px-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full py-2 px-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow"
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      <span>Buka Kamera HP</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={generateSimulatedPhoto}
+                      className="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10.5px] font-medium rounded-xl transition-colors border border-slate-700"
+                    >
+                      Foto Seragam Cadangan
+                    </button>
+                  </div>
                 </>
               ) : isInitializing ? (
                 <div className="flex flex-col items-center">
                   <RefreshCw className="w-6 h-6 text-amber-500 animate-spin mb-2" />
-                  <span className="text-xs text-slate-400">Menghubungkan kamera...</span>
+                  <span className="text-xs text-slate-400">Menghubungkan kamera HP...</span>
                 </div>
               ) : (
-                <button
-                  onClick={startCamera}
-                  className="flex flex-col items-center gap-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <Camera className="w-8 h-8 text-amber-500" />
-                  <span className="text-xs">Aktifkan Kamera Selfie</span>
-                </button>
+                <div className="flex flex-col items-center gap-2.5 w-full px-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    <span>Buka Kamera HP (Swafoto)</span>
+                  </button>
+
+                  <button
+                    onClick={startCamera}
+                    className="text-[11px] text-slate-300 hover:text-white transition-colors flex items-center gap-1"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-amber-400" />
+                    <span>atau Aktifkan Kamera Live</span>
+                  </button>
+                </div>
               )}
             </div>
           )}
 
           {streamActive && (
-            <button
-              onClick={captureSnapshot}
-              className="absolute bottom-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-1.5 px-4 rounded-full shadow-lg flex items-center gap-1.5 transition-all transform active:scale-95 border border-amber-400/40"
-            >
-              <Camera className="w-4 h-4" />
-              Jepret Selfie
-            </button>
+            <div className="absolute bottom-2.5 left-2 right-2 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={captureSnapshot}
+                className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2 px-5 rounded-full shadow-lg flex items-center gap-1.5 transition-all transform active:scale-95 border border-amber-400/40"
+              >
+                <Camera className="w-4 h-4" />
+                Jepret Selfie
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Buka Kamera Bawaan HP"
+                className="bg-slate-900/90 text-slate-300 p-2 rounded-full border border-slate-700 hover:text-white"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
         </div>
       )}
-      <span className="text-[11px] text-slate-400 mt-2">
-        {photoUrl ? "Foto selfie terverifikasi untuk bukti kehadiran" : "Wajib foto wajah dengan seragam dinas"}
+      <span className="text-[10px] sm:text-[10.5px] text-slate-400 mt-2 text-center">
+        {photoUrl ? "Foto selfie terverifikasi untuk bukti kehadiran" : "Wajib foto wajah mengenakan seragam dinas"}
       </span>
     </div>
   );

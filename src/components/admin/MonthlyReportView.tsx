@@ -427,9 +427,82 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         </div>
       </div>
 
-      {/* Main Monthly Report Table */}
+      {/* Main Monthly Report Content: Mobile Cards + Desktop Table */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-3xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        
+        {/* Mobile View: HP Card List */}
+        <div className="sm:hidden p-3 space-y-3">
+          {filteredReports.map((item) => (
+            <div key={item.employeeId} className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-white text-xs truncate">{item.employeeName}</div>
+                  <div className="text-[10px] text-slate-400 font-mono">NIP: {item.nip} · {item.employeeId}</div>
+                  <div className="text-[10px] text-slate-300 mt-0.5">{item.role}</div>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                  item.scheduleType === 'shift' 
+                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' 
+                    : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                }`}>
+                  {item.scheduleType === 'shift' ? 'Shift' : 'Harian'}
+                </span>
+              </div>
+
+              <div className="text-[10.5px] text-slate-300 bg-slate-900/60 px-2.5 py-1.5 rounded-xl border border-slate-800">
+                <span className="text-slate-400">Pos Penugasan: </span>
+                <span className="font-semibold text-white">Slot {item.locationSlotId}: {item.locationName.replace(/^Slot \d+:\s*/, '')}</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[9.5px] text-slate-400 block">Hadir</span>
+                  <span className="font-mono font-bold text-white text-xs">{item.totalPresentDays} Hari</span>
+                </div>
+                <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[9.5px] text-slate-400 block">Jam Kerja</span>
+                  <span className="font-mono font-bold text-amber-400 text-xs">{item.totalWorkHours}j</span>
+                </div>
+                <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <span className="text-[9.5px] text-slate-400 block">Terlambat</span>
+                  <span className={`font-mono font-bold text-xs ${
+                    item.totalLateCount === 0 ? 'text-emerald-400' : 'text-rose-400'
+                  }`}>
+                    {item.totalLateCount}x
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1 pt-1 border-t border-slate-800/80">
+                <div className="flex justify-between items-center text-[10.5px]">
+                  <span className="text-slate-300 truncate max-w-[200px]">{item.attendancePattern}</span>
+                  <span className="font-mono font-bold text-white">{item.disciplineRate}%</span>
+                </div>
+                <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      item.disciplineRate >= 90
+                        ? 'bg-emerald-500'
+                        : item.disciplineRate >= 75
+                        ? 'bg-amber-500'
+                        : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${item.disciplineRate}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {filteredReports.length === 0 && (
+            <div className="py-8 text-center text-slate-500 text-xs">
+              Tidak ada data laporan bulanan pada filter ini.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop & Tablet Table (Hidden on Mobile) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>

@@ -31,8 +31,6 @@ import { TimeSimulatorModal } from './components/TimeSimulatorModal';
 import { AdminPinModal } from './components/admin/AdminPinModal';
 import { PrintReportModal, PrintMenuType } from './components/admin/PrintReportModal';
 import { OperationalGuideModal } from './components/OperationalGuideModal';
-import { MusicPlayerModal } from './components/music/MusicPlayerModal';
-import { FloatingMusicBar } from './components/music/FloatingMusicBar';
 import { Shield, Sparkles, FileText, Printer, KeyRound, Cloud } from 'lucide-react';
 import { testFirestoreConnection } from './services/firebase';
 import { getOrCreateDeviceId } from './utils/deviceLock';
@@ -178,7 +176,6 @@ export default function App() {
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
-  const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [printDefaultMenu, setPrintDefaultMenu] = useState<PrintMenuType>('daily');
 
   // Ref to track if reminder was already dispatched today
@@ -754,7 +751,6 @@ export default function App() {
         onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
         onOpenAdminPinModal={() => setIsAdminPinModalOpen(true)}
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
-        onOpenMusicModal={() => setIsMusicModalOpen(true)}
         onOpenPrintModal={() => {
           const mapping: Record<string, PrintMenuType> = {
             monitoring: 'daily',
@@ -925,17 +921,6 @@ export default function App() {
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
         currentRole={currentRole}
-      />
-
-      {/* Pemutar Musik & Mars Dinas Satpol PP */}
-      <MusicPlayerModal
-        isOpen={isMusicModalOpen}
-        onClose={() => setIsMusicModalOpen(false)}
-      />
-
-      {/* Floating Music Bar Widget (Bottom Right Quick Control) */}
-      <FloatingMusicBar
-        onOpenFullModal={() => setIsMusicModalOpen(true)}
       />
 
     </div>

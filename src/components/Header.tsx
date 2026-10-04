@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Shield, 
   Clock, 
@@ -14,11 +14,11 @@ import {
   MapPin,
   Cloud,
   BookOpen,
-  Music
+  MoreVertical,
+  X
 } from 'lucide-react';
 import { NotificationItem, Employee } from '../types';
 import { NotificationCenter } from './NotificationCenter';
-import { musicEngine } from '../services/musicEngine';
 
 interface HeaderProps {
   currentRole: 'pegawai' | 'admin';
@@ -35,7 +35,6 @@ interface HeaderProps {
   onOpenAdminPinModal?: () => void;
   onOpenPrintModal?: () => void;
   onOpenGuideModal?: () => void;
-  onOpenMusicModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -53,45 +52,38 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAdminPinModal,
   onOpenPrintModal,
   onOpenGuideModal,
-  onOpenMusicModal,
 }) => {
-  const [isMusicActive, setIsMusicActive] = React.useState<boolean>(musicEngine.getIsPlaying());
+  const [isMobileAdminMenuOpen, setIsMobileAdminMenuOpen] = useState(false);
 
-  React.useEffect(() => {
-    const unsub = musicEngine.subscribe(() => {
-      setIsMusicActive(musicEngine.getIsPlaying());
-    });
-    return () => unsub();
-  }, []);
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-md">
       
-      {/* Main Top Header Bar */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+      {/* Main Top Header Bar (Fully optimized for HP & Desktop) */}
+      <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-2">
         
         {/* Zone 1: Brand Wordmark */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-md flex items-center justify-center shrink-0">
-            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <Shield className="w-5 h-5 text-amber-500" />
+        <div className="flex items-center gap-2 shrink-0 min-w-0">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-md flex items-center justify-center shrink-0">
+            <div className="w-full h-full bg-slate-950 rounded-[9px] sm:rounded-[10px] flex items-center justify-center">
+              <Shield className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-500" />
             </div>
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base tracking-tight text-white">
+          <div className="truncate">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className="font-extrabold text-xs sm:text-base tracking-tight text-white">
                 SI-PRAJA
               </span>
-              <span className="text-amber-400 font-bold text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+              <span className="text-amber-400 font-bold text-[8px] sm:text-[10px] uppercase px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
                 POL PP
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 block -mt-0.5 font-medium truncate max-w-[140px] sm:max-w-none">
-              {currentRole === 'admin' ? "Komando & Pengaturan" : "Portal Presensi Personel"}
+            <span className="text-[8.5px] sm:text-[10px] text-slate-400 block -mt-0.5 font-medium truncate max-w-[110px] sm:max-w-none">
+              {currentRole === 'admin' ? "Komando Admin" : "Portal Presensi HP"}
             </span>
           </div>
         </div>
 
-        {/* Zone 2: Employee Role View Badge (Only shown in Employee mode) */}
+        {/* Zone 2: Employee Role View Badge (Desktop View) */}
         {currentRole === 'pegawai' && (
           <div className="hidden md:flex items-center gap-2.5 bg-slate-900/80 px-3 py-1.5 rounded-2xl border border-slate-800 text-xs">
             <UserCheck className="w-4 h-4 text-amber-500 shrink-0" />
@@ -113,18 +105,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        {/* Zone 3: Actions, Real-time Clock, Time Simulator, & Logout (Always fits cleanly without overflowing) */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        {/* Zone 3: Actions & Real-Time Clock */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           
-          {/* Admin Quick Tools: Cetak & PIN */}
+          {/* Admin Quick Tools: Desktop view */}
           {currentRole === 'admin' && (
-            <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="hidden md:flex items-center gap-1">
               {onOpenPrintModal && (
                 <button
                   type="button"
                   onClick={onOpenPrintModal}
-                  title="Pusat Cetak Dokumen Resmi Satpol PP (Sesuai Menu)"
-                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+                  title="Pusat Cetak Dokumen Resmi"
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all flex items-center gap-1 shadow-sm"
                 >
                   <Printer className="w-3.5 h-3.5 text-amber-400" />
                   <span className="hidden xl:inline text-[11px]">Cetak</span>
@@ -136,11 +128,120 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   onClick={onOpenAdminPinModal}
                   title="Atur PIN Keamanan Admin"
-                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all flex items-center gap-1 shadow-sm"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-amber-400" />
                   <span className="hidden xl:inline text-[11px]">PIN</span>
                 </button>
+              )}
+
+              {/* Test Schedule Button (Uji Jam Shift) - Admin Only */}
+              <button
+                type="button"
+                onClick={onOpenTimeSimulator}
+                title="Ubah / Uji Jam Absensi (Simulasi Waktu)"
+                className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all border shrink-0 shadow-sm ${
+                  simulatedTime
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:text-white'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="hidden lg:inline">Uji Jam</span>
+              </button>
+            </div>
+          )}
+
+          {/* Admin Tools Mobile Quick Button */}
+          {currentRole === 'admin' && (
+            <div className="relative md:hidden">
+              <button
+                type="button"
+                onClick={() => setIsMobileAdminMenuOpen(!isMobileAdminMenuOpen)}
+                title="Alat Komando Admin"
+                className={`p-1.5 rounded-xl text-xs font-semibold transition-all border shrink-0 flex items-center justify-center ${
+                  isMobileAdminMenuOpen || simulatedTime
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+              </button>
+
+              {/* Mobile Admin Tools Dropdown Sheet */}
+              {isMobileAdminMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs"
+                    onClick={() => setIsMobileAdminMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2.5 py-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 flex items-center justify-between">
+                      <span>Menu Komando HP</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileAdminMenuOpen(false)}
+                        className="text-slate-400 hover:text-white p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileAdminMenuOpen(false);
+                        onOpenTimeSimulator();
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800 hover:text-amber-300 flex items-center gap-2 transition-colors"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>Uji Jam Absensi (Simulasi)</span>
+                    </button>
+
+                    {onOpenPrintModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileAdminMenuOpen(false);
+                          onOpenPrintModal();
+                        }}
+                        className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800 hover:text-amber-300 flex items-center gap-2 transition-colors"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Pusat Cetak Dokumen</span>
+                      </button>
+                    )}
+
+                    {onOpenAdminPinModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileAdminMenuOpen(false);
+                          onOpenAdminPinModal();
+                        }}
+                        className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800 hover:text-amber-300 flex items-center gap-2 transition-colors"
+                      >
+                        <KeyRound className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Atur PIN Komando</span>
+                      </button>
+                    )}
+
+                    {onOpenGuideModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileAdminMenuOpen(false);
+                          onOpenGuideModal();
+                        }}
+                        className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800 hover:text-amber-300 flex items-center gap-2 transition-colors"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Panduan & SOP Dinas</span>
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -154,67 +255,29 @@ export const Header: React.FC<HeaderProps> = ({
             onMarkAllAsRead={onMarkAllNotificationsAsRead}
           />
 
-          {/* Real-time Clock Display (Compact, Crisp, & Perfectly Aligned) */}
+          {/* Real-time Clock Display (Compact & Clean on Mobile HP) */}
           <div
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-amber-400 shadow-sm shrink-0"
+            className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-[10px] sm:text-xs font-mono font-bold text-amber-400 shadow-sm shrink-0"
             title={simulatedTime ? "Mode Simulasi Waktu Absensi Aktif" : "Waktu Nyata Terverifikasi (WIB)"}
           >
-            <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0 animate-pulse" />
-            <span className="tracking-tight text-xs sm:text-[13px]">{currentTimeString}</span>
-            <span className="text-[10px] text-slate-400 font-sans hidden sm:inline">WIB</span>
+            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500 shrink-0 animate-pulse" />
+            <span className="tracking-tight">{currentTimeString}</span>
+            <span className="text-[9px] text-slate-400 font-sans hidden sm:inline">WIB</span>
             {simulatedTime && (
-              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-ping" title="Simulasi Waktu Aktif" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 animate-ping" title="Simulasi Waktu" />
             )}
           </div>
 
-          {/* Test Schedule Button (Uji Jam Shift) - Admin Only */}
-          {currentRole === 'admin' && (
-            <button
-              type="button"
-              onClick={onOpenTimeSimulator}
-              title="Ubah / Uji Jam Absensi (Simulasi Waktu)"
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border shrink-0 shadow-sm ${
-                simulatedTime
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
-                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:text-white'
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden md:inline">Uji Jam Shift</span>
-              <span className="md:hidden text-[11px]">Uji Jam</span>
-            </button>
-          )}
-
-          {/* Panduan Button */}
+          {/* Panduan Button (Desktop) */}
           {onOpenGuideModal && (
             <button
               type="button"
               onClick={onOpenGuideModal}
               title="Buka Petunjuk Teknis & SOP Dinas"
-              className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 hover:text-white transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+              className="hidden sm:flex p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 hover:text-white transition-all items-center gap-1 shrink-0 shadow-sm"
             >
               <BookOpen className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden sm:inline">Panduan</span>
-            </button>
-          )}
-
-          {/* Musik / Mars Dinas Button */}
-          {onOpenMusicModal && (
-            <button
-              type="button"
-              onClick={onOpenMusicModal}
-              title="Buka Pemutar Musik & Mars Kedinasan Satpol PP"
-              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 shadow-sm border ${
-                isMusicActive
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-amber-500/10'
-                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:text-white'
-              }`}
-            >
-              <Music className={`w-3.5 h-3.5 text-amber-400 shrink-0 ${isMusicActive ? 'animate-bounce' : ''}`} />
-              <span className="hidden sm:inline">Musik</span>
-              {isMusicActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-              )}
+              <span>Panduan</span>
             </button>
           )}
 
@@ -223,7 +286,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onLogout}
             title="Keluar dari Portal"
-            className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 hover:text-white border border-rose-800/40 hover:border-rose-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-sm"
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-white border border-rose-800/50 hover:border-rose-700 transition-colors flex items-center gap-1 shrink-0 shadow-sm"
           >
             <LogOut className="w-3.5 h-3.5 text-rose-400 shrink-0" />
             <span className="hidden sm:inline">Keluar</span>
@@ -233,15 +296,35 @@ export const Header: React.FC<HeaderProps> = ({
 
       </div>
 
-      {/* Admin Navigation Bar (Unified for All Screen Sizes, Beautiful & Spanning Correctly) */}
+      {/* Mobile Employee Identity Strip (Exclusively for Mobile HP View) */}
+      {currentRole === 'pegawai' && currentEmployee && (
+        <div className="md:hidden border-t border-slate-800/80 bg-slate-900/90 px-3 py-1.5 flex items-center justify-between text-[11px] gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <UserCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="font-bold text-white truncate">{currentEmployee.name}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px]">
+            <span className="text-slate-400">NIP: {currentEmployee.nip.slice(0, 10)}...</span>
+            <span className={`px-1.5 py-0.2 rounded border font-semibold ${
+              currentEmployee.regu === 'Harian'
+                ? 'bg-emerald-950/70 text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-950/70 text-amber-400 border-amber-500/30'
+            }`}>
+              {currentEmployee.regu}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Navigation Bar (Touch scrollable with smooth scrollbar on Mobile) */}
       {currentRole === 'admin' && (
         <div className="border-t border-slate-800/80 bg-slate-950/95 shadow-inner">
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+          <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
             <nav className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => onAdminTabChange('monitoring')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   activeAdminTab === 'monitoring'
                     ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/60'
@@ -255,7 +338,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onAdminTabChange('locations')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   activeAdminTab === 'locations'
                     ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/60'
@@ -268,20 +351,20 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onAdminTabChange('employees')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   activeAdminTab === 'employees'
                     ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/60'
                 }`}
               >
                 <Users className="w-3.5 h-3.5 text-amber-400" />
-                <span>150 Pegawai Pol PP</span>
+                <span>150 Pegawai</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => onAdminTabChange('reports')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   activeAdminTab === 'reports'
                     ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/60'
@@ -294,7 +377,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onAdminTabChange('security')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   activeAdminTab === 'security'
                     ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 hover:bg-slate-900 border border-slate-800/60'
@@ -311,7 +394,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Cloud Firestore Live</span>
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Sistem Komando Satpol PP Bangka Barat</span>
+              <span>Satpol PP Bangka Barat</span>
             </div>
           </div>
         </div>

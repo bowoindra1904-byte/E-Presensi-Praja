@@ -374,9 +374,113 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         </div>
       </div>
 
-      {/* Main Table */}
+      {/* Main Content: Mobile Card View + Desktop Table */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        
+        {/* Mobile View (HP Card List) */}
+        <div className="sm:hidden p-3 space-y-3">
+          {paginatedList.map((emp) => {
+            const assignedLoc = locations.find(l => l.id === emp.locationSlotId);
+
+            return (
+              <div key={emp.id} className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-3 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-white text-xs truncate">{emp.name}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">NIP: {emp.nip} · {emp.id}</div>
+                    <div className="text-[10px] text-slate-300 mt-0.5">{emp.role} · {emp.rank}</div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                    emp.regu === 'Harian' 
+                      ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300' 
+                      : 'bg-amber-950/70 border-amber-500/40 text-amber-300'
+                  }`}>
+                    {emp.regu}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 pt-1 border-t border-slate-800/80">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">Pos Lokasi Kerja:</label>
+                    <select
+                      value={emp.locationSlotId}
+                      onChange={(e) => handleSlotChange(emp, Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500"
+                    >
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          Slot {loc.slotNumber}: {loc.name.replace(/^Slot \d+:\s*/, '')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">Regu & Shift:</label>
+                    <select
+                      value={emp.regu}
+                      onChange={(e) => handleReguChange(emp, e.target.value as ReguType)}
+                      className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
+                      <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
+                      <option value="Regu 3">Regu 3 (Shift 12 Jam)</option>
+                      <option value="Regu 4">Regu 4 (Shift 12 Jam)</option>
+                      <option value="Harian">Harian (Kantor / Staf)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[10px]">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {emp.boundDeviceId ? (
+                      <span className="text-emerald-400 font-mono truncate max-w-[120px]" title={emp.boundDeviceId}>
+                        ✓ Kunci: {emp.boundDeviceId.slice(0, 8)}...
+                      </span>
+                    ) : (
+                      <span className="text-amber-400">Belum Ada Kunci HP</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onResetDeviceLock(emp.id)}
+                      className="px-2 py-1 bg-amber-950/60 hover:bg-amber-900 text-amber-300 rounded-lg text-xs font-medium border border-amber-600/40"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingEmployee({ ...emp })}
+                      className="p-1 bg-slate-800 text-slate-300 rounded-lg text-xs hover:text-white"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEmployeeToDelete(emp)}
+                      className="p-1 bg-rose-950/60 text-rose-300 rounded-lg text-xs border border-rose-800/50"
+                      title="Hapus"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {paginatedList.length === 0 && (
+            <div className="py-8 text-center text-slate-500 text-xs">
+              Tidak ada personel yang sesuai kriteria pencarian / filter.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop & Tablet Table (Hidden on Mobile) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>

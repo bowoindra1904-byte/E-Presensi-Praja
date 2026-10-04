@@ -277,19 +277,19 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-slate-950 flex flex-col justify-center items-center p-3 sm:p-6 relative overflow-y-auto">
       {/* Background Glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Login Card */}
-      <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 backdrop-blur-md">
+      <div className="w-full max-w-md bg-slate-900/95 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl relative z-10 backdrop-blur-md my-auto">
         
         {/* Satpol PP Crest Branding */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-xl flex items-center justify-center mb-3">
+        <div className="text-center mb-5 sm:mb-6">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-xl flex items-center justify-center mb-2.5">
             <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Shield className="w-8 h-8 text-amber-500" />
+              <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-amber-500" />
             </div>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
@@ -301,7 +301,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
         </div>
 
         {/* Tab Switcher: Pegawai vs Admin */}
-        <div className="grid grid-cols-2 gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 mb-6 text-xs font-semibold">
+        <div className="grid grid-cols-2 gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 mb-5 sm:mb-6 text-xs font-semibold">
           <button
             type="button"
             onClick={() => {
@@ -310,19 +310,19 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
             }}
             className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'pegawai'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-amber-600 text-white shadow-md font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Portal Pegawai</span>
+            <span>Portal Pegawai (HP)</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('admin')}
             className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'admin'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-amber-600 text-white shadow-md font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -356,8 +356,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     setIsNameSuggestionsOpen(true);
                   }}
                   onFocus={() => setIsNameSuggestionsOpen(true)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors font-medium"
-                  autoFocus
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors font-medium"
                 />
               </div>
 
@@ -425,7 +424,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                   setInputNip(e.target.value);
                   setEmployeeError('');
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors font-mono tracking-wide"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors font-mono tracking-wide"
               />
             </div>
 
@@ -537,8 +536,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                   setAdminPinInput(e.target.value);
                   setAdminError('');
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center text-sm"
-                autoFocus
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center text-base sm:text-sm"
               />
               {adminError && (
                 <p className="text-[11px] text-rose-400 font-medium">{adminError}</p>

@@ -83,42 +83,42 @@ export const AdminPinModal: React.FC<AdminPinModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md p-6 shadow-2xl relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col max-h-[92dvh]">
         
         {/* Top Decorative Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <KeyRound className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+              <KeyRound className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-white tracking-tight">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
                 Pengaturan PIN Keamanan Admin
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
                 Otorisasi Akses Komando & Manajemen Satpol PP
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-xl transition-colors"
+            className="text-slate-400 hover:text-white p-1 rounded-xl transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="mt-4 sm:mt-5 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto pr-1">
           
           {/* Current Active Pin Status */}
-          <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+          <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2 text-slate-300">
               <Shield className="w-4 h-4 text-amber-400" />
               <span>Status PIN Admin:</span>
             </div>
-            <span className="font-mono text-emerald-400 font-bold bg-emerald-950/50 px-2.5 py-0.5 rounded-lg border border-emerald-500/30">
+            <span className="font-mono text-emerald-400 font-bold bg-emerald-950/50 px-2.5 py-0.5 rounded-lg border border-emerald-500/30 text-[11px]">
               Aktif & Terproteksi
             </span>
           </div>
@@ -134,7 +134,7 @@ export const AdminPinModal: React.FC<AdminPinModalProps> = ({
                 placeholder="PIN saat ini (Bawaan: 123456)"
                 value={oldPinInput}
                 onChange={(e) => setOldPinInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono tracking-wider focus:outline-none focus:border-amber-500 pr-10"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono tracking-wider focus:outline-none focus:border-amber-500 pr-10 text-base sm:text-xs"
                 required
               />
               <button
@@ -148,9 +148,9 @@ export const AdminPinModal: React.FC<AdminPinModalProps> = ({
           </div>
 
           {/* New PIN Input */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             <div>
-              <label className="text-slate-300 font-semibold block mb-1">
+              <label className="text-slate-300 font-semibold block mb-1 text-[11px]">
                 PIN Baru
               </label>
               <input
@@ -158,20 +158,20 @@ export const AdminPinModal: React.FC<AdminPinModalProps> = ({
                 placeholder="Min. 4 digit"
                 value={newPinInput}
                 onChange={(e) => setNewPinInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono tracking-wider focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono tracking-wider focus:outline-none focus:border-amber-500 text-base sm:text-xs"
                 required
               />
             </div>
             <div>
-              <label className="text-slate-300 font-semibold block mb-1">
-                Konfirmasi PIN Baru
+              <label className="text-slate-300 font-semibold block mb-1 text-[11px]">
+                Konfirmasi PIN
               </label>
               <input
                 type={showPins ? "text" : "password"}
-                placeholder="Ulangi PIN baru"
+                placeholder="Ulangi PIN"
                 value={confirmPinInput}
                 onChange={(e) => setConfirmPinInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono tracking-wider focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono tracking-wider focus:outline-none focus:border-amber-500 text-base sm:text-xs"
                 required
               />
             </div>

@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/* Mobile responsive resets and touch optimizations */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+#root {
+  min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Smooth touch momentum scrolling on mobile */
+.overflow-x-auto, .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Leaflet map styles and container fixes */
 .leaflet-container {
   font-family: inherit;
