@@ -242,7 +242,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Rekapitulasi Presensi Digital Personel
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Log kehadiran real-time dengan verifikasi GPS, kunci perangkat, dan foto dinas
+              Log kehadiran real-time dengan verifikasi GPS digital dan kunci perangkat dinas
             </p>
           </div>
 
@@ -329,7 +329,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="font-bold text-white text-xs truncate">{r.employeeName}</div>
                   <div className="text-[10px] text-slate-400 font-mono">NIP: {r.employeeNip}</div>
                 </div>
-                {r.checkInPhoto ? (
+                {r.checkInPhoto && (
                   <button
                     type="button"
                     onClick={() => setSelectedPhotoPreview(r.checkInPhoto || null)}
@@ -337,10 +337,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   >
                     <img src={r.checkInPhoto} alt="Foto" className="w-full h-full object-cover" />
                   </button>
-                ) : (
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 shrink-0">
-                    <Camera className="w-4 h-4" />
-                  </div>
                 )}
               </div>
 
@@ -499,9 +495,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <img src={r.checkInPhoto} alt="Foto" className="w-full h-full object-cover" />
                       </button>
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-600 ml-auto">
-                        <Camera className="w-3.5 h-3.5" />
-                      </div>
+                      <span className="text-slate-600 text-xs">-</span>
                     )}
                   </td>
 

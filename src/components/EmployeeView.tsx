@@ -16,7 +16,6 @@ import {
   validateAntiSpoofing 
 } from '../utils/deviceLock';
 import { MapComponent } from './MapComponent';
-import { CameraCapture } from './CameraCapture';
 import { 
   MapPin, 
   CheckCircle2, 
@@ -25,7 +24,6 @@ import {
   Navigation, 
   UserCheck, 
   Clock, 
-  Camera, 
   ShieldCheck,
   Building2,
   Sparkles,
@@ -73,8 +71,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
     isRealGps: false,
   });
 
-  // Selfie capture state
-  const [selfiePhoto, setSelfiePhoto] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<{
     type: 'success' | 'warning' | 'error';
     title: string;
@@ -261,7 +257,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
       checkInDistance: currentDistance,
       checkInDeviceId: currentDevice.deviceId,
       checkInDeviceMatched: true,
-      checkInPhoto: selfiePhoto || undefined,
       checkInAccuracy: Math.round(userCoords.accuracy),
       notes: isLate ? "Hadir terlambat melewati batas jam dinas." : "Hadir tepat waktu di pos penugasan."
     };
@@ -466,19 +461,18 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
         </div>
       )}
 
-      {/* Main Responsive Grid (Mobile-First Ordering: Action Panel & Camera First on HP!) */}
+      {/* Main Responsive Grid (Action Panel + Rules on Top Row, Full GPS Map Below) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Card 1: Attendance Action Panel (Tap Presensi Masuk & Pulang) */}
-        {/* On mobile: order-1 (Top priority for quick tap). On desktop: col-span-7, order-2 */}
-        <div className="lg:col-span-7 order-1 lg:order-2 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3 sm:space-y-4">
+        <div className="lg:col-span-7 order-1 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div>
               <h3 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
                 Panel Presensi Tugas Lapangan
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400">
-                Wajib foto seragam & berada dalam radius {location.radiusMeters}m
+                Wajib berada dalam radius pos penugasan ({location.radiusMeters} meter)
               </p>
             </div>
             <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20 shrink-0">
@@ -486,7 +480,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
             </span>
           </div>
 
-          {/* Live GPS Distance Radar Banner on Mobile (Immediately visible above tap buttons) */}
+          {/* Live GPS Distance Radar Banner on Mobile */}
           <div className={`p-3 rounded-xl border flex items-center justify-between text-xs font-semibold gap-2 ${
             isWithinGeofence
               ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
@@ -571,36 +565,89 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
             </button>
 
           </div>
+        </div>
 
-          {/* Selfie requirement helper note */}
-          {!selfiePhoto && !todayRecord?.checkInTime && (
-            <p className="text-[10.5px] text-amber-300/80 text-center font-medium">
-              💡 Pastikan Anda mengambil swafoto seragam di bawah sebelum menekan tombol Absen Masuk.
+        {/* Card 2: Schedule Rules & Time Status (Collapsible on mobile) */}
+        <div className="lg:col-span-5 order-2 bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg space-y-3">
+          <div 
+            onClick={() => setIsRulesExpanded(prev => !prev)}
+            className="flex items-center justify-between pb-2 border-b border-slate-800 cursor-pointer lg:cursor-default"
+          >
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+              <h3 className="text-xs sm:text-sm font-bold text-white">Aturan Jam Kerja & Presensi</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                {timeEval.currentDayName}
+              </span>
+              <button 
+                type="button"
+                className="lg:hidden text-slate-400 hover:text-white"
+                aria-label="Toggle Aturan"
+              >
+                {isRulesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Content (Hidden on mobile if not expanded, always visible on desktop) */}
+          <div className={`space-y-2.5 text-xs ${isRulesExpanded ? 'block' : 'hidden lg:block'}`}>
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-1.5">
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Tipe Jam Kerja:</span>
+                <span className="font-bold text-white uppercase">{employee.scheduleType === 'harian' ? 'Harian' : 'Shift'}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Jam Dinas Resmi:</span>
+                <span className="font-mono font-bold text-amber-400">{timeEval.workHoursLabel}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Jendela Absen Masuk:</span>
+                <span className="text-slate-200">{timeEval.checkInWindowLabel}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Ketentuan Absen Pulang:</span>
+                <span className="text-slate-200 font-semibold">{timeEval.checkOutWindowLabel}</span>
+              </div>
+            </div>
+
+            {/* Status explanation */}
+            <div className={`p-2.5 rounded-xl border text-[11px] leading-relaxed ${
+              timeEval.canCheckIn 
+                ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
+                : 'bg-slate-950 border-slate-800 text-slate-400'
+            }`}>
+              <div className="font-semibold mb-0.5 text-slate-200 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                Status Absen Masuk:
+              </div>
+              {timeEval.checkInReason}
+            </div>
+
+            <div className={`p-2.5 rounded-xl border text-[11px] leading-relaxed ${
+              timeEval.canCheckOut 
+                ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
+                : 'bg-slate-950 border-slate-800 text-slate-400'
+            }`}>
+              <div className="font-semibold mb-0.5 text-slate-200 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                Status Absen Pulang:
+              </div>
+              {timeEval.checkOutReason}
+            </div>
+          </div>
+
+          {!isRulesExpanded && (
+            <p className="lg:hidden text-[10.5px] text-slate-400 flex items-center justify-between py-1">
+              <span>Jam Dinas: <strong className="text-amber-400">{timeEval.workHoursLabel}</strong></span>
+              <span className="text-amber-500 underline font-medium cursor-pointer" onClick={() => setIsRulesExpanded(true)}>Lihat Rincian</span>
             </p>
           )}
         </div>
 
-        {/* Card 2: Selfie Photo Verification */}
-        {/* On mobile: order-2 (Right below action panel). On desktop: col-span-5, order-1 */}
-        <div className="lg:col-span-5 order-2 lg:order-1 bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-            <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4 text-amber-500" />
-              <h3 className="text-xs sm:text-sm font-bold text-white">Verifikasi Swafoto Seragam Dinas</h3>
-            </div>
-            <span className="text-[10px] text-slate-400">Bukti Kehadiran</span>
-          </div>
-
-          <CameraCapture
-            photoUrl={selfiePhoto}
-            onPhotoCaptured={(url) => setSelfiePhoto(url)}
-            onClearPhoto={() => setSelfiePhoto(null)}
-          />
-        </div>
-
         {/* Card 3: Interactive GPS Geofence Map */}
-        {/* On mobile: order-3. On desktop: col-span-7, order-4 */}
-        <div className="lg:col-span-7 order-3 lg:order-4 bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg space-y-3.5">
+        <div className="lg:col-span-12 order-3 bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg space-y-3.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
             <div>
               <div className="flex items-center gap-2">
@@ -678,86 +725,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
               <span>Segarkan GPS HP</span>
             </button>
           </div>
-        </div>
-
-        {/* Card 4: Schedule Rules & Time Status (Collapsible on mobile) */}
-        {/* On mobile: order-4. On desktop: col-span-5, order-3 */}
-        <div className="lg:col-span-5 order-4 lg:order-3 bg-slate-900/90 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-lg space-y-3">
-          <div 
-            onClick={() => setIsRulesExpanded(prev => !prev)}
-            className="flex items-center justify-between pb-2 border-b border-slate-800 cursor-pointer lg:cursor-default"
-          >
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <h3 className="text-xs sm:text-sm font-bold text-white">Aturan Jam Kerja & Presensi</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                {timeEval.currentDayName}
-              </span>
-              <button 
-                type="button"
-                className="lg:hidden text-slate-400 hover:text-white"
-                aria-label="Toggle Aturan"
-              >
-                {isRulesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Content (Hidden on mobile if not expanded, always visible on desktop) */}
-          <div className={`space-y-2.5 text-xs ${isRulesExpanded ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-1.5">
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Tipe Jam Kerja:</span>
-                <span className="font-bold text-white uppercase">{employee.scheduleType === 'harian' ? 'Harian' : 'Shift'}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Jam Dinas Resmi:</span>
-                <span className="font-mono font-bold text-amber-400">{timeEval.workHoursLabel}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Jendela Absen Masuk:</span>
-                <span className="text-slate-200">{timeEval.checkInWindowLabel}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Ketentuan Absen Pulang:</span>
-                <span className="text-slate-200 font-semibold">{timeEval.checkOutWindowLabel}</span>
-              </div>
-            </div>
-
-            {/* Status explanation */}
-            <div className={`p-2.5 rounded-xl border text-[11px] leading-relaxed ${
-              timeEval.canCheckIn 
-                ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
-                : 'bg-slate-950 border-slate-800 text-slate-400'
-            }`}>
-              <div className="font-semibold mb-0.5 text-slate-200 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                Status Absen Masuk:
-              </div>
-              {timeEval.checkInReason}
-            </div>
-
-            <div className={`p-2.5 rounded-xl border text-[11px] leading-relaxed ${
-              timeEval.canCheckOut 
-                ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' 
-                : 'bg-slate-950 border-slate-800 text-slate-400'
-            }`}>
-              <div className="font-semibold mb-0.5 text-slate-200 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                Status Absen Pulang:
-              </div>
-              {timeEval.checkOutReason}
-            </div>
-          </div>
-
-          {!isRulesExpanded && (
-            <p className="lg:hidden text-[10.5px] text-slate-400 flex items-center justify-between py-1">
-              <span>Jam Dinas: <strong className="text-amber-400">{timeEval.workHoursLabel}</strong></span>
-              <span className="text-amber-500 underline font-medium cursor-pointer" onClick={() => setIsRulesExpanded(true)}>Lihat Rincian</span>
-            </p>
-          )}
         </div>
 
         {/* Card 5: Today's Presensi Summary */}
