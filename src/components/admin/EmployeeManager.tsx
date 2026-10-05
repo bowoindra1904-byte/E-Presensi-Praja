@@ -202,13 +202,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     <div className="space-y-6">
       
       {/* Title & Overview Banner */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-            <Users className="w-5 h-5 text-amber-500" />
-            Pengaturan Personel Satpol PP (Total: {employees.length} Pegawai)
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Users className="w-5 h-5 text-amber-600" />
+            <span>Pengaturan Personel Satpol PP (Total: {employees.length} Pegawai)</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Atur pembagian Regu 1, 2, 3, 4 atau Harian, penempatan {locations.length} slot pos lokasi, dan audit perangkat
           </p>
         </div>
@@ -217,32 +217,32 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           {onResetAllEmployees && (
             <button
               onClick={onResetAllEmployees}
-              className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-2 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs"
               title="Reset seluruh data personel ke default 150 anggota"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+              <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
               <span>Reset 150 Pegawai</span>
             </button>
           )}
           {onOpenPrintMenu && (
             <button
               onClick={() => onOpenPrintMenu('regu')}
-              className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-2 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs"
             >
-              <Printer className="w-3.5 h-3.5 text-amber-400" />
+              <Printer className="w-3.5 h-3.5 text-amber-600" />
               <span>Cetak Daftar Regu</span>
             </button>
           )}
           <button
             onClick={handleExportCSV}
-            className="px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5 shadow-sm"
+            className="px-3.5 py-2 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             Ekspor CSV
           </button>
           <button
             onClick={() => setIsAddingNew(true)}
-            className="px-3.5 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl shadow transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Tambah Personel
@@ -251,7 +251,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           
           {/* Search Box */}
@@ -265,7 +265,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500"
             />
           </div>
 
@@ -274,7 +274,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <select
               value={filterRegu}
               onChange={(e) => handleFilterChange(setFilterRegu, e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
             >
               <option value="all">Semua Regu (1-4 & Harian)</option>
               <option value="Regu 1">Regu 1 (Shift)</option>
@@ -290,7 +290,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <select
               value={filterSlot}
               onChange={(e) => handleFilterChange(setFilterSlot, e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
             >
               <option value="all">Semua Slot Pos Lokasi ({locations.length} Pos)</option>
               {locations.map((loc) => (
@@ -306,7 +306,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <select
               value={filterSchedule}
               onChange={(e) => handleFilterChange(setFilterSchedule, e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
             >
               <option value="all">Semua Tipe Jadwal</option>
               <option value="shift">Shift (12 Jam)</option>
@@ -319,7 +319,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <select
               value={filterDevice}
               onChange={(e) => handleFilterChange(setFilterDevice, e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
             >
               <option value="all">Semua Status Kunci HP</option>
               <option value="locked">Terkunci (Device Bound)</option>
@@ -330,10 +330,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         </div>
 
         {/* Status Count & Summary & Reset Filter */}
-        <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800 gap-2">
+        <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 gap-2">
           <div className="flex items-center gap-3">
             <span>
-              Menampilkan <strong className="text-white">{filteredList.length}</strong> dari total {employees.length} personel Satpol PP
+              Menampilkan <strong className="text-slate-900">{filteredList.length}</strong> dari total {employees.length} personel Satpol PP
             </span>
             {(search || filterSlot !== 'all' || filterRegu !== 'all' || filterSchedule !== 'all' || filterDevice !== 'all') && (
               <button
@@ -346,7 +346,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   setFilterDevice('all');
                   setCurrentPage(1);
                 }}
-                className="px-2.5 py-1 text-xs text-amber-300 hover:text-amber-200 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-700/60 rounded-lg transition-colors flex items-center gap-1 font-semibold"
+                className="px-2.5 py-1 text-xs text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors flex items-center gap-1 font-semibold"
                 title="Kembalikan semua filter dan pencarian ke awal"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -363,7 +363,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 text-xs text-white"
+              className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 text-xs text-slate-700"
             >
               <option value={15}>15</option>
               <option value={25}>25</option>
@@ -375,7 +375,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       </div>
 
       {/* Main Content: Mobile Card View + Desktop Table */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden">
         
         {/* Mobile View (HP Card List) */}
         <div className="sm:hidden p-3 space-y-3">
@@ -383,29 +383,29 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             const assignedLoc = locations.find(l => l.id === emp.locationSlotId);
 
             return (
-              <div key={emp.id} className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-3 shadow-sm">
+              <div key={emp.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3 shadow-xs">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-white text-xs truncate">{emp.name}</div>
+                    <div className="font-bold text-slate-900 text-xs truncate">{emp.name}</div>
                     <div className="text-[10px] text-slate-400 font-mono">NIP: {emp.nip} · {emp.id}</div>
-                    <div className="text-[10px] text-slate-300 mt-0.5">{emp.role} · {emp.rank}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{emp.role} · {emp.rank}</div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
                     emp.regu === 'Harian' 
-                      ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300' 
-                      : 'bg-amber-950/70 border-amber-500/40 text-amber-300'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                      : 'bg-amber-50 border-amber-200 text-amber-800'
                   }`}>
                     {emp.regu}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 pt-1 border-t border-slate-800/80">
+                <div className="grid grid-cols-1 gap-2 pt-1 border-t border-slate-200">
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-1">Pos Lokasi Kerja:</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">Pos Lokasi Kerja:</label>
                     <select
                       value={emp.locationSlotId}
                       onChange={(e) => handleSlotChange(emp, Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500"
                     >
                       {locations.map((loc) => (
                         <option key={loc.id} value={loc.id}>
@@ -416,11 +416,11 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-1">Regu & Shift:</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">Regu & Shift:</label>
                     <select
                       value={emp.regu}
                       onChange={(e) => handleReguChange(emp, e.target.value as ReguType)}
-                      className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-500"
                     >
                       <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
                       <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
@@ -431,14 +431,14 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[10px]">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-[10px]">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {emp.boundDeviceId ? (
-                      <span className="text-emerald-400 font-mono truncate max-w-[120px]" title={emp.boundDeviceId}>
+                      <span className="text-emerald-700 font-mono truncate max-w-[120px]" title={emp.boundDeviceId}>
                         ✓ Kunci: {emp.boundDeviceId.slice(0, 8)}...
                       </span>
                     ) : (
-                      <span className="text-amber-400">Belum Ada Kunci HP</span>
+                      <span className="text-amber-700">Belum Ada Kunci HP</span>
                     )}
                   </div>
 
@@ -446,14 +446,14 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => onResetDeviceLock(emp.id)}
-                      className="px-2 py-1 bg-amber-950/60 hover:bg-amber-900 text-amber-300 rounded-lg text-xs font-medium border border-amber-600/40"
+                      className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-medium border border-amber-200"
                     >
                       Reset
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingEmployee({ ...emp })}
-                      className="p-1 bg-slate-800 text-slate-300 rounded-lg text-xs hover:text-white"
+                      className="p-1 bg-white text-slate-600 rounded-lg text-xs hover:text-slate-900 border border-slate-200"
                       title="Edit"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -461,7 +461,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => setEmployeeToDelete(emp)}
-                      className="p-1 bg-rose-950/60 text-rose-300 rounded-lg text-xs border border-rose-800/50"
+                      className="p-1 bg-rose-50 text-rose-700 rounded-lg text-xs border border-rose-200"
                       title="Hapus"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -473,7 +473,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           })}
 
           {paginatedList.length === 0 && (
-            <div className="py-8 text-center text-slate-500 text-xs">
+            <div className="py-8 text-center text-slate-400 text-xs">
               Tidak ada personel yang sesuai kriteria pencarian / filter.
             </div>
           )}
@@ -482,7 +482,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         {/* Desktop & Tablet Table (Hidden on Mobile) */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">Personel</th>
                 <th className="py-3 px-4">Pangkat / Jabatan</th>
@@ -492,18 +492,18 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 <th className="py-3 px-4 text-right">Aksi Personel (Reset & Hapus)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {paginatedList.map((emp) => {
                 const assignedLoc = locations.find(l => l.id === emp.locationSlotId);
 
                 return (
-                  <tr key={emp.id} className="hover:bg-slate-800/40 transition-colors">
+                  <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
                     
                     {/* Personnel Info */}
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-white text-sm">{emp.name}</div>
-                      <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
-                        <span className="text-amber-400 font-bold">{emp.regu}</span>
+                      <div className="font-semibold text-slate-900 text-sm">{emp.name}</div>
+                      <div className="text-[11px] text-slate-500 font-mono flex items-center gap-2 mt-0.5">
+                        <span className="text-amber-800 font-bold">{emp.regu}</span>
                         <span>·</span>
                         <span>{emp.id}</span>
                         <span>·</span>
@@ -513,8 +513,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
                     {/* Role & Rank */}
                     <td className="py-3 px-4">
-                      <div className="text-slate-200 font-medium">{emp.role}</div>
-                      <div className="text-[11px] text-slate-400">{emp.rank}</div>
+                      <div className="text-slate-800 font-medium">{emp.role}</div>
+                      <div className="text-[11px] text-slate-500">{emp.rank}</div>
                     </td>
 
                     {/* Penempatan Slot Lokasi (Dropdown langsung untuk admin) */}
@@ -522,7 +522,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       <select
                         value={emp.locationSlotId}
                         onChange={(e) => handleSlotChange(emp, Number(e.target.value))}
-                        className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-amber-500 font-medium max-w-[210px] truncate"
+                        className="bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-amber-500 font-medium max-w-[210px] truncate"
                       >
                         {locations.map((loc) => (
                           <option key={loc.id} value={loc.id}>
@@ -530,8 +530,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           </option>
                         ))}
                       </select>
-                      <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-amber-500 shrink-0" />
+                      <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
                         <span>Radius Geofence: {assignedLoc?.radiusMeters}m</span>
                       </div>
                     </td>
@@ -543,15 +543,15 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                         onChange={(e) => handleReguChange(emp, e.target.value as ReguType)}
                         className={`border rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-amber-500 ${
                           emp.regu === 'Harian' 
-                            ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300' 
-                            : 'bg-amber-950/60 border-amber-500/40 text-amber-300'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                            : 'bg-amber-50 border-amber-200 text-amber-800'
                         }`}
                       >
-                        <option value="Regu 1" className="bg-slate-900 text-amber-400">Regu 1 (Shift 12 Jam)</option>
-                        <option value="Regu 2" className="bg-slate-900 text-amber-400">Regu 2 (Shift 12 Jam)</option>
-                        <option value="Regu 3" className="bg-slate-900 text-amber-400">Regu 3 (Shift 12 Jam)</option>
-                        <option value="Regu 4" className="bg-slate-900 text-amber-400">Regu 4 (Shift 12 Jam)</option>
-                        <option value="Harian" className="bg-slate-900 text-emerald-400">Harian (Kantor / Staf)</option>
+                        <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
+                        <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
+                        <option value="Regu 3">Regu 3 (Shift 12 Jam)</option>
+                        <option value="Regu 4">Regu 4 (Shift 12 Jam)</option>
+                        <option value="Harian">Harian (Kantor / Staf)</option>
                       </select>
                       <div className="text-[10px] text-slate-400 mt-1">
                         {emp.regu === 'Harian' ? 'Senin-Kamis & Jumat' : 'Rotasi Shift 12 Jam (Pagi/Malam)'}
@@ -562,16 +562,16 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                     <td className="py-3 px-4">
                       {emp.boundDeviceId ? (
                         <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5 text-emerald-400 font-medium text-[11px]">
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-medium text-[11px]">
                             <CheckCircle className="w-3.5 h-3.5" />
                             <span>Terkunci</span>
                           </div>
-                          <div className="font-mono text-[10px] text-slate-300 truncate max-w-[140px]" title={emp.boundDeviceId}>
+                          <div className="font-mono text-[10px] text-slate-600 truncate max-w-[140px]" title={emp.boundDeviceId}>
                             {emp.boundDeviceId}
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-amber-400 font-medium text-[11px]">
+                        <div className="flex items-center gap-1.5 text-amber-700 font-medium text-[11px]">
                           <AlertCircle className="w-3.5 h-3.5" />
                           <span>Belum Ada Kunci HP</span>
                         </div>
@@ -591,13 +591,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                               ? `Reset Kunci Perangkat: Buka ikatan HP ${emp.boundDeviceId} agar pegawai bisa daftar HP baru`
                               : `Reset Status Perangkat untuk ${emp.name}`
                           }
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 shadow-sm ${
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1 shadow-xs ${
                             emp.boundDeviceId
-                              ? 'bg-amber-950/70 hover:bg-amber-900 text-amber-300 border-amber-600/50 hover:border-amber-500'
-                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 hover:text-white'
+                              ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
-                          <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                          <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
                           <span>Reset</span>
                         </button>
 
@@ -606,9 +606,9 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           type="button"
                           onClick={() => setEmployeeToDelete(emp)}
                           title={`Hapus Personel ${emp.name} dari sistem`}
-                          className="px-2.5 py-1.5 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 hover:text-white rounded-lg text-xs font-semibold border border-rose-800/60 hover:border-rose-600 transition-colors flex items-center gap-1 shadow-sm"
+                          className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200 transition-colors flex items-center gap-1 shadow-xs"
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                           <span>Hapus</span>
                         </button>
 
@@ -617,7 +617,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           type="button"
                           onClick={() => setEditingEmployee({ ...emp })}
                           title="Edit Lengkap Pegawai"
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 rounded-lg transition-colors border border-slate-700 hover:border-amber-500/40"
+                          className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-amber-800 rounded-lg transition-colors border border-slate-200"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -631,7 +631,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
               {paginatedList.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500 text-xs">
+                  <td colSpan={6} className="py-12 text-center text-slate-400 text-xs">
                     Tidak ada personel yang sesuai dengan kriteria pencarian / filter.
                   </td>
                 </tr>
@@ -641,23 +641,23 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         </div>
 
         {/* Pagination Navigation */}
-        <div className="p-4 bg-slate-950/70 border-t border-slate-800 flex items-center justify-between text-xs">
-          <div className="text-slate-400">
-            Halaman <strong className="text-white">{currentPage}</strong> dari <strong className="text-white">{totalPages}</strong>
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+          <div className="text-slate-500">
+            Halaman <strong className="text-slate-900">{currentPage}</strong> dari <strong className="text-slate-900">{totalPages}</strong>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800"
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="font-mono text-slate-300 px-2">{currentPage} / {totalPages}</span>
+            <span className="font-mono text-slate-700 px-2">{currentPage} / {totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800"
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -667,13 +667,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
       {/* Edit Employee Modal */}
       {editingEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h3 className="text-base font-bold text-white">Edit Data Personel: {editingEmployee.id}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-base font-bold text-slate-900">Edit Data Personel: {editingEmployee.id}</h3>
               <button
                 onClick={() => setEditingEmployee(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
               >
                 ✕
               </button>
@@ -681,46 +681,46 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
               <div>
-                <label className="text-slate-300 font-semibold block mb-1">Nama Lengkap</label>
+                <label className="text-slate-700 font-semibold block mb-1">Nama Lengkap</label>
                 <input
                   type="text"
                   value={editingEmployee.name}
                   onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">NIP / NRPTT</label>
+                  <label className="text-slate-700 font-semibold block mb-1">NIP / NRPTT</label>
                   <input
                     type="text"
                     value={editingEmployee.nip}
                     onChange={(e) => setEditingEmployee({ ...editingEmployee, nip: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono focus:outline-none focus:border-amber-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Pangkat Satpol PP</label>
+                  <label className="text-slate-700 font-semibold block mb-1">Pangkat Satpol PP</label>
                   <input
                     type="text"
                     value={editingEmployee.rank}
                     onChange={(e) => setEditingEmployee({ ...editingEmployee, rank: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-slate-300 font-semibold block mb-1">Jabatan / Penugasan</label>
+                <label className="text-slate-700 font-semibold block mb-1">Jabatan / Penugasan</label>
                 <input
                   type="text"
                   value={editingEmployee.role}
                   onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
@@ -728,11 +728,11 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               {/* Slot Penempatan & Penugasan Regu */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Penempatan Slot Lokasi</label>
+                  <label className="text-slate-700 font-semibold block mb-1">Penempatan Slot Lokasi</label>
                   <select
                     value={editingEmployee.locationSlotId}
                     onChange={(e) => setEditingEmployee({ ...editingEmployee, locationSlotId: Number(e.target.value) })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                   >
                     {locations.map((loc) => (
                       <option key={loc.id} value={loc.id}>
@@ -742,7 +742,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Penugasan Regu / Jam Kerja</label>
+                  <label className="text-slate-700 font-semibold block mb-1">Penugasan Regu / Jam Kerja</label>
                   <select
                     value={editingEmployee.regu}
                     onChange={(e) => {
@@ -753,7 +753,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                         scheduleType: newRegu === 'Harian' ? 'harian' : 'shift'
                       });
                     }}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-semibold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
                   >
                     <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
                     <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
@@ -763,17 +763,17 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </select>
                 </div>
               </div>
-              <div className="text-[10px] text-slate-400 -mt-2">
+              <div className="text-[10px] text-slate-500 -mt-2">
                 {editingEmployee.regu === 'Harian' 
                   ? 'Pegawai Harian: Masuk 07.30 (Jumat 07.00) & Pulang 16.00 (Jumat 16.30 WIB)' 
                   : `Personel ${editingEmployee.regu}: Rotasi Shift 12 Jam (Pagi 08.00-20.00 / Malam 20.00-08.00 WIB)`}
               </div>
 
               {/* Device lock status in modal */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Kunci ID Perangkat:</span>
-                  <span className="font-mono text-amber-400 font-bold">
+                  <span className="text-slate-600">Kunci ID Perangkat:</span>
+                  <span className="font-mono text-amber-800 font-bold">
                     {editingEmployee.boundDeviceId || "Belum Terkunci"}
                   </span>
                 </div>
@@ -784,7 +784,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       setEditingEmployee({ ...editingEmployee, boundDeviceId: null });
                       onResetDeviceLock(editingEmployee.id);
                     }}
-                    className="w-full py-1.5 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     Buka Kunci Perangkat (Reset Binding)
@@ -792,7 +792,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => {
@@ -800,7 +800,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                     setEditingEmployee(null);
                     setEmployeeToDelete(target);
                   }}
-                  className="px-3 py-2 text-xs font-semibold text-rose-400 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 rounded-xl transition-colors flex items-center gap-1.5"
+                  className="px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 bg-rose-50/50 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5"
                   title="Hapus personel ini dari sistem"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -811,13 +811,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   <button
                     type="button"
                     onClick={() => setEditingEmployee(null)}
-                    className="px-4 py-2 text-slate-300 hover:bg-slate-800 rounded-xl transition-colors"
+                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
                   >
                     <Check className="w-4 h-4" />
                     Simpan Perubahan
@@ -831,13 +831,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
       {/* Add New Employee Modal */}
       {isAddingNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <h3 className="text-base font-bold text-white">Tambah Personel Satpol PP Baru</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-base font-bold text-slate-900">Tambah Personel Satpol PP Baru</h3>
               <button
                 onClick={() => setIsAddingNew(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
               >
                 ✕
               </button>
@@ -845,61 +845,61 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
             <form onSubmit={handleSaveAdd} className="space-y-4 text-xs">
               <div>
-                <label className="text-slate-300 font-semibold block mb-1">Nama Lengkap Personel</label>
+                <label className="text-slate-700 font-semibold block mb-1">Nama Lengkap Personel</label>
                 <input
                   type="text"
                   placeholder="Contoh: Budi Santoso, S.H."
                   value={newEmployee.name || ''}
                   onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">NIP / NRPTT</label>
+                  <label className="text-slate-700 font-semibold block mb-1">NIP / NRPTT</label>
                   <input
                     type="text"
                     placeholder="19950101 202001 1 001"
                     value={newEmployee.nip || ''}
                     onChange={(e) => setNewEmployee({ ...newEmployee, nip: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono focus:outline-none focus:border-amber-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Pangkat</label>
+                  <label className="text-slate-700 font-semibold block mb-1">Pangkat</label>
                   <input
                     type="text"
                     placeholder="Pengatur Muda (II/a)"
                     value={newEmployee.rank || ''}
                     onChange={(e) => setNewEmployee({ ...newEmployee, rank: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-slate-300 font-semibold block mb-1">Jabatan / Regu</label>
+                <label className="text-slate-700 font-semibold block mb-1">Jabatan / Regu</label>
                 <input
                   type="text"
                   placeholder="Anggota Regu Operasional / Danru"
                   value={newEmployee.role || ''}
                   onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Penempatan Slot Lokasi</label>
+                  <label className="text-slate-700 font-semibold block mb-1">Penempatan Slot Lokasi</label>
                   <select
                     value={newEmployee.locationSlotId}
                     onChange={(e) => setNewEmployee({ ...newEmployee, locationSlotId: Number(e.target.value) })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500"
                   >
                     {locations.map((loc) => (
                       <option key={loc.id} value={loc.id}>
@@ -909,7 +909,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold block mb-1">Penugasan Regu / Jam Kerja</label>
+                  <label className="text-slate-700 font-semibold block mb-1">Penugasan Regu / Jam Kerja</label>
                   <select
                     value={newEmployee.regu || 'Regu 1'}
                     onChange={(e) => {
@@ -920,7 +920,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                         scheduleType: newRegu === 'Harian' ? 'harian' : 'shift'
                       });
                     }}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500 font-semibold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
                   >
                     <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
                     <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
@@ -931,17 +931,17 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsAddingNew(false)}
-                  className="px-4 py-2 text-slate-300 hover:bg-slate-800 rounded-xl transition-colors"
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   Tambahkan Personel
@@ -954,44 +954,44 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
       {/* Delete Confirmation Modal */}
       {employeeToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-rose-500/50 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-rose-200 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Hapus Data Personel?</h3>
-                <p className="text-xs text-slate-400">Data anggota Satpol PP akan dihapus dari sistem</p>
+                <h3 className="text-base font-bold text-slate-900">Hapus Data Personel?</h3>
+                <p className="text-xs text-slate-500">Data anggota Satpol PP akan dihapus dari sistem</p>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-slate-400">Nama Lengkap:</span>
-                <strong className="text-white">{employeeToDelete.name}</strong>
+                <span className="text-slate-500">Nama Lengkap:</span>
+                <strong className="text-slate-900">{employeeToDelete.name}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">NIP / ID:</span>
-                <span className="font-mono text-slate-300">{employeeToDelete.nip} ({employeeToDelete.id})</span>
+                <span className="text-slate-500">NIP / ID:</span>
+                <span className="font-mono text-slate-700">{employeeToDelete.nip} ({employeeToDelete.id})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Penugasan Regu:</span>
-                <span className="font-semibold text-amber-400">{employeeToDelete.regu}</span>
+                <span className="text-slate-500">Penugasan Regu:</span>
+                <span className="font-semibold text-amber-800">{employeeToDelete.regu}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Pos Penempatan:</span>
-                <span className="text-slate-300">Slot {employeeToDelete.locationSlotId}</span>
+                <span className="text-slate-500">Pos Penempatan:</span>
+                <span className="text-slate-700">Slot {employeeToDelete.locationSlotId}</span>
               </div>
               {employeeToDelete.boundDeviceId && (
-                <div className="flex justify-between text-rose-400">
+                <div className="flex justify-between text-rose-600">
                   <span>Kunci Perangkat:</span>
                   <span className="font-mono">{employeeToDelete.boundDeviceId}</span>
                 </div>
               )}
             </div>
 
-            <p className="text-[11px] text-rose-300/80 bg-rose-950/40 p-2.5 rounded-lg border border-rose-900/60 leading-relaxed">
+            <p className="text-[11px] text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200 leading-relaxed">
               Peringatan: Tindakan ini akan menghapus personel dan melepaskan seluruh penugasan slot pos serta status perangkat yang terkait.
             </p>
 
@@ -999,7 +999,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               <button
                 type="button"
                 onClick={() => setEmployeeToDelete(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 rounded-xl transition-colors"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
               >
                 Batal
               </button>
@@ -1009,7 +1009,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   onDeleteEmployee(employeeToDelete.id);
                   setEmployeeToDelete(null);
                 }}
-                className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Ya, Hapus Personel</span>

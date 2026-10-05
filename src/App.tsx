@@ -9,22 +9,25 @@ import {
   WorkLocation, 
   AttendanceRecord, 
   SecurityLog,
-  NotificationItem
+  NotificationItem,
+  LeaveRequest
 } from './types';
 import { INITIAL_WORK_LOCATIONS } from './data/initialLocations';
 import { INITIAL_EMPLOYEES } from './data/initialEmployees';
 import { 
   generateInitialAttendanceRecords, 
   generateInitialSecurityLogs,
-  generateInitialNotifications 
+  generateInitialNotifications,
+  generateInitialLeaveRequests
 } from './data/initialAttendance';
-import { Header } from './components/Header';
+import { Header, AdminTabType } from './components/Header';
 import { EmployeeView } from './components/EmployeeView';
 import { LoginPortal } from './components/LoginPortal';
 import { ToastNotificationOverlay } from './components/NotificationCenter';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { WorkLocationsManager } from './components/admin/WorkLocationsManager';
 import { EmployeeManager } from './components/admin/EmployeeManager';
+import { AdminLeaveApprovals } from './components/admin/AdminLeaveApprovals';
 import { MonthlyReportView } from './components/admin/MonthlyReportView';
 import { SecurityAuditLog } from './components/admin/SecurityAuditLog';
 import { TimeSimulatorModal } from './components/TimeSimulatorModal';
@@ -40,6 +43,7 @@ import {
   subscribeAttendance,
   subscribeSecurityLogs,
   subscribeAdminPin,
+  subscribeLeaveRequests,
   syncSaveEmployee,
   syncDeleteEmployee,
   syncSaveLocation,
@@ -47,6 +51,7 @@ import {
   syncSaveAttendance,
   syncSaveSecurityLog,
   syncSaveAdminPin,
+  syncSaveLeaveRequest,
   seedInitialEmployees,
   syncArchiveAndCleanupAttendance
 } from './services/firestoreSync';
@@ -61,6 +66,7 @@ const STORAGE_KEYS = {
   CURRENT_ROLE: 'sipraja_current_role_v2',
   IS_LOGGED_IN: 'sipraja_is_logged_in_v2',
   ADMIN_PIN: 'sipraja_admin_pin_v2',
+  LEAVE_REQUESTS: 'sipraja_leave_requests_v2',
 };
 
 export default function App() {
@@ -124,6 +130,17 @@ export default function App() {
     return generateInitialNotifications();
   });
 
+  // 5b. State: Izin & Sakit (Leave Requests)
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.LEAVE_REQUESTS);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return generateInitialLeaveRequests();
+  });
+
   // Active floating toasts for immediate popup
   const [toasts, setToasts] = useState<NotificationItem[]>([]);
 
@@ -161,7 +178,7 @@ export default function App() {
   });
 
   // 9. Active Admin Sub-tab
-  const [activeAdminTab, setActiveAdminTab] = useState<'monitoring' | 'locations' | 'employees' | 'reports' | 'security'>('monitoring');
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminTabType>('monitoring');
 
   // 10. Simulated Time (Optional override for schedule validation testing)
   const [simulatedTime, setSimulatedTime] = useState<Date | null>(null);
@@ -237,12 +254,23 @@ export default function App() {
       } catch {}
     });
 
+    // 7. Subscribe to Leave Requests (Izin & Sakit)
+    const unsubLeaves = subscribeLeaveRequests((syncedLeaves) => {
+      if (syncedLeaves) {
+        setLeaveRequests(syncedLeaves);
+        try {
+          localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(syncedLeaves));
+        } catch {}
+      }
+    });
+
     return () => {
       unsubEmployees();
       unsubLocations();
       unsubAttendance();
       unsubSecurity();
       unsubPin();
+      unsubLeaves();
     };
   }, []);
 
@@ -324,6 +352,14 @@ export default function App() {
       // ignore
     }
   }, [notifications]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(leaveRequests));
+    } catch {
+      // ignore
+    }
+  }, [leaveRequests]);
 
   useEffect(() => {
     try {
@@ -587,6 +623,150 @@ export default function App() {
     syncSaveSecurityLog(log).catch(console.error);
   };
 
+  // Helper to generate dates between startDate and endDate (inclusive)
+  const getDatesInRange = (startDateStr: string, endDateStr: string): string[] => {
+    const dates: string[] = [];
+    const current = new Date(startDateStr);
+    const end = new Date(endDateStr);
+    while (current <= end) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+    return dates.length > 0 ? dates : [startDateStr];
+  };
+
+  // 1. Submit new leave/sick request (Employee -> Admin live sync)
+  const handleSubmitLeaveRequest = (request: LeaveRequest) => {
+    setLeaveRequests(prev => [request, ...prev]);
+    syncSaveLeaveRequest(request).catch(console.error);
+
+    // Notify admin
+    handleAddNotification({
+      id: `NOTIF-LEAVE-${Date.now()}`,
+      targetRole: 'admin',
+      type: 'warning',
+      title: `Pengajuan ${request.type === 'izin' ? 'Izin Dinas' : 'Surat Sakit'} Baru`,
+      message: `${request.employeeName} (${request.regu}) mengajukan permohonan ${request.type === 'izin' ? 'izin' : 'sakit'} untuk periode ${request.startDate} s/d ${request.endDate} (${request.totalDays} hari).`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+  };
+
+  // 2. Approve leave/sick request (Admin -> Automatically reflected in daily/monthly attendance)
+  const handleApproveLeaveRequest = (requestId: string, adminNote?: string) => {
+    const req = leaveRequests.find(r => r.id === requestId);
+    if (!req) return;
+
+    const nowStr = `${effectiveCurrentDate.toISOString().split('T')[0]} ${currentTimeString} WIB`;
+    const updatedRequest: LeaveRequest = {
+      ...req,
+      status: 'approved',
+      reviewedAt: nowStr,
+      reviewedBy: 'Admin Komando',
+      adminNote: adminNote || 'Disetujui oleh Komando Satpol PP.'
+    };
+
+    setLeaveRequests(prev => prev.map(r => r.id === requestId ? updatedRequest : r));
+    syncSaveLeaveRequest(updatedRequest).catch(console.error);
+
+    // Find assigned location for the employee
+    const targetEmp = employees.find(e => e.id === req.employeeId);
+    const locId = targetEmp?.locationSlotId || 1;
+    const loc = locations.find(l => l.id === locId) || locations[0];
+
+    // Automatically synchronize into Attendance Records for each date in range!
+    const dates = getDatesInRange(req.startDate, req.endDate);
+    dates.forEach(dateStr => {
+      const attendanceId = `ATT-LEAVE-${req.id}-${dateStr}`;
+      const leaveRecord: AttendanceRecord = {
+        id: attendanceId,
+        employeeId: req.employeeId,
+        employeeName: req.employeeName,
+        employeeNip: req.employeeNip,
+        date: dateStr,
+        regu: req.regu,
+        scheduleType: targetEmp?.scheduleType || 'shift',
+        locationSlotId: locId,
+        locationName: loc.name,
+        checkInTime: req.type === 'izin' ? 'IZIN' : 'SAKIT',
+        checkInStatus: req.type,
+        checkOutTime: '-',
+        notes: `[DISPOSISI ${req.type.toUpperCase()}] ${req.reason} (Disetujui Admin: ${updatedRequest.adminNote})`,
+        leaveRequestId: req.id
+      };
+
+      setAttendanceRecords(prev => {
+        const existingIdx = prev.findIndex(r => r.employeeId === req.employeeId && r.date === dateStr);
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          updated[existingIdx] = { ...updated[existingIdx], ...leaveRecord };
+          return updated;
+        } else {
+          return [leaveRecord, ...prev];
+        }
+      });
+      syncSaveAttendance(leaveRecord).catch(console.error);
+    });
+
+    // Notify employee
+    handleAddNotification({
+      id: `NOTIF-LEAVE-APP-${Date.now()}`,
+      targetRole: 'employee',
+      targetEmployeeId: req.employeeId,
+      type: 'success',
+      title: `Pengajuan ${req.type === 'izin' ? 'Izin' : 'Sakit'} Disetujui`,
+      message: `Permohonan ${req.type} Anda (${req.startDate} s/d ${req.endDate}) telah DISETUJUI oleh Admin Komando dan tersinkron otomatis ke rekap absensi.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+
+    // Audit log
+    const log: SecurityLog = {
+      id: `SEC-LEAVE-APP-${Date.now()}`,
+      timestamp: `Hari Ini, ${currentTimeString} WIB`,
+      employeeId: req.employeeId,
+      employeeName: req.employeeName,
+      eventType: 'device_reset',
+      details: `PERSETUJUAN DISPOSISI: Permohonan ${req.type.toUpperCase()} personel ${req.employeeName} (${req.totalDays} hari) disetujui Admin. Rekapitulasi absensi diperbarui otomatis.`,
+      deviceId: 'PORTAL-KOMANDO'
+    };
+    setSecurityLogs(prev => [log, ...prev]);
+    syncSaveSecurityLog(log).catch(console.error);
+  };
+
+  // 3. Reject leave/sick request
+  const handleRejectLeaveRequest = (requestId: string, adminNote?: string) => {
+    const req = leaveRequests.find(r => r.id === requestId);
+    if (!req) return;
+
+    const nowStr = `${effectiveCurrentDate.toISOString().split('T')[0]} ${currentTimeString} WIB`;
+    const updatedRequest: LeaveRequest = {
+      ...req,
+      status: 'rejected',
+      reviewedAt: nowStr,
+      reviewedBy: 'Admin Komando',
+      adminNote: adminNote || 'Permohonan ditolak karena kebutuhan operasional lapangan.'
+    };
+
+    setLeaveRequests(prev => prev.map(r => r.id === requestId ? updatedRequest : r));
+    syncSaveLeaveRequest(updatedRequest).catch(console.error);
+
+    // If there were any attendance records generated for this leaveRequestId, remove them
+    setAttendanceRecords(prev => prev.filter(r => r.leaveRequestId !== req.id));
+
+    // Notify employee
+    handleAddNotification({
+      id: `NOTIF-LEAVE-REJ-${Date.now()}`,
+      targetRole: 'employee',
+      targetEmployeeId: req.employeeId,
+      type: 'warning',
+      title: `Pengajuan ${req.type === 'izin' ? 'Izin' : 'Sakit'} Ditolak`,
+      message: `Permohonan ${req.type} Anda (${req.startDate} s/d ${req.endDate}) TIDAK DISETUJUI oleh Admin. Alasan: ${updatedRequest.adminNote}`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+  };
+
   // Admin PIN configuration handler
   const handleUpdateAdminPin = (newPin: string) => {
     setAdminPin(newPin);
@@ -809,8 +989,10 @@ export default function App() {
     );
   }
 
+  const pendingLeavesCount = leaveRequests.filter(r => r.status === 'pending').length;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-amber-600 selection:text-white">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col selection:bg-amber-500 selection:text-white">
       
       {/* Top Bar Header */}
       <Header
@@ -829,11 +1011,13 @@ export default function App() {
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
         locationsCount={locations.length}
         employeesCount={employees.length}
+        pendingLeavesCount={pendingLeavesCount}
         onOpenPrintModal={() => {
           const mapping: Record<string, PrintMenuType> = {
             monitoring: 'daily',
             locations: 'locations',
             employees: 'regu',
+            leaves: 'daily',
             reports: 'monthly',
             security: 'security'
           };
@@ -846,16 +1030,16 @@ export default function App() {
         
         {/* Simulation Banner Notice (if active - Admin only) */}
         {simulatedTime && currentRole === 'admin' && (
-          <div className="mb-6 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300 animate-in fade-in">
+          <div className="mb-6 p-3.5 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between text-xs text-amber-900 shadow-xs animate-in fade-in">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
               <span>
                 <strong>Mode Simulasi Waktu Aktif:</strong> Jam diset ke <strong>{currentTimeString} WIB</strong>. Aturan 30 menit sebelum masuk dan jam pulang tervalidasi terhadap waktu ini.
               </span>
             </div>
             <button
               onClick={() => setSimulatedTime(null)}
-              className="text-xs underline hover:text-white font-semibold ml-2 shrink-0"
+              className="text-xs underline hover:text-amber-700 font-bold ml-2 shrink-0 text-amber-800"
             >
               Kembalikan ke Waktu Nyata
             </button>
@@ -870,13 +1054,15 @@ export default function App() {
             locations={locations}
             currentDate={effectiveCurrentDate}
             attendanceRecords={attendanceRecords}
+            leaveRequests={leaveRequests}
+            onSubmitLeaveRequest={handleSubmitLeaveRequest}
             onAddAttendance={handleAddAttendance}
             onUpdateAttendance={handleUpdateAttendance}
             onAddSecurityLog={handleAddSecurityLog}
             onAddNotification={handleAddNotification}
           />
         ) : (
-          /* ADMIN VIEW: sees Command Center, 8 Pos, 150 Pegawai, Laporan Bulanan, Kunci & Audit */
+          /* ADMIN VIEW: sees Command Center, Pos Lokasi, Pegawai, Izin & Sakit, Laporan Bulanan, Kunci & Audit */
           <div className="space-y-6">
             
             {/* Active Admin Tab Content */}
@@ -916,6 +1102,14 @@ export default function App() {
               />
             )}
 
+            {activeAdminTab === 'leaves' && (
+              <AdminLeaveApprovals
+                leaveRequests={leaveRequests}
+                onApproveLeaveRequest={handleApproveLeaveRequest}
+                onRejectLeaveRequest={handleRejectLeaveRequest}
+              />
+            )}
+
             {activeAdminTab === 'reports' && (
               <MonthlyReportView
                 employees={employees}
@@ -946,11 +1140,11 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-5 text-xs text-slate-500">
+      <footer className="border-t border-slate-200/90 bg-white py-5 text-xs text-slate-500 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-amber-500" />
-            <span>
+            <Shield className="w-4 h-4 text-amber-600" />
+            <span className="text-slate-600 font-medium">
               Satuan Polisi Pamong Praja (Satpol PP) · Sistem Presensi GPS & Kunci Perangkat
             </span>
           </div>
@@ -958,12 +1152,12 @@ export default function App() {
           <div className="flex items-center gap-4">
             <button
               onClick={handleResetDemoData}
-              className="text-slate-500 hover:text-amber-400 transition-colors"
+              className="text-slate-500 hover:text-amber-700 transition-colors font-medium"
             >
               Reset Data Bawaan (150 Pegawai)
             </button>
             <span>·</span>
-            <span>Praja Wibawa</span>
+            <span className="font-semibold text-slate-700">Praja Wibawa</span>
           </div>
         </div>
       </footer>

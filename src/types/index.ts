@@ -43,9 +43,9 @@ export interface AttendanceRecord {
   locationName: string;
   
   // Check-In
-  checkInTime?: string; // HH:mm:ss
+  checkInTime?: string; // HH:mm:ss or '-'
   checkInTimestamp?: number;
-  checkInStatus?: 'tepat_waktu' | 'terlambat' | 'ditolak_waktu' | 'ditolak_lokasi' | 'ditolak_perangkat';
+  checkInStatus?: 'tepat_waktu' | 'terlambat' | 'ditolak_waktu' | 'ditolak_lokasi' | 'ditolak_perangkat' | 'izin' | 'sakit';
   checkInLat?: number;
   checkInLng?: number;
   checkInDistance?: number;
@@ -55,7 +55,7 @@ export interface AttendanceRecord {
   checkInAccuracy?: number;
   
   // Check-Out
-  checkOutTime?: string; // HH:mm:ss
+  checkOutTime?: string; // HH:mm:ss or '-'
   checkOutTimestamp?: number;
   checkOutStatus?: 'pulang_normal' | 'ditolak_waktu' | 'pulang_di_luar_radius';
   checkOutLat?: number;
@@ -66,6 +66,30 @@ export interface AttendanceRecord {
   
   notes?: string;
   antiSpoofingFlags?: string[];
+  leaveRequestId?: string;
+}
+
+export type LeaveType = 'izin' | 'sakit';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+
+export interface LeaveRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeNip: string;
+  regu: ReguType;
+  type: LeaveType;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  totalDays: number;
+  reason: string;
+  attachmentName?: string;
+  attachmentUrl?: string; // Base64 or URL
+  status: LeaveStatus;
+  appliedAt: string; // YYYY-MM-DD HH:mm
+  reviewedAt?: string;
+  reviewedBy?: string;
+  adminNote?: string;
 }
 
 export interface SecurityLog {
@@ -117,6 +141,8 @@ export interface MonthlyEmployeeReport {
   totalPresentDays: number;
   totalWorkHours: number;
   totalLateCount: number;
+  totalIzinCount?: number;
+  totalSakitCount?: number;
   disciplineRate: number; // percentage 0 - 100
   attendancePattern: string; // e.g. "Disiplin Prima (100%)", "Keterlambatan Ringan (1x)", dll.
   records: AttendanceRecord[];

@@ -4,34 +4,32 @@ service cloud.firestore {
     
     // Pegawai Satpol PP
     match /employees/{employeeId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
     
-    // 8 Pos Slot Lokasi Dinas
+    // Slot Pos Lokasi Dinas
     match /locations/{locationId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
     
     // Rekapitulasi Presensi Masuk & Pulang
     match /attendance/{recordId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if true;
+      allow read, write: if true;
+    }
+
+    // Permohonan Izin & Sakit Pegawai (Leave Requests)
+    match /leave_requests/{requestId} {
+      allow read, write: if true;
     }
     
     // Log Audit Keamanan
     match /security_logs/{logId} {
-      allow read: if true;
-      allow create: if true;
-      allow update, delete: if true;
+      allow read, write: if true;
     }
     
     // Pengaturan Sistem & PIN
     match /system_settings/{settingId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     // Health check test doc

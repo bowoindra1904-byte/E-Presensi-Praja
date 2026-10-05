@@ -90,6 +90,26 @@
         "adminPin": { "type": "string" },
         "updatedAt": { "type": "string" }
       }
+    },
+    "LeaveRequest": {
+      "title": "LeaveRequest",
+      "description": "Permohonan Izin dan Sakit Personel Satpol PP",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "employeeNip": { "type": "string" },
+        "regu": { "type": "string" },
+        "type": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "totalDays": { "type": "number" },
+        "reason": { "type": "string" },
+        "status": { "type": "string" },
+        "appliedAt": { "type": "string" }
+      },
+      "required": ["id", "employeeId", "employeeName", "type", "startDate", "endDate", "reason", "status", "appliedAt"]
     }
   },
   "firestore": {
@@ -99,11 +119,15 @@
     },
     "/locations/{locationId}": {
       "schema": { "$ref": "#/entities/WorkLocation" },
-      "description": "Koleksi 8 slot lokasi dinas Satpol PP"
+      "description": "Koleksi slot lokasi dinas Satpol PP"
     },
     "/attendance/{recordId}": {
       "schema": { "$ref": "#/entities/AttendanceRecord" },
       "description": "Koleksi transaksi presensi personel harian dan shift"
+    },
+    "/leave_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/LeaveRequest" },
+      "description": "Koleksi pengajuan dan persetujuan izin dan sakit pegawai"
     },
     "/security_logs/{logId}": {
       "schema": { "$ref": "#/entities/SecurityLog" },

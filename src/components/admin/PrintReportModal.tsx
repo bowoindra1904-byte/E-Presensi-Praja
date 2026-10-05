@@ -288,23 +288,23 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       
       {/* Modal Container */}
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden print:m-0 print:p-0 print:border-none print:shadow-none print:w-full print:h-auto print:bg-white print:text-black">
+      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden print:m-0 print:p-0 print:border-none print:shadow-none print:w-full print:h-auto print:bg-white print:text-black">
         
         {/* Modal Top Header (Screen Only) */}
-        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/90 print:hidden shrink-0">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white print:hidden shrink-0">
           <div className="flex items-center justify-between sm:justify-start gap-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
                 <Printer className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-xs sm:text-base font-bold text-white tracking-tight truncate">
+                <h3 className="text-xs sm:text-base font-bold text-slate-900 tracking-tight truncate">
                   Pusat Cetak Dokumen Satpol PP
                 </h3>
-                <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+                <p className="text-[10px] sm:text-xs text-slate-500 truncate">
                   Format cetak dinas resmi sesuai menu
                 </p>
               </div>
@@ -312,7 +312,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
             <button
               onClick={onClose}
-              className="sm:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+              className="sm:hidden p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
             >
               <X className="w-5 h-5" />
             </button>
@@ -321,16 +321,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={handleExportCSV}
-              className="flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-1 shadow-sm"
+              className="flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-1 shadow-xs"
               title="Unduh format spreadsheet untuk menu ini"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
               <span>Ekspor CSV</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1"
+              className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Cetak / PDF</span>
@@ -338,7 +338,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
             <button
               onClick={onClose}
-              className="hidden sm:block p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              className="hidden sm:block p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -346,9 +346,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         </div>
 
         {/* Menu Tabs Bar (Screen Only - Touch Scrollable on HP) */}
-        <div className="bg-slate-950/60 border-b border-slate-800/80 px-3 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none print:hidden shrink-0">
-          <span className="text-xs font-semibold text-slate-400 mr-2 flex items-center gap-1">
-            <Filter className="w-3 h-3 text-amber-500" />
+        <div className="bg-slate-50/90 border-b border-slate-200 px-3 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none print:hidden shrink-0">
+          <span className="text-xs font-semibold text-slate-500 mr-2 flex items-center gap-1">
+            <Filter className="w-3 h-3 text-amber-600" />
             Pilih Menu Cetak:
           </span>
 
@@ -356,8 +356,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             onClick={() => setActiveMenu('daily')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeMenu === 'daily'
-                ? 'bg-amber-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
             }`}
           >
             <Radio className="w-3.5 h-3.5" />
@@ -368,8 +368,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             onClick={() => setActiveMenu('monthly')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeMenu === 'monthly'
-                ? 'bg-amber-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -380,8 +380,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             onClick={() => setActiveMenu('locations')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeMenu === 'locations'
-                ? 'bg-amber-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
@@ -392,8 +392,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             onClick={() => setActiveMenu('regu')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeMenu === 'regu'
-                ? 'bg-amber-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -404,8 +404,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             onClick={() => setActiveMenu('security')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeMenu === 'security'
-                ? 'bg-amber-600 text-white shadow'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
@@ -414,25 +414,25 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         </div>
 
         {/* Filter Controls for Current Menu (Screen Only) */}
-        <div className="bg-slate-900 px-6 py-2 border-b border-slate-800 flex flex-wrap items-center gap-3 text-xs print:hidden shrink-0">
+        <div className="bg-slate-100/70 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center gap-3 text-xs print:hidden shrink-0">
           {activeMenu === 'daily' && (
             <>
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">Pilih Tanggal:</span>
+                <span className="text-slate-600 font-medium">Pilih Tanggal:</span>
                 <input
                   type="date"
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500"
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
                 />
               </div>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">Filter Regu:</span>
+                <span className="text-slate-600 font-medium">Filter Regu:</span>
                 <select
                   value={filterRegu}
                   onChange={(e) => setFilterRegu(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500"
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
                 >
                   <option value="all">Semua Regu & Harian</option>
                   <option value="Regu 1">Regu 1</option>
@@ -444,13 +444,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">Filter Pos:</span>
+                <span className="text-slate-600 font-medium">Filter Pos:</span>
                 <select
                   value={filterSlot}
                   onChange={(e) => setFilterSlot(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500 max-w-[180px] truncate"
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 max-w-[180px] truncate shadow-xs"
                 >
-                  <option value="all">Semua 8 Pos Kerja</option>
+                  <option value="all">Semua {locations.length} Pos Kerja</option>
                   {locations.map(l => (
                     <option key={l.id} value={String(l.id)}>Slot {l.slotNumber}: {l.name.replace(/^Slot \d+:\s*/, '')}</option>
                   ))}
@@ -462,11 +462,11 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           {activeMenu === 'monthly' && (
             <>
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">Bulan Laporan:</span>
+                <span className="text-slate-600 font-medium">Bulan Laporan:</span>
                 <select
                   value={filterMonth}
                   onChange={(e) => setFilterMonth(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500"
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
                 >
                   <option value="2026-09">September 2026</option>
                   <option value="2026-08">Agustus 2026</option>
@@ -475,11 +475,11 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">Filter Regu:</span>
+                <span className="text-slate-600 font-medium">Filter Regu:</span>
                 <select
                   value={filterRegu}
                   onChange={(e) => setFilterRegu(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500"
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
                 >
                   <option value="all">Semua Regu</option>
                   <option value="Regu 1">Regu 1</option>
@@ -491,13 +491,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">Filter Pos:</span>
+                <span className="text-slate-600 font-medium">Filter Pos:</span>
                 <select
                   value={filterSlot}
                   onChange={(e) => setFilterSlot(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500 max-w-[180px] truncate"
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 max-w-[180px] truncate shadow-xs"
                 >
-                  <option value="all">Semua 8 Pos Kerja</option>
+                  <option value="all">Semua {locations.length} Pos Kerja</option>
                   {locations.map(l => (
                     <option key={l.id} value={String(l.id)}>Slot {l.slotNumber}: {l.name.replace(/^Slot \d+:\s*/, '')}</option>
                   ))}
@@ -508,11 +508,11 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
           {activeMenu === 'regu' && (
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-400">Pilihan Tampilan Regu:</span>
+              <span className="text-slate-600 font-medium">Pilihan Tampilan Regu:</span>
               <select
                 value={filterRegu}
                 onChange={(e) => setFilterRegu(e.target.value)}
-                className="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-amber-500"
+                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
               >
                 <option value="all">Seluruh Personel (Regu 1 - 4 & Harian)</option>
                 <option value="Regu 1">Hanya Regu 1 (Shift 12 Jam)</option>
@@ -529,41 +529,41 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsEditingSignConfig(!isEditingSignConfig)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-sm ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-xs ${
                   isEditingSignConfig
-                    ? 'bg-amber-600 text-white border-amber-500 shadow-md'
-                    : 'bg-slate-800 text-amber-300 hover:text-white border-slate-700 hover:bg-slate-700'
+                    ? 'bg-amber-600 text-white border-amber-600'
+                    : 'bg-white text-amber-800 hover:text-amber-900 border-amber-300 hover:bg-amber-50'
                 }`}
                 title="Buka menu edit tanggal, alamat dan penanda tangan"
               >
-                <PenTool className="w-3.5 h-3.5 text-amber-400" />
+                <PenTool className="w-3.5 h-3.5 text-amber-600" />
                 <span>{isEditingSignConfig ? 'Tutup Edit Pengesahan' : 'Edit Tanggal, Alamat & Penanda Tangan'}</span>
                 {isEditingSignConfig ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
               </button>
             )}
 
-            <span className="text-[11px] text-slate-400 hidden sm:inline">
-              Total: <strong className="text-white">{employees.length} Pegawai</strong>
+            <span className="text-[11px] text-slate-500 hidden sm:inline">
+              Total: <strong className="text-slate-900">{employees.length} Pegawai</strong>
             </span>
           </div>
         </div>
 
         {/* Menu Edit Tanggal, Alamat & Penanda Tangan (Khusus Laporan Bulanan & Cetak) */}
         {isEditingSignConfig && (
-          <div className="bg-slate-950 border-b border-amber-500/30 p-4 sm:p-5 print:hidden space-y-4 animate-in slide-in-from-top-2 duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-3">
+          <div className="bg-amber-50/50 border-b border-amber-200 p-4 sm:p-5 print:hidden space-y-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-amber-200/80 gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                <div className="p-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-800">
                   <PenTool className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
                     Menu Edit Tanggal, Alamat & Penanda Tangan Laporan Bulanan
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold">
                       Live Preview & Disimpan
                     </span>
                   </h4>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Kop Surat resmi: SATPOL PP KABUPATEN BANGKA BARAT · Alamat dan nomor surat telah ditiadakan sesuai format baku
                   </p>
                 </div>
@@ -573,16 +573,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 <button
                   type="button"
                   onClick={handleResetSignConfig}
-                  className="px-2.5 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors flex items-center gap-1"
+                  className="px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
                   title="Kembalikan nama pejabat ke default Satpol PP Bangka Barat"
                 >
-                  <RotateCcw className="w-3 h-3 text-rose-400" />
+                  <RotateCcw className="w-3 h-3 text-rose-500" />
                   <span>Reset Bawaan</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsEditingSignConfig(false)}
-                  className="px-3.5 py-1.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg transition-colors flex items-center gap-1 shadow"
+                  className="px-3.5 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Tutup & Terapkan</span>
@@ -594,14 +594,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               
               {/* Kolom 1: Alamat (Kota) & Tanggal */}
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
-                <div className="flex items-center gap-1.5 font-bold text-amber-400 border-b border-slate-800 pb-1.5">
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-xs">
+                <div className="flex items-center gap-1.5 font-bold text-amber-700 border-b border-slate-100 pb-1.5">
                   <MapPin className="w-3.5 h-3.5" />
                   <span>1. Alamat (Kota) & Tanggal Pengesahan</span>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 font-semibold block mb-1">
+                  <label className="text-[11px] text-slate-600 font-semibold block mb-1">
                     Alamat / Kota Tempat Pengesahan:
                   </label>
                   <input
@@ -609,15 +609,15 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     value={signConfig.locationCity}
                     onChange={(e) => handleUpdateSignConfig({ locationCity: e.target.value })}
                     placeholder="Contoh: Muntok / Muntok, Bangka Barat"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-500 font-medium"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
                   />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
                     Format cetak: "{signConfig.locationCity}, {signConfig.customDate}"
                   </span>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 font-semibold block mb-1">
+                  <label className="text-[11px] text-slate-600 font-semibold block mb-1">
                     Tanggal Pengesahan Dokumen:
                   </label>
                   <input
@@ -625,7 +625,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     value={signConfig.customDate}
                     onChange={(e) => handleUpdateSignConfig({ customDate: e.target.value })}
                     placeholder="Contoh: 30 September 2026"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-500 font-medium"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
                   />
                 </div>
 
@@ -634,14 +634,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleUpdateSignConfig({ customDate: '30 September 2026' })}
-                    className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] rounded border border-slate-700"
+                    className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] rounded border border-slate-200"
                   >
                     30 Sep 2026
                   </button>
                   <button
                     type="button"
                     onClick={() => handleUpdateSignConfig({ customDate: '31 Oktober 2026' })}
-                    className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] rounded border border-slate-700"
+                    className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] rounded border border-slate-200"
                   >
                     31 Okt 2026
                   </button>
@@ -650,7 +650,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     onClick={() => handleUpdateSignConfig({ 
                       customDate: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) 
                     })}
-                    className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] rounded border border-slate-700"
+                    className="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] rounded border border-amber-200"
                   >
                     Hari Ini
                   </button>
@@ -658,14 +658,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
 
               {/* Kolom 2: Penanda Tangan Kiri (Pemeriksa / Verifikator) */}
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
-                <div className="flex items-center gap-1.5 font-bold text-amber-400 border-b border-slate-800 pb-1.5">
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-xs">
+                <div className="flex items-center gap-1.5 font-bold text-amber-700 border-b border-slate-100 pb-1.5">
                   <Users className="w-3.5 h-3.5" />
                   <span>2. Pejabat Pemeriksa (Kiri)</span>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 font-semibold block mb-1">
+                  <label className="text-[11px] text-slate-600 font-semibold block mb-1">
                     Jabatan Pemeriksa:
                   </label>
                   <input
@@ -673,12 +673,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     value={signConfig.signatory1Role}
                     onChange={(e) => handleUpdateSignConfig({ signatory1Role: e.target.value })}
                     placeholder="Perwira Piket / Kasubag Tata Usaha"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 font-semibold block mb-1">
+                  <label className="text-[11px] text-slate-600 font-semibold block mb-1">
                     Nama Lengkap & Gelar:
                   </label>
                   <input
@@ -686,43 +686,43 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     value={signConfig.signatory1Name}
                     onChange={(e) => handleUpdateSignConfig({ signatory1Name: e.target.value })}
                     placeholder="AGUS PRASETYO, A.Md."
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-semibold focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 font-semibold focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-slate-300 font-semibold block mb-0.5">Pangkat / Gol:</label>
+                    <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">Pangkat / Gol:</label>
                     <input
                       type="text"
                       value={signConfig.signatory1Rank}
                       onChange={(e) => handleUpdateSignConfig({ signatory1Rank: e.target.value })}
                       placeholder="Penata Muda (III/a)"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white text-[11px]"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-slate-900 text-[11px]"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-300 font-semibold block mb-0.5">NIP Pejabat:</label>
+                    <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">NIP Pejabat:</label>
                     <input
                       type="text"
                       value={signConfig.signatory1Nip}
                       onChange={(e) => handleUpdateSignConfig({ signatory1Nip: e.target.value })}
                       placeholder="19920120 201402 1 003"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-[11px]"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-slate-900 font-mono text-[11px]"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Kolom 3: Penanda Tangan Kanan (Kasatpol PP) */}
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
-                <div className="flex items-center gap-1.5 font-bold text-amber-400 border-b border-slate-800 pb-1.5">
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-xs">
+                <div className="flex items-center gap-1.5 font-bold text-amber-700 border-b border-slate-100 pb-1.5">
                   <Shield className="w-3.5 h-3.5" />
                   <span>3. Pejabat Pengesah / Kasatpol PP (Kanan)</span>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 font-semibold block mb-1">
+                  <label className="text-[11px] text-slate-600 font-semibold block mb-1">
                     Jabatan Pengesah:
                   </label>
                   <input
@@ -730,12 +730,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     value={signConfig.signatory2Role}
                     onChange={(e) => handleUpdateSignConfig({ signatory2Role: e.target.value })}
                     placeholder="KEPALA SATUAN POLISI PAMONG PRAJA KABUPATEN BANGKA BARAT"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-amber-500 font-medium"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-slate-300 font-semibold block mb-1">
+                  <label className="text-[11px] text-slate-600 font-semibold block mb-1">
                     Nama Pejabat & Gelar:
                   </label>
                   <input
@@ -743,29 +743,29 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     value={signConfig.signatory2Name}
                     onChange={(e) => handleUpdateSignConfig({ signatory2Name: e.target.value })}
                     placeholder="SIDARTA GAUTAMA, S.STP"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-bold focus:outline-none focus:border-amber-500 uppercase"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 font-bold focus:outline-none focus:border-amber-500 uppercase"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-slate-300 font-semibold block mb-0.5">Pangkat / Gol:</label>
+                    <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">Pangkat / Gol:</label>
                     <input
                       type="text"
                       value={signConfig.signatory2Rank}
                       onChange={(e) => handleUpdateSignConfig({ signatory2Rank: e.target.value })}
                       placeholder="Pembina Utama Muda (IV/c)"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white text-[11px]"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-slate-900 text-[11px]"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-300 font-semibold block mb-0.5">NIP Pejabat:</label>
+                    <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">NIP Pejabat:</label>
                     <input
                       type="text"
                       value={signConfig.signatory2Nip}
                       onChange={(e) => handleUpdateSignConfig({ signatory2Nip: e.target.value })}
                       placeholder="19740512 199903 1 002"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-[11px]"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-slate-900 font-mono text-[11px]"
                     />
                   </div>
                 </div>
@@ -776,7 +776,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         )}
 
         {/* Scrollable Printable Paper Container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-950/40 print:p-0 print:overflow-visible print:bg-white">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 print:p-0 print:overflow-visible print:bg-white">
           
           {/* Printable White Paper Sheet */}
           <div className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl p-8 sm:p-10 shadow-xl border border-slate-200 print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full">
@@ -1178,21 +1178,50 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
             )}
 
-            {/* 4. LEMBAR PENGESAHAN / TANDA TANGAN RESMI (DIPERBARUI DENGAN SIGNCONFIG) */}
-            <div className="mt-10 pt-6 border-t border-slate-300 text-xs">
-              <div className="flex justify-between items-start gap-8">
+            {/* 4. LEMBAR PENGESAHAN / TANDA TANGAN RESMI (SEJAJAR PRESISI KIRI & KANAN) */}
+            <div className="mt-10 pt-6 border-t border-slate-300 text-xs break-inside-avoid print:break-inside-avoid">
+              <div className="grid grid-cols-2 gap-x-12 gap-y-0 text-center max-w-3xl mx-auto">
                 
-                {/* Tanda Tangan Kiri: Petugas Jaga / Operator / Verifikator */}
-                <div className="text-center w-64">
-                  <p className="text-slate-600 text-[11px]">Dibuat & Diverifikasi Oleh:</p>
-                  <p className="font-bold text-slate-900 mt-1 leading-snug">{signConfig.signatory1Role}</p>
-                  <div className="h-20 flex items-center justify-center text-slate-300 italic text-[10px]">
-                    (Cap & Tanda Tangan Sah)
-                  </div>
-                  <p className="font-bold text-slate-900 underline underline-offset-2">
+                {/* Baris 1: Header Jabatan Penanda Tangan (Flex ke bawah agar baseline jabatan presisi sejajar) */}
+                <div className="flex flex-col justify-end pb-1 px-2">
+                  <p className="text-slate-600 text-[11px] invisible select-none leading-normal">
+                    &nbsp;
+                  </p>
+                  <p className="text-slate-600 text-[11px] font-medium leading-normal">
+                    Dibuat & Diverifikasi Oleh:
+                  </p>
+                  <p className="font-bold text-slate-900 mt-1 leading-snug uppercase min-h-[2.5rem] flex items-center justify-center">
+                    {signConfig.signatory1Role}
+                  </p>
+                </div>
+
+                <div className="flex flex-col justify-end pb-1 px-2">
+                  <p className="text-slate-600 text-[11px] font-medium leading-normal">
+                    {signConfig.locationCity}, {signConfig.customDate}
+                  </p>
+                  <p className="text-slate-600 text-[11px] font-medium leading-normal">
+                    Mengetahui,
+                  </p>
+                  <p className="font-bold text-slate-900 mt-1 leading-snug uppercase min-h-[2.5rem] flex items-center justify-center">
+                    {signConfig.signatory2Role}
+                  </p>
+                </div>
+
+                {/* Baris 2: Ruang Tanda Tangan & Cap Stempel Dinas (Ketinggian Mutlak Sama) */}
+                <div className="h-20 flex items-center justify-center text-slate-300 italic text-[10px]">
+                  (Cap & Tanda Tangan Sah)
+                </div>
+
+                <div className="h-20 flex items-center justify-center text-slate-300 italic text-[10px]">
+                  (Cap Stempel Dinas Satpol PP)
+                </div>
+
+                {/* Baris 3: Nama Lengkap Penanda Tangan, Pangkat & NIP (100% SEJAJAR HORIZONTAL) */}
+                <div className="pt-0.5 px-2">
+                  <p className="font-bold text-slate-900 underline underline-offset-4 text-xs tracking-wide">
                     {signConfig.signatory1Name}
                   </p>
-                  <p className="text-[10px] text-slate-600 font-medium">
+                  <p className="text-[10px] text-slate-600 font-medium mt-1">
                     {signConfig.signatory1Rank}
                   </p>
                   <p className="text-[10px] text-slate-600 font-mono">
@@ -1200,22 +1229,11 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   </p>
                 </div>
 
-                {/* Tanda Tangan Kanan: Kasatpol PP dengan Alamat (Kota) & Tanggal */}
-                <div className="text-center w-72">
-                  <p className="text-slate-600 text-[11px] font-medium">
-                    {signConfig.locationCity}, {signConfig.customDate}
-                  </p>
-                  <p className="font-bold text-slate-900 mt-1 leading-snug">
-                    Mengetahui,<br />
-                    <span className="uppercase">{signConfig.signatory2Role}</span>
-                  </p>
-                  <div className="h-20 flex items-center justify-center text-slate-300 italic text-[10px]">
-                    (Cap Stempel Dinas Satpol PP)
-                  </div>
-                  <p className="font-bold text-slate-900 underline underline-offset-2 uppercase">
+                <div className="pt-0.5 px-2">
+                  <p className="font-bold text-slate-900 underline underline-offset-4 text-xs tracking-wide uppercase">
                     {signConfig.signatory2Name}
                   </p>
-                  <p className="text-[10px] text-slate-600 font-medium">
+                  <p className="text-[10px] text-slate-600 font-medium mt-1">
                     {signConfig.signatory2Rank}
                   </p>
                   <p className="text-[10px] text-slate-600 font-mono">

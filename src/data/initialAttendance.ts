@@ -1,4 +1,4 @@
-import { AttendanceRecord, SecurityLog, NotificationItem } from '../types';
+import { AttendanceRecord, SecurityLog, NotificationItem, LeaveRequest } from '../types';
 import { INITIAL_EMPLOYEES } from './initialEmployees';
 
 export function getTodayDateString(): string {
@@ -299,3 +299,56 @@ export function generateInitialNotifications(): NotificationItem[] {
     }
   ];
 }
+
+export function generateInitialLeaveRequests(): LeaveRequest[] {
+  const today = getTodayDateString();
+  return [
+    {
+      id: "LEAVE-REQ-001",
+      employeeId: "POLPP-006",
+      employeeName: "Rudi Hartono",
+      employeeNip: "19940608 201703 1 006",
+      regu: "Regu 2",
+      type: "sakit",
+      startDate: today,
+      endDate: today,
+      totalDays: 1,
+      reason: "Demam tinggi dan flu berat sesuai rujukan dokter klinik dinas.",
+      attachmentName: "surat_keterangan_dokter_klinik.pdf",
+      status: "pending",
+      appliedAt: "Hari ini, 06:45 WIB"
+    },
+    {
+      id: "LEAVE-REQ-002",
+      employeeId: "POLPP-007",
+      employeeName: "Siti Rahmawati",
+      employeeNip: "19951112 201804 2 007",
+      regu: "Regu 3",
+      type: "izin",
+      startDate: today,
+      endDate: today,
+      totalDays: 1,
+      reason: "Izin keperluan keluarga mendesak (orang tua opname di RSUD).",
+      status: "pending",
+      appliedAt: "Hari ini, 07:10 WIB"
+    },
+    {
+      id: "LEAVE-REQ-003",
+      employeeId: "POLPP-008",
+      employeeName: "Wahyu Hidayat",
+      employeeNip: "19900215 201201 1 008",
+      regu: "Regu 4",
+      type: "izin",
+      startDate: "2026-10-02",
+      endDate: "2026-10-03",
+      totalDays: 2,
+      reason: "Menghadiri wisuda adik kandung di luar kota.",
+      status: "approved",
+      appliedAt: "2026-10-01 14:20 WIB",
+      reviewedAt: "2026-10-01 16:30 WIB",
+      reviewedBy: "Admin Komando",
+      adminNote: "Disetujui. Harap kembali bertugas tepat waktu pada jadwal shift berikutnya."
+    }
+  ];
+}
+

@@ -8,9 +8,10 @@ import {
   writeBatch 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Employee, WorkLocation, AttendanceRecord, SecurityLog } from '../types';
+import { Employee, WorkLocation, AttendanceRecord, SecurityLog, LeaveRequest } from '../types';
 import { INITIAL_EMPLOYEES } from '../data/initialEmployees';
 import { INITIAL_WORK_LOCATIONS } from '../data/initialLocations';
+import { generateInitialLeaveRequests } from '../data/initialAttendance';
 
 // 1. Subscribe to Employees with auto-seed of 150 personnel
 export function subscribeEmployees(onData: (employees: Employee[]) => void) {
@@ -120,6 +121,30 @@ export function subscribeAdminPin(onData: (pin: string) => void) {
   });
 }
 
+// 6. Subscribe to Leave Requests (Izin & Sakit)
+export function subscribeLeaveRequests(onData: (requests: LeaveRequest[]) => void) {
+  const leaveCol = collection(db, 'leave_requests');
+  
+  return onSnapshot(leaveCol, async (snapshot) => {
+    if (snapshot.empty) {
+      console.log('Firestore leave_requests empty. Seeding initial sample requests...');
+      await seedInitialLeaveRequests();
+      return;
+    }
+
+    const items: LeaveRequest[] = [];
+    snapshot.forEach(docSnap => {
+      items.push(docSnap.data() as LeaveRequest);
+    });
+
+    // Sort newest application first
+    items.sort((a, b) => (b.appliedAt || '').localeCompare(a.appliedAt || ''));
+    onData(items);
+  }, (err) => {
+    console.error('Error subscribing to leave requests:', err);
+  });
+}
+
 // Utility to strip all `undefined` fields recursively so Firestore never throws unsupported field value error
 function cleanFirestoreData<T>(obj: T): any {
   if (obj === null || obj === undefined) return null;
@@ -155,6 +180,16 @@ export async function syncSaveAttendance(record: AttendanceRecord): Promise<void
 export async function syncSaveSecurityLog(log: SecurityLog): Promise<void> {
   const docRef = doc(db, 'security_logs', log.id);
   await setDoc(docRef, cleanFirestoreData(log), { merge: true });
+}
+
+export async function syncSaveLeaveRequest(request: LeaveRequest): Promise<void> {
+  const docRef = doc(db, 'leave_requests', request.id);
+  await setDoc(docRef, cleanFirestoreData(request), { merge: true });
+}
+
+export async function syncDeleteLeaveRequest(requestId: string): Promise<void> {
+  const docRef = doc(db, 'leave_requests', requestId);
+  await deleteDoc(docRef);
 }
 
 export async function syncSaveAdminPin(newPin: string): Promise<void> {
@@ -205,6 +240,16 @@ export async function seedInitialLocations(): Promise<void> {
   for (const loc of INITIAL_WORK_LOCATIONS) {
     const docRef = doc(db, 'locations', String(loc.id));
     batch.set(docRef, cleanFirestoreData(loc), { merge: true });
+  }
+  await batch.commit();
+}
+
+export async function seedInitialLeaveRequests(): Promise<void> {
+  const initial = generateInitialLeaveRequests();
+  const batch = writeBatch(db);
+  for (const req of initial) {
+    const docRef = doc(db, 'leave_requests', req.id);
+    batch.set(docRef, cleanFirestoreData(req), { merge: true });
   }
   await batch.commit();
 }

@@ -174,7 +174,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-950/70 rounded-2xl border border-slate-800 w-full max-w-sm mx-auto">
+    <div className="flex flex-col items-center justify-center p-3 sm:p-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs w-full max-w-sm mx-auto">
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Hidden native camera input for HP direct access */}
@@ -188,13 +188,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       />
 
       {photoUrl ? (
-        <div className="w-full max-w-[260px] aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden bg-slate-900 border-2 border-emerald-500/80 relative shadow-xl">
+        <div className="w-full max-w-[260px] aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden bg-slate-100 border-2 border-emerald-500 relative shadow-sm">
           <img
             src={photoUrl}
             alt="Swafoto Presensi"
             className="w-full h-full object-cover"
           />
-          <div className="absolute top-2 right-2 bg-emerald-600/90 text-white rounded-full p-1 shadow">
+          <div className="absolute top-2 right-2 bg-emerald-600 text-white rounded-full p-1 shadow-sm">
             <CheckCircle2 className="w-4 h-4" />
           </div>
           <button
@@ -202,14 +202,14 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
               onClearPhoto();
               startCamera();
             }}
-            className="absolute bottom-2 left-2 right-2 bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-slate-700 backdrop-blur-sm shadow-md"
+            className="absolute bottom-2 left-2 right-2 bg-slate-900/90 hover:bg-slate-900 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-slate-700 backdrop-blur-sm shadow-md"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Ambil Foto Ulang
           </button>
         </div>
       ) : (
-        <div className="w-full max-w-[260px] aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-slate-700 relative flex flex-col items-center justify-center shadow-inner">
+        <div className="w-full max-w-[260px] aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-slate-300 relative flex flex-col items-center justify-center shadow-inner">
           <video
             ref={videoRef}
             autoPlay
@@ -223,13 +223,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
               {cameraError ? (
                 <>
                   <AlertCircle className="w-7 h-7 text-amber-500 shrink-0" />
-                  <p className="text-xs text-slate-200 font-semibold">Gunakan Kamera HP</p>
-                  <p className="text-[10px] text-slate-400">Pilih salah satu metode di bawah:</p>
+                  <p className="text-xs text-white font-semibold">Gunakan Kamera HP</p>
+                  <p className="text-[10px] text-slate-300">Pilih salah satu metode di bawah:</p>
                   <div className="flex flex-col gap-1.5 w-full px-2">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-2 px-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow"
+                      className="w-full py-2 px-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                     >
                       <Smartphone className="w-4 h-4" />
                       <span>Buka Kamera HP</span>
@@ -253,7 +253,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                    className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md"
                   >
                     <Smartphone className="w-4 h-4" />
                     <span>Buka Kamera HP (Swafoto)</span>
@@ -276,7 +276,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
               <button
                 type="button"
                 onClick={captureSnapshot}
-                className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2 px-5 rounded-full shadow-lg flex items-center gap-1.5 transition-all transform active:scale-95 border border-amber-400/40"
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 px-5 rounded-full shadow-lg flex items-center gap-1.5 transition-all transform active:scale-95 border border-amber-400/40"
               >
                 <Camera className="w-4 h-4" />
                 Jepret Selfie
@@ -293,7 +293,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           )}
         </div>
       )}
-      <span className="text-[10px] sm:text-[10.5px] text-slate-400 mt-2 text-center">
+      <span className="text-[10px] sm:text-[10.5px] text-slate-500 mt-2 text-center">
         {photoUrl ? "Foto selfie terverifikasi untuk bukti kehadiran" : "Wajib foto wajah mengenakan seragam dinas"}
       </span>
     </div>

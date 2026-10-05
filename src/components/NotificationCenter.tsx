@@ -46,17 +46,17 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const getIcon = (type: NotificationItem['type']) => {
     switch (type) {
       case 'success':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+        return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
       case 'late':
-        return <Clock className="w-4 h-4 text-amber-400" />;
+        return <Clock className="w-4 h-4 text-amber-600" />;
       case 'invalid_time':
-        return <AlertTriangle className="w-4 h-4 text-rose-400" />;
+        return <AlertTriangle className="w-4 h-4 text-rose-600" />;
       case 'checkout_reminder':
-        return <Sparkles className="w-4 h-4 text-sky-400" />;
+        return <Sparkles className="w-4 h-4 text-sky-600" />;
       case 'security':
-        return <ShieldAlert className="w-4 h-4 text-rose-500" />;
+        return <ShieldAlert className="w-4 h-4 text-rose-600" />;
       default:
-        return <Bell className="w-4 h-4 text-amber-400" />;
+        return <Bell className="w-4 h-4 text-amber-600" />;
     }
   };
 
@@ -65,12 +65,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors"
+        className="relative p-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 shadow-2xs transition-colors"
         title="Notifikasi Real-time"
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 px-1 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-lg animate-pulse">
+          <span className="absolute -top-1 -right-1 flex h-4.5 min-w-4.5 px-1 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -83,14 +83,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="fixed sm:absolute inset-x-2.5 sm:inset-x-auto top-14 sm:top-full mt-2 sm:right-0 sm:w-96 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in duration-150">
+          <div className="fixed sm:absolute inset-x-2.5 sm:inset-x-auto top-14 sm:top-full mt-2 sm:right-0 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in duration-150">
             {/* Popover Header */}
-            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-amber-400" />
-                <h4 className="text-xs font-bold text-white">Notifikasi Real-Time</h4>
+                <Bell className="w-4 h-4 text-amber-600" />
+                <h4 className="text-xs font-bold text-slate-900">Notifikasi Real-Time</h4>
                 {unreadCount > 0 && (
-                  <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.2 rounded-full font-mono">
+                  <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded-full font-mono font-semibold">
                     {unreadCount} baru
                   </span>
                 )}
@@ -98,7 +98,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               {unreadCount > 0 && (
                 <button
                   onClick={onMarkAllAsRead}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+                  className="text-[11px] font-semibold text-amber-700 hover:text-amber-800 transition-colors"
                 >
                   Tandai Dibaca
                 </button>
@@ -106,32 +106,32 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             </div>
 
             {/* List */}
-            <div className="max-h-80 overflow-y-auto divide-y divide-slate-800/80">
+            <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
               {visibleNotifications.length > 0 ? (
                 visibleNotifications.map((n) => (
                   <div
                     key={n.id}
                     onClick={() => onMarkAsRead(n.id)}
                     className={`p-3.5 transition-colors cursor-pointer flex items-start gap-3 ${
-                      !n.read ? 'bg-slate-800/40 hover:bg-slate-800/60' : 'hover:bg-slate-800/20 opacity-80'
+                      !n.read ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50 opacity-90'
                     }`}
                   >
-                    <div className="p-1.5 rounded-lg bg-slate-950/80 shrink-0 mt-0.5 border border-slate-800">
+                    <div className="p-1.5 rounded-lg bg-white shrink-0 mt-0.5 border border-slate-200 shadow-2xs">
                       {getIcon(n.type)}
                     </div>
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between gap-1">
-                        <span className={`text-xs font-bold ${!n.read ? 'text-white' : 'text-slate-300'}`}>
+                        <span className={`text-xs font-bold ${!n.read ? 'text-slate-900' : 'text-slate-700'}`}>
                           {n.title}
                         </span>
                         {!n.read && (
                           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
                         {n.message}
                       </p>
-                      <span className="text-[10px] text-slate-500 block font-mono">
+                      <span className="text-[10px] text-slate-400 block font-mono">
                         {n.timestamp}
                       </span>
                     </div>
@@ -145,11 +145,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             </div>
 
             {/* Popover Footer */}
-            <div className="px-4 py-2 border-t border-slate-800 bg-slate-950/50 text-[10px] text-slate-400 flex items-center justify-between">
+            <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 text-[10px] text-slate-500 flex items-center justify-between">
               <span>{currentUserRole === 'admin' ? "Notifikasi Komando Satpol PP" : "Notifikasi Personel"}</span>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-700 font-semibold"
               >
                 Tutup
               </button>
@@ -173,30 +173,30 @@ export const ToastNotificationOverlay: React.FC<{
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto p-4 rounded-xl border shadow-2xl backdrop-blur-md flex items-start gap-3 animate-in slide-in-from-bottom duration-300 ${
+          className={`pointer-events-auto p-4 rounded-2xl border shadow-xl backdrop-blur-md flex items-start gap-3 animate-in slide-in-from-bottom duration-300 ${
             toast.type === 'late'
-              ? 'bg-amber-950/90 border-amber-500/50 text-amber-200'
+              ? 'bg-white border-amber-300 text-amber-950'
               : toast.type === 'invalid_time' || toast.type === 'security'
-              ? 'bg-rose-950/90 border-rose-500/50 text-rose-200'
+              ? 'bg-white border-rose-300 text-rose-950'
               : toast.type === 'checkout_reminder'
-              ? 'bg-sky-950/90 border-sky-500/50 text-sky-200'
-              : 'bg-slate-900/95 border-emerald-500/50 text-slate-100'
+              ? 'bg-white border-sky-300 text-sky-950'
+              : 'bg-white border-emerald-300 text-emerald-950'
           }`}
         >
           <div className="shrink-0 mt-0.5">
-            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-            {toast.type === 'late' && <Clock className="w-5 h-5 text-amber-400" />}
-            {(toast.type === 'invalid_time' || toast.type === 'security') && <AlertTriangle className="w-5 h-5 text-rose-400" />}
-            {toast.type === 'checkout_reminder' && <Sparkles className="w-5 h-5 text-sky-400" />}
+            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+            {toast.type === 'late' && <Clock className="w-5 h-5 text-amber-600" />}
+            {(toast.type === 'invalid_time' || toast.type === 'security') && <AlertTriangle className="w-5 h-5 text-rose-600" />}
+            {toast.type === 'checkout_reminder' && <Sparkles className="w-5 h-5 text-sky-600" />}
           </div>
           <div className="flex-1">
-            <h5 className="text-xs font-bold text-white">{toast.title}</h5>
-            <p className="text-[11px] mt-0.5 leading-relaxed opacity-90">{toast.message}</p>
-            <span className="text-[9px] font-mono opacity-60 block mt-1">{toast.timestamp}</span>
+            <h5 className="text-xs font-bold text-slate-900">{toast.title}</h5>
+            <p className="text-[11px] mt-0.5 leading-relaxed text-slate-600">{toast.message}</p>
+            <span className="text-[9px] font-mono text-slate-400 block mt-1">{toast.timestamp}</span>
           </div>
           <button
             onClick={() => onDismiss(toast.id)}
-            className="text-slate-400 hover:text-white p-1"
+            className="text-slate-400 hover:text-slate-700 p-1"
           >
             <X className="w-3.5 h-3.5" />
           </button>
