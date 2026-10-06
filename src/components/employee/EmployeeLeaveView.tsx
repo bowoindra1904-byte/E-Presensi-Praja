@@ -19,6 +19,7 @@ interface EmployeeLeaveViewProps {
   leaveRequests: LeaveRequest[];
   onSubmitLeaveRequest: (request: LeaveRequest) => void;
   currentDate: Date;
+  initialType?: LeaveType;
 }
 
 export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
@@ -26,11 +27,12 @@ export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
   leaveRequests,
   onSubmitLeaveRequest,
   currentDate,
+  initialType = 'izin',
 }) => {
   const todayStr = currentDate.toISOString().split('T')[0];
 
   // Form State
-  const [leaveType, setLeaveType] = useState<LeaveType>('izin');
+  const [leaveType, setLeaveType] = useState<LeaveType>(initialType);
   const [startDate, setStartDate] = useState<string>(todayStr);
   const [endDate, setEndDate] = useState<string>(todayStr);
   const [reason, setReason] = useState<string>('');
@@ -38,6 +40,13 @@ export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
   const [attachmentUrl, setAttachmentUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
+  // Sync if initialType changes from outside
+  React.useEffect(() => {
+    if (initialType) {
+      setLeaveType(initialType);
+    }
+  }, [initialType]);
 
   // Calculate day count
   const calculateDays = (start: string, end: string) => {
@@ -121,7 +130,7 @@ export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <HeartHandshake className="w-5 h-5 text-amber-600" />
@@ -149,7 +158,7 @@ export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Form Card */}
-        <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="lg:col-span-5 bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <FileText className="w-4 h-4 text-amber-600" />
             <h3 className="text-sm font-bold text-slate-900">Formulir Pengajuan Baru</h3>
@@ -282,7 +291,7 @@ export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
         </div>
 
         {/* History List (Right) */}
-        <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="lg:col-span-7 bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-amber-600" />

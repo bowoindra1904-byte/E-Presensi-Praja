@@ -35,8 +35,8 @@ import {
   HeartHandshake, 
   Fingerprint,
   RotateCcw,
-  Menu,
-  X
+  Stethoscope,
+  FileText
 } from 'lucide-react';
 
 interface EmployeeViewProps {
@@ -52,7 +52,7 @@ interface EmployeeViewProps {
   onAddNotification: (notif: NotificationItem) => void;
 }
 
-export type EmployeeTab = 'presence' | 'recap' | 'leave';
+export type EmployeeTab = 'presence' | 'recap' | 'leave_izin' | 'leave_sakit' | 'leave';
 
 export const EmployeeView: React.FC<EmployeeViewProps> = ({
   employee,
@@ -68,7 +68,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 }) => {
   // Navigation tab on sidebar
   const [activeTab, setActiveTab] = useState<EmployeeTab>('presence');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const location = locations.find(l => l.id === employee.locationSlotId) || locations[0] || {
     id: 1,
@@ -387,117 +386,285 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6">
       
-      {/* Officer Personal Dignity Card (Clean, luminous, elegant light card) */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-xs relative">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Officer Personal Dignity Card (Compact & streamlined for mobile) */}
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xs relative">
+        <div className="flex items-center justify-between gap-3">
           
-          <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-700 font-bold text-lg shrink-0 shadow-inner">
-              <UserCheck className="w-6 h-6 sm:w-7 sm:h-7 text-amber-600" />
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-700 font-bold shrink-0 shadow-inner">
+              <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <h2 className="text-base sm:text-xl font-bold text-slate-900 tracking-tight truncate">
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">
                   {employee.name}
                 </h2>
-                <span className="text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-amber-50 border-amber-300 text-amber-800">
+                <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-50 border-amber-300 text-amber-800">
                   {employee.regu}
                 </span>
-                <span className={`text-[10px] sm:text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${schedBadge.bg} ${schedBadge.text} border-slate-200`}>
+                <span className={`hidden sm:inline-block text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full border ${schedBadge.bg} ${schedBadge.text} border-slate-200`}>
                   {schedBadge.label}
                 </span>
-                <span className="text-[10px] sm:text-[11px] font-medium bg-slate-100 px-2.5 py-0.5 rounded-full text-slate-700 border border-slate-200">
+                <span className="text-[9px] sm:text-[10px] font-medium bg-slate-100 px-2 py-0.5 rounded-full text-slate-700 border border-slate-200 truncate max-w-[110px] sm:max-w-none">
                   {employee.rank}
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
-                <span>NIP: <strong className="text-slate-800 font-mono">{employee.nip}</strong></span>
+              <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-0.5 text-[11px] text-slate-500 mt-0.5">
+                <span className="font-mono text-slate-700">NIP: {employee.nip}</span>
                 <span className="hidden sm:inline">·</span>
-                <span>Jabatan: <strong className="text-slate-800">{employee.role}</strong></span>
+                <span className="hidden sm:inline text-slate-700">{employee.role}</span>
                 <span className="hidden sm:inline">·</span>
-                <span className="text-amber-800 font-semibold flex items-center gap-1">
-                  <Building2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span className="truncate">{location.name} (Radius: {location.radiusMeters}m)</span>
+                <span className="text-amber-800 font-semibold flex items-center gap-1 truncate">
+                  <Building2 className="w-3 h-3 text-amber-600 shrink-0" />
+                  <span className="truncate">{location.name}</span>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto bg-slate-50 px-3.5 py-2 rounded-2xl border border-slate-200 shrink-0">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-            <div className="text-left text-xs">
-              <span className="text-[10px] text-slate-500 block">Sistem Keamanan HP</span>
-              <span className="font-bold text-emerald-700 text-xs">GPS & Kunci Perangkat Aktif</span>
+          {/* Security Device Lock Status */}
+          <div className="shrink-0 flex items-center">
+            {/* Desktop Full Box */}
+            <div className="hidden md:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-200 text-xs">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="text-left">
+                <span className="text-[9px] text-slate-500 block leading-none">Keamanan HP</span>
+                <span className="font-bold text-emerald-700 text-[11px]">GPS & Kunci Aktif</span>
+              </div>
+            </div>
+            {/* Mobile Pill Badge */}
+            <div className="md:hidden flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-xl border border-emerald-200 text-[10px] font-bold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Kunci HP Aktif</span>
             </div>
           </div>
 
         </div>
       </div>
 
+      {/* Mobile Personel Menu Tab Bar (Compact & fits 100% phone width seamlessly) */}
+      <div className="lg:hidden grid grid-cols-4 gap-1 p-1 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('presence')}
+          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold transition-all ${
+            activeTab === 'presence'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <Fingerprint className="w-4 h-4 shrink-0" />
+          <span className="truncate">Presensi</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('recap')}
+          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold transition-all ${
+            activeTab === 'recap'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <CalendarCheck className="w-4 h-4 shrink-0" />
+          <span className="truncate">Rekap</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('leave_izin')}
+          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold transition-all relative ${
+            activeTab === 'leave_izin' || activeTab === 'leave'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <HeartHandshake className="w-4 h-4 shrink-0" />
+          <span className="truncate">Izin Dinas</span>
+          {myPendingLeaves > 0 && (
+            <span className="w-2 h-2 rounded-full bg-amber-400 absolute top-1.5 right-2 sm:right-3 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('leave_sakit')}
+          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-bold transition-all ${
+            activeTab === 'leave_sakit'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-purple-900 hover:bg-purple-50'
+          }`}
+        >
+          <Stethoscope className="w-4 h-4 shrink-0" />
+          <span className="truncate">Surat Sakit</span>
+        </button>
+      </div>
+
       {/* Main Layout with Sidebar Navigation */}
-      <div className="flex flex-col lg:flex-row gap-5 items-start">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-5 items-start">
         
-        {/* Left Sidebar Navigation (Desktop & Mobile Touch Tabs) */}
-        <aside className="w-full lg:w-64 bg-white border border-slate-200/90 rounded-3xl p-3 sm:p-4 shadow-xs shrink-0 space-y-1.5">
-          <div className="px-3 py-2 text-[10.5px] font-bold text-slate-400 uppercase tracking-wider hidden lg:block">
-            Menu Personel
+        {/* Left Sidebar Navigation (Desktop Only) */}
+        <aside className="hidden lg:block w-72 bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 shadow-xs shrink-0 space-y-3">
+          
+          <div className="px-2 py-1 flex items-center justify-between">
+            <div className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>Menu Personel</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium">
+              Praja Wibawa
+            </span>
           </div>
 
-          <nav className="flex lg:flex-col gap-1.5 overflow-x-auto scrollbar-none w-full">
+          {/* Desktop Sidebar Buttons with Rich Modern Design */}
+          <nav className="flex flex-col gap-2">
             
-            {/* Tab 1: Presensi Dinas */}
+            {/* Group 1: Kehadiran */}
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pt-1">
+              Kehadiran Tugas
+            </div>
+
+            {/* Tab 1: Presensi Tugas */}
             <button
               type="button"
               onClick={() => setActiveTab('presence')}
-              className={`flex-1 lg:flex-none flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left whitespace-nowrap ${
+              className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all text-left border ${
                 activeTab === 'presence'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                  ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border-amber-600 shadow-md shadow-amber-600/25 ring-2 ring-amber-500/20'
+                  : 'text-slate-700 hover:text-slate-900 bg-slate-50/60 hover:bg-amber-50/50 border-slate-200/80 hover:border-amber-200'
               }`}
             >
-              <Fingerprint className={`w-4 h-4 shrink-0 ${activeTab === 'presence' ? 'text-white' : 'text-amber-600'}`} />
-              <div className="flex-1">
-                <span>Presensi Tugas</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  activeTab === 'presence' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  <Fingerprint className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate">Presensi Tugas</div>
+                  <div className={`text-[10px] font-normal truncate ${activeTab === 'presence' ? 'text-amber-100' : 'text-slate-400'}`}>
+                    Absensi Masuk & Pulang GPS
+                  </div>
+                </div>
               </div>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                todayRecord?.checkInTime 
+                  ? 'bg-emerald-100 text-emerald-800' 
+                  : 'bg-amber-100 text-amber-800'
+              }`}>
+                {todayRecord?.checkInTime ? 'Hadir' : 'Absen'}
+              </span>
             </button>
 
-            {/* Tab 2: Rekap Kehadiran (Requested by User) */}
+            {/* Tab 2: Rekap Kehadiran */}
             <button
               type="button"
               onClick={() => setActiveTab('recap')}
-              className={`flex-1 lg:flex-none flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left whitespace-nowrap ${
+              className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all text-left border ${
                 activeTab === 'recap'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                  ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border-amber-600 shadow-md shadow-amber-600/25 ring-2 ring-amber-500/20'
+                  : 'text-slate-700 hover:text-slate-900 bg-slate-50/60 hover:bg-amber-50/50 border-slate-200/80 hover:border-amber-200'
               }`}
             >
-              <CalendarCheck className={`w-4 h-4 shrink-0 ${activeTab === 'recap' ? 'text-white' : 'text-amber-600'}`} />
-              <div className="flex-1">
-                <span>Rekap Kehadiran</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  activeTab === 'recap' ? 'bg-white/20 text-white' : 'bg-sky-100 text-sky-700'
+                }`}>
+                  <CalendarCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate">Rekap Kehadiran</div>
+                  <div className={`text-[10px] font-normal truncate ${activeTab === 'recap' ? 'text-amber-100' : 'text-slate-400'}`}>
+                    Riwayat Dinas & Absensi Saya
+                  </div>
+                </div>
               </div>
             </button>
 
-            {/* Tab 3: Izin & Sakit (Requested by User) */}
+            {/* Group 2: Pelayanan Izin & Sakit */}
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 pt-2">
+              Layanan Izin & Sakit
+            </div>
+
+            {/* Tab 3: Pengajuan Izin */}
             <button
               type="button"
-              onClick={() => setActiveTab('leave')}
-              className={`flex-1 lg:flex-none flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left whitespace-nowrap ${
-                activeTab === 'leave'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+              onClick={() => setActiveTab('leave_izin')}
+              className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all text-left border ${
+                activeTab === 'leave_izin' || activeTab === 'leave'
+                  ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border-amber-600 shadow-md shadow-amber-600/25 ring-2 ring-amber-500/20'
+                  : 'text-slate-700 hover:text-slate-900 bg-slate-50/60 hover:bg-amber-50/50 border-slate-200/80 hover:border-amber-200'
               }`}
             >
-              <HeartHandshake className={`w-4 h-4 shrink-0 ${activeTab === 'leave' ? 'text-white' : 'text-amber-600'}`} />
-              <div className="flex-1 flex items-center justify-between">
-                <span>Izin & Sakit</span>
-                {myPendingLeaves > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-1" />
-                )}
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  activeTab === 'leave_izin' || activeTab === 'leave' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  <HeartHandshake className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate">Pengajuan Izin</div>
+                  <div className={`text-[10px] font-normal truncate ${activeTab === 'leave_izin' ? 'text-amber-100' : 'text-slate-400'}`}>
+                    Permohonan Izin Kedinasan
+                  </div>
+                </div>
               </div>
+              {myPendingLeaves > 0 && (
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 animate-pulse shrink-0">
+                  {myPendingLeaves} Pending
+                </span>
+              )}
+            </button>
+
+            {/* Tab 4: Surat Keterangan Sakit */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('leave_sakit')}
+              className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all text-left border ${
+                activeTab === 'leave_sakit'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white border-purple-600 shadow-md shadow-purple-600/25 ring-2 ring-purple-500/20'
+                  : 'text-slate-700 hover:text-purple-900 bg-slate-50/60 hover:bg-purple-50/50 border-slate-200/80 hover:border-purple-200'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  activeTab === 'leave_sakit' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  <Stethoscope className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate">Surat Izin Sakit</div>
+                  <div className={`text-[10px] font-normal truncate ${activeTab === 'leave_sakit' ? 'text-purple-100' : 'text-slate-400'}`}>
+                    Keterangan Sakit & Dokter
+                  </div>
+                </div>
+              </div>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                activeTab === 'leave_sakit' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-800'
+              }`}>
+                Medis
+              </span>
             </button>
 
           </nav>
+
+          {/* Officer Status Footer Widget in Sidebar */}
+          <div className="hidden lg:block pt-3 border-t border-slate-100">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/70 rounded-2xl p-3 text-xs space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-amber-900">
+                <span>Status Pos Hari Ini</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              </div>
+              <p className="text-[11px] text-amber-800 truncate">
+                Slot {location.slotNumber}: {location.name}
+              </p>
+              <p className="text-[10px] text-amber-700/80">
+                Radius resmi: {location.radiusMeters} meter
+              </p>
+            </div>
+          </div>
+
         </aside>
 
         {/* Right Content Area */}
@@ -539,23 +706,23 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
               )}
 
               {/* Attendance Action Panel Card */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-slate-100">
                   <div>
                     <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                       Panel Presensi Tugas Lapangan
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-[11px] sm:text-xs text-slate-500">
                       Wajib berada dalam radius pos penugasan ({location.radiusMeters} meter)
                     </p>
                   </div>
-                  <span className="text-xs font-mono font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 shrink-0">
+                  <span className="text-xs font-mono font-bold text-amber-800 bg-amber-50 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-amber-200 shrink-0">
                     {currentDate.toLocaleTimeString('id-ID')} WIB
                   </span>
                 </div>
 
                 {/* Live GPS Distance Radar Banner */}
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-semibold gap-2 ${
+                <div className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border flex items-center justify-between text-xs font-semibold gap-2 ${
                   isWithinGeofence
                     ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
                     : 'bg-rose-50/70 border-rose-200 text-rose-900'
@@ -578,15 +745,15 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                   </button>
                 </div>
 
-                {/* Big Action Tap Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-1">
+                {/* Big Action Tap Buttons (Side-by-side on mobile for compact viewport) */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-1">
                   
                   {/* Tap Masuk */}
                   <button
                     type="button"
                     onClick={handleCheckIn}
                     disabled={!!todayRecord?.checkInTime}
-                    className={`py-4 px-4 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center ${
+                    className={`py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center ${
                       todayRecord?.checkInTime
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                         : timeEval.canCheckIn && isWithinGeofence
@@ -594,18 +761,18 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                         : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 shrink-0" />
-                      <span className="text-sm sm:text-base font-extrabold tracking-wide">
-                        {todayRecord?.checkInTime ? "Sudah Absen Masuk" : "TAP ABSEN MASUK"}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
+                        {todayRecord?.checkInTime ? "Sudah Masuk" : "TAP MASUK"}
                       </span>
                     </div>
-                    <span className="text-[11px] opacity-80">
+                    <span className="text-[10px] sm:text-[11px] opacity-80 truncate max-w-full">
                       {todayRecord?.checkInTime 
-                        ? `Pukul ${todayRecord.checkInTime} WIB` 
+                        ? `${todayRecord.checkInTime} WIB` 
                         : timeEval.canCheckIn 
-                        ? "(Jendela waktu masuk terbuka)" 
-                        : "(Dibuka 30 menit sebelum masuk)"}
+                        ? "Waktu Masuk Aktif" 
+                        : "Buka -30 Menit"}
                     </span>
                   </button>
 
@@ -614,7 +781,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                     type="button"
                     onClick={handleCheckOut}
                     disabled={!todayRecord?.checkInTime || !!todayRecord?.checkOutTime}
-                    className={`py-4 px-4 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center ${
+                    className={`py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center ${
                       !todayRecord?.checkInTime
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                         : todayRecord?.checkOutTime
@@ -624,41 +791,41 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                         : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-5 h-5 shrink-0" />
-                      <span className="text-sm sm:text-base font-extrabold tracking-wide">
-                        {todayRecord?.checkOutTime ? "Sudah Absen Pulang" : "TAP ABSEN PULANG"}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
+                        {todayRecord?.checkOutTime ? "Sudah Pulang" : "TAP PULANG"}
                       </span>
                     </div>
-                    <span className="text-[11px] opacity-80">
+                    <span className="text-[10px] sm:text-[11px] opacity-80 truncate max-w-full">
                       {todayRecord?.checkOutTime 
-                        ? `Pukul ${todayRecord.checkOutTime} WIB` 
+                        ? `${todayRecord.checkOutTime} WIB` 
                         : timeEval.canCheckOut 
-                        ? "(Jam pulang telah tercapai)" 
-                        : "(Hanya tepat pada jam pulang)"}
+                        ? "Jam Pulang Aktif" 
+                        : "Tepat Jam Pulang"}
                     </span>
                   </button>
 
                 </div>
 
                 {/* GPS Status Badges Grid (Replaces Map cleanly) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 text-xs">
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[10px] text-slate-500 block">Radius Geofence</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 pt-1 text-xs">
+                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
+                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Radius Pos</span>
                     <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm">{location.radiusMeters} m</span>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[10px] text-slate-500 block">Jarak Saat Ini</span>
+                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
+                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Jarak GPS</span>
                     <span className={`font-mono font-bold text-xs sm:text-sm ${isWithinGeofence ? 'text-emerald-700' : 'text-rose-700'}`}>
                       {currentDistance} m
                     </span>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[10px] text-slate-500 block">Akurasi GPS HP</span>
+                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
+                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Akurasi GPS</span>
                     <span className="font-mono font-bold text-slate-800 text-xs sm:text-sm">±{Math.round(userCoords.accuracy)} m</span>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[10px] text-slate-500 block">Anti-Fake GPS</span>
+                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
+                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Anti-Fake GPS</span>
                     <span className={`font-bold text-xs sm:text-sm ${antiSpoof.isValid ? 'text-emerald-700' : 'text-amber-700'}`}>
                       {antiSpoof.securityScore}% Valid
                     </span>
@@ -726,26 +893,26 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
               {/* Today's Record Summary Card */}
               {todayRecord && (
-                <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs text-xs space-y-2.5">
+                <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xs text-xs space-y-2 sm:space-y-2.5">
                   <div className="flex items-center justify-between font-bold text-slate-900">
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1.5 text-xs">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                       Bukti Presensi Hari Ini:
                     </span>
-                    <span className="font-mono text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <span className="font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[11px]">
                       {todayRecord.date}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200">
                     <div>
-                      <span className="text-slate-500">Jam Masuk: </span>
-                      <strong className="text-slate-900 font-mono">{todayRecord.checkInTime || '-'} WIB</strong>
-                      <span className="ml-1 text-emerald-700 font-semibold">({todayRecord.checkInStatus})</span>
+                      <span className="text-slate-500 text-[11px] block sm:inline">Jam Masuk: </span>
+                      <strong className="text-slate-900 font-mono text-xs">{todayRecord.checkInTime || '-'} WIB</strong>
+                      <span className="ml-1 text-emerald-700 font-semibold text-[10px]">({todayRecord.checkInStatus})</span>
                     </div>
                     <div>
-                      <span className="text-slate-500">Jam Pulang: </span>
-                      <strong className="text-slate-900 font-mono">{todayRecord.checkOutTime || 'Belum Pulang'} {todayRecord.checkOutTime ? 'WIB' : ''}</strong>
+                      <span className="text-slate-500 text-[11px] block sm:inline">Jam Pulang: </span>
+                      <strong className="text-slate-900 font-mono text-xs">{todayRecord.checkOutTime || 'Belum'} {todayRecord.checkOutTime ? 'WIB' : ''}</strong>
                     </div>
                   </div>
 
@@ -770,13 +937,36 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
             />
           )}
 
-          {/* TAB 3: IZIN & SAKIT (SIDEBAR MENU 3) */}
+          {/* TAB 3: PENGAJUAN IZIN (SIDEBAR MENU 3) */}
+          {activeTab === 'leave_izin' && (
+            <EmployeeLeaveView
+              employee={employee}
+              leaveRequests={leaveRequests}
+              onSubmitLeaveRequest={onSubmitLeaveRequest}
+              currentDate={currentDate}
+              initialType="izin"
+            />
+          )}
+
+          {/* TAB 4: SURAT KETERANGAN SAKIT (SIDEBAR MENU 4) */}
+          {activeTab === 'leave_sakit' && (
+            <EmployeeLeaveView
+              employee={employee}
+              leaveRequests={leaveRequests}
+              onSubmitLeaveRequest={onSubmitLeaveRequest}
+              currentDate={currentDate}
+              initialType="sakit"
+            />
+          )}
+
+          {/* GENERAL LEAVE TAB (FALLBACK) */}
           {activeTab === 'leave' && (
             <EmployeeLeaveView
               employee={employee}
               leaveRequests={leaveRequests}
               onSubmitLeaveRequest={onSubmitLeaveRequest}
               currentDate={currentDate}
+              initialType="izin"
             />
           )}
 

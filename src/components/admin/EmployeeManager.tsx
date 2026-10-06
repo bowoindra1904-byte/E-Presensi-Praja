@@ -17,7 +17,8 @@ import {
   MapPin,
   Check,
   Printer,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 
 interface EmployeeManagerProps {
@@ -27,7 +28,7 @@ interface EmployeeManagerProps {
   onAddEmployee: (emp: Employee) => void;
   onDeleteEmployee: (employeeId: string) => void;
   onResetDeviceLock: (employeeId: string) => void;
-  onResetAllEmployees?: () => void;
+  onResetAllEmployees?: (mode?: 'reset_default' | 'clear_all') => void;
   onOpenPrintMenu?: (menu: 'regu') => void;
 }
 
@@ -47,6 +48,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   const [filterRegu, setFilterRegu] = useState<string>('all');
   const [filterSchedule, setFilterSchedule] = useState<string>('all');
   const [filterDevice, setFilterDevice] = useState<string>('all');
+
+  // Reset all modal state
+  const [isResetAllModalOpen, setIsResetAllModalOpen] = useState(false);
+  const [selectedResetAllMode, setSelectedResetAllMode] = useState<'reset_default' | 'clear_all'>('reset_default');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -202,7 +207,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     <div className="space-y-6">
       
       {/* Title & Overview Banner */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Users className="w-5 h-5 text-amber-600" />
@@ -216,12 +221,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           {onResetAllEmployees && (
             <button
-              onClick={onResetAllEmployees}
-              className="px-3.5 py-2 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs"
-              title="Reset seluruh data personel ke default 150 anggota"
+              type="button"
+              onClick={() => setIsResetAllModalOpen(true)}
+              className="px-3.5 py-2 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl border border-rose-200 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              title="Hapus atau reset data seluruh pegawai Satpol PP"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
-              <span>Reset 150 Pegawai</span>
+              <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+              <span>Hapus / Reset Data Seluruh Pegawai</span>
             </button>
           )}
           {onOpenPrintMenu && (
@@ -251,7 +257,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           
           {/* Search Box */}
@@ -375,7 +381,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       </div>
 
       {/* Main Content: Mobile Card View + Desktop Table */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden">
         
         {/* Mobile View (HP Card List) */}
         <div className="sm:hidden p-3 space-y-3">
@@ -1013,6 +1019,137 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Ya, Hapus Personel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Hapus / Reset Data Seluruh Pegawai */}
+      {isResetAllModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 font-bold">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Hapus / Reset Data Seluruh Pegawai
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Pilih opsi pemulihan data personel Satpol PP (Total saat ini: {employees.length} Pegawai)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetAllModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              {/* Option 1: Reset Default */}
+              <label 
+                className={`p-3.5 rounded-2xl border cursor-pointer block transition-all ${
+                  selectedResetAllMode === 'reset_default'
+                    ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-400/30'
+                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="resetAllEmployeeMode"
+                    checked={selectedResetAllMode === 'reset_default'}
+                    onChange={() => setSelectedResetAllMode('reset_default')}
+                    className="mt-0.5 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-slate-900 font-bold text-sm">
+                        Reset ke Data Default Personel Satpol PP
+                      </strong>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                        Standar Dinas
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] mt-1">
+                      Mengembalikan seluruh daftar personel ke formasi baku resmi Satpol PP lengkap dengan nama, NIP, pangkat, pembagian Regu 1, 2, 3, 4, dan Harian, serta penempatan slot pos dinas.
+                    </p>
+                  </div>
+                </div>
+              </label>
+
+              {/* Option 2: Kosongkan / Hapus Semua */}
+              <label 
+                className={`p-3.5 rounded-2xl border cursor-pointer block transition-all ${
+                  selectedResetAllMode === 'clear_all'
+                    ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-400/30'
+                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="resetAllEmployeeMode"
+                    checked={selectedResetAllMode === 'clear_all'}
+                    onChange={() => setSelectedResetAllMode('clear_all')}
+                    className="mt-0.5 text-rose-600 focus:ring-rose-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-slate-900 font-bold text-sm text-rose-700">
+                        Hapus / Kosongkan Seluruh Data Pegawai
+                      </strong>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                        Hapus Total
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] mt-1">
+                      Mengosongkan seluruh database personel ({employees.length} pegawai) dari sistem untuk kebutuhan input formasi ulang secara manual atau impor file CSV baru.
+                    </p>
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <p className="text-[11px] text-amber-800 bg-amber-50 p-3 rounded-2xl border border-amber-200 leading-relaxed">
+              💡 <strong>Catatan:</strong> Data personel akan langsung tersinkronisasi ke Cloud Firestore dan dapat diakses kembali oleh admin.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsResetAllModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onResetAllEmployees) {
+                    onResetAllEmployees(selectedResetAllMode);
+                  }
+                  setIsResetAllModalOpen(false);
+                }}
+                className={`px-4 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5 ${
+                  selectedResetAllMode === 'clear_all'
+                    ? 'bg-rose-600 hover:bg-rose-500'
+                    : 'bg-amber-600 hover:bg-amber-500'
+                }`}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>
+                  {selectedResetAllMode === 'clear_all'
+                    ? "Ya, Kosongkan Seluruh Pegawai"
+                    : "Ya, Reset ke Data Default"}
+                </span>
               </button>
             </div>
           </div>

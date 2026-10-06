@@ -149,7 +149,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         
         {/* Total Personel */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Total Personel</span>
             <Users className="w-4 h-4 text-amber-600" />
@@ -161,7 +161,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Hadir Tepat Waktu */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Tepat Waktu</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -173,7 +173,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Terlambat */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Terlambat</span>
             <Clock className="w-4 h-4 text-amber-600" />
@@ -185,7 +185,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Izin & Sakit Disetujui */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Izin & Sakit</span>
             <HeartHandshake className="w-4 h-4 text-blue-600" />
@@ -197,7 +197,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Belum Absen */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Belum Hadir</span>
             <XCircle className="w-4 h-4 text-slate-400" />
@@ -209,7 +209,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         {/* Insiden Keamanan & Kunci HP */}
-        <div className="col-span-2 sm:col-span-1 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div className="col-span-2 sm:col-span-1 bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Audit Keamanan</span>
             <AlertTriangle className="w-4 h-4 text-rose-500" />
@@ -223,7 +223,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Map Overview Section: All Slots Live */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -251,7 +251,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Live Attendance Table */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden space-y-4 p-5">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl shadow-xs overflow-hidden space-y-4 p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-bold text-slate-900 tracking-tight">

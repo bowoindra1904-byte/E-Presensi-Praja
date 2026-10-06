@@ -126,7 +126,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
   return (
     <div className="space-y-5">
       {/* Top Banner & Month Selector */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <CalendarCheck className="w-5 h-5 text-amber-600" />
@@ -232,7 +232,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
       </div>
 
       {/* Filter and Table Card */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-amber-600" />

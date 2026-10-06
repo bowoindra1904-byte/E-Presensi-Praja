@@ -18,7 +18,7 @@ export function subscribeEmployees(onData: (employees: Employee[]) => void) {
   const employeesCol = collection(db, 'employees');
   
   return onSnapshot(employeesCol, async (snapshot) => {
-    if (snapshot.empty) {
+    if (snapshot.empty && localStorage.getItem('sipraja_employees_cleared') !== 'true') {
       console.log('Firestore employees empty. Seeding initial 150 employees...');
       await seedInitialEmployees();
       return;
@@ -126,7 +126,7 @@ export function subscribeLeaveRequests(onData: (requests: LeaveRequest[]) => voi
   const leaveCol = collection(db, 'leave_requests');
   
   return onSnapshot(leaveCol, async (snapshot) => {
-    if (snapshot.empty) {
+    if (snapshot.empty && localStorage.getItem('sipraja_leaves_cleared') !== 'true') {
       console.log('Firestore leave_requests empty. Seeding initial sample requests...');
       await seedInitialLeaveRequests();
       return;
@@ -252,4 +252,28 @@ export async function seedInitialLeaveRequests(): Promise<void> {
     batch.set(docRef, cleanFirestoreData(req), { merge: true });
   }
   await batch.commit();
+}
+
+export async function syncClearAllEmployees(employeeIds: string[]): Promise<void> {
+  const batchSize = 400;
+  for (let i = 0; i < employeeIds.length; i += batchSize) {
+    const chunk = employeeIds.slice(i, i + batchSize);
+    const batch = writeBatch(db);
+    for (const id of chunk) {
+      batch.delete(doc(db, 'employees', id));
+    }
+    await batch.commit();
+  }
+}
+
+export async function syncClearLeaveRequests(requestIds: string[]): Promise<void> {
+  const batchSize = 400;
+  for (let i = 0; i < requestIds.length; i += batchSize) {
+    const chunk = requestIds.slice(i, i + batchSize);
+    const batch = writeBatch(db);
+    for (const id of chunk) {
+      batch.delete(doc(db, 'leave_requests', id));
+    }
+    await batch.commit();
+  }
 }

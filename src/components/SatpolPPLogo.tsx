@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import satpolLogoTransparent from '../assets/images/satpol_pp_logo_transparent.png';
 import satpolLogoImage from '../assets/images/satpol_pp_logo_1791104048215.jpg';
 
 interface SatpolPPLogoProps {
@@ -14,10 +15,12 @@ export const SatpolPPLogo: React.FC<SatpolPPLogoProps> = ({
   variant = 'color',
   alt = "Lambang Resmi Satpol PP Praja Wibawa",
 }) => {
-  // Try imported asset, then public fallbacks
+  // Prioritize transparent PNG, then imported assets, then public assets, then SVG fallback
   const imageSources = [
-    satpolLogoImage,
+    satpolLogoTransparent,
+    "/satpol_pp_logo_transparent.png",
     "/satpol_pp_logo.png",
+    satpolLogoImage,
     "/satpol_pp_logo.jpg",
     "/icon.svg"
   ];
@@ -170,26 +173,40 @@ export const SatpolPPLogo: React.FC<SatpolPPLogoProps> = ({
       </g>
 
       {/* Curved Golden Ribbon PRAJA WIBAWA */}
-      <polygon points="112,398 94,424 136,432 136,404" fill="#92400E"/>
-      <polygon points="400,398 418,424 376,432 376,404" fill="#92400E"/>
+      <polygon points="98,390 76,418 126,428 126,396" fill="#C2410C" />
+      <polygon points="414,390 436,418 386,428 386,396" fill="#C2410C" />
       
       <path
-        d="M 120 395 Q 256 426 392 395 L 382 432 Q 256 462 130 432 Z"
-        fill="url(#fallbackGold)"
-        stroke="#FEF3C7"
-        strokeWidth="2.5"
+        d="M 104,390 Q 256,425 408,390 L 396,432 Q 256,468 116,432 Z"
+        fill="#FFD200"
+        stroke="#DC2626"
+        strokeWidth="3.5"
       />
       <text
         x="256"
         y="423"
         textAnchor="middle"
-        fill="#0F172A"
-        fontSize="19"
+        fill="#DC2626"
+        fontSize="21"
         fontWeight="900"
-        letterSpacing="3"
+        letterSpacing="2.5"
         fontFamily="sans-serif"
       >
         PRAJA WIBAWA
+      </text>
+
+      {/* 1950 Founding Year Below Ribbon */}
+      <text
+        x="256"
+        y="472"
+        textAnchor="middle"
+        fill="#DC2626"
+        fontSize="34"
+        fontWeight="900"
+        letterSpacing="2"
+        fontFamily="sans-serif"
+      >
+        1950
       </text>
     </svg>
   );

@@ -289,7 +289,7 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
     <div className="space-y-6">
       
       {/* Header Info & Dynamic Slot Controls */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+      <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -391,7 +391,7 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
               className={`p-4 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between ${
                 isSelected
                   ? 'bg-amber-50/40 border-amber-500 ring-2 ring-amber-500/20 shadow-xs'
-                  : 'bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-xs'
+                  : 'bg-white/92 backdrop-blur-md border-slate-200/90 hover:border-slate-300 hover:shadow-xs'
               }`}
             >
               <div>
@@ -462,7 +462,7 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left: Location Map Preview */}
-        <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+        <div className="lg:col-span-7 bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-amber-600" />
@@ -503,7 +503,7 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
         <div className="lg:col-span-5 space-y-4">
           
           {/* Slot Detail Card */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+          <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
               <div className="min-w-0">
                 <span className="text-[10px] font-mono font-bold text-amber-700 uppercase tracking-wider block">

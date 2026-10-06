@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Employee, SecurityLog, NotificationItem } from '../types';
 import { getOrCreateDeviceId } from '../utils/deviceLock';
 import { SatpolPPLogo } from './SatpolPPLogo';
+import { SatpolPPWatermarkBackground } from './SatpolPPWatermarkBackground';
 import { 
   Shield, 
   Smartphone, 
@@ -279,6 +280,9 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 flex flex-col justify-center items-center p-3 sm:p-6 relative overflow-y-auto">
+      {/* Background Watermark with Uploaded Official Satpol PP Emblem */}
+      <SatpolPPWatermarkBackground theme="dark" opacity="opacity-25 sm:opacity-30" size="xl" />
+
       {/* Background Glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />

@@ -779,8 +779,23 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 print:p-0 print:overflow-visible print:bg-white">
           
           {/* Printable White Paper Sheet */}
-          <div className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl p-8 sm:p-10 shadow-xl border border-slate-200 print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full">
+          <div className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl p-8 sm:p-10 shadow-xl border border-slate-200 print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full relative overflow-hidden">
             
+            {/* Authentic Document Watermark Background (Satpol PP Praja Wibawa Emblem) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden opacity-[0.08] print:opacity-[0.06] z-0">
+              <div className="w-[360px] sm:w-[480px] aspect-square">
+                <img
+                  src="/satpol_pp_logo.png"
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain filter saturate-110"
+                />
+              </div>
+            </div>
+
+            {/* Document Content */}
+            <div className="relative z-10">
+
             {/* 1. KOP SURAT RESMI: SATPOL PP KABUPATEN BANGKA BARAT (Alamat & Kontak Dihapus) */}
             <div className="border-b-4 border-double border-slate-900 pb-4 mb-6">
               <div className="flex items-center justify-between gap-4">
@@ -1247,6 +1262,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               <div className="mt-8 pt-2 border-t border-slate-200 text-center text-[9px] text-slate-400 font-mono">
                 Dokumen resmi SATPOL PP KABUPATEN BANGKA BARAT dicetak melalui Sistem Informasi Presensi Digital SI-PRAJA pada {printTimestamp} WIB
               </div>
+
+            </div>
 
             </div>
 

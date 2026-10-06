@@ -34,6 +34,7 @@ import { TimeSimulatorModal } from './components/TimeSimulatorModal';
 import { AdminPinModal } from './components/admin/AdminPinModal';
 import { PrintReportModal, PrintMenuType } from './components/admin/PrintReportModal';
 import { OperationalGuideModal } from './components/OperationalGuideModal';
+import { SatpolPPWatermarkBackground } from './components/SatpolPPWatermarkBackground';
 import { Shield, Sparkles, FileText, Printer, KeyRound, Cloud } from 'lucide-react';
 import { testFirestoreConnection } from './services/firebase';
 import { getOrCreateDeviceId } from './utils/deviceLock';
@@ -53,6 +54,9 @@ import {
   syncSaveAdminPin,
   syncSaveLeaveRequest,
   seedInitialEmployees,
+  seedInitialLeaveRequests,
+  syncClearAllEmployees,
+  syncClearLeaveRequests,
   syncArchiveAndCleanupAttendance
 } from './services/firestoreSync';
 
@@ -474,23 +478,44 @@ export default function App() {
     });
   };
 
-  const handleResetEmployeesToDefault = () => {
-    if (window.confirm("Kembalikan seluruh daftar personel ke data bawaan awal (150 Personel Satpol PP)?")) {
-      setEmployees(INITIAL_EMPLOYEES);
-      seedInitialEmployees().catch(console.error);
-      try {
-        localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(INITIAL_EMPLOYEES));
-      } catch {}
+  const handleResetOrClearEmployees = async (mode: 'reset_default' | 'clear_all' = 'reset_default') => {
+    try {
+      if (mode === 'clear_all') {
+        const allIds = employees.map(e => e.id);
+        setEmployees([]);
+        try {
+          localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify([]));
+        } catch {}
+        await syncClearAllEmployees(allIds);
 
-      handleAddNotification({
-        id: `NOTIF-RESET-ALL-EMP-${Date.now()}`,
-        targetRole: 'admin',
-        type: 'warning',
-        title: 'Reset Daftar Personel Berhasil',
-        message: 'Daftar personel berhasil dikembalikan ke data default 150 anggota Satpol PP.',
-        timestamp: `${currentTimeString} WIB`,
-        read: false
-      });
+        handleAddNotification({
+          id: `NOTIF-CLEAR-ALL-EMP-${Date.now()}`,
+          targetRole: 'admin',
+          type: 'warning',
+          title: 'Seluruh Data Pegawai Dikosongkan',
+          message: `${allIds.length} data pegawai berhasil dihapus dari database sistem.`,
+          timestamp: `${currentTimeString} WIB`,
+          read: false
+        });
+      } else {
+        setEmployees(INITIAL_EMPLOYEES);
+        try {
+          localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(INITIAL_EMPLOYEES));
+        } catch {}
+        await seedInitialEmployees();
+
+        handleAddNotification({
+          id: `NOTIF-RESET-ALL-EMP-${Date.now()}`,
+          targetRole: 'admin',
+          type: 'warning',
+          title: 'Reset Data Personel Berhasil',
+          message: 'Daftar personel berhasil dikembalikan ke data default anggota Satpol PP.',
+          timestamp: `${currentTimeString} WIB`,
+          read: false
+        });
+      }
+    } catch (err) {
+      console.error('Error reset/clear employees:', err);
     }
   };
 
@@ -767,6 +792,72 @@ export default function App() {
     });
   };
 
+  // 4. Reset or clear leave/sick requests (Requested by User)
+  const handleResetLeaveRequests = async (mode: 'completed' | 'all' | 'default') => {
+    try {
+      if (mode === 'completed') {
+        const completed = leaveRequests.filter(r => r.status === 'approved' || r.status === 'rejected');
+        const completedIds = completed.map(r => r.id);
+        const remaining = leaveRequests.filter(r => r.status === 'pending');
+        
+        setLeaveRequests(remaining);
+        try {
+          localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(remaining));
+        } catch {}
+
+        await syncClearLeaveRequests(completedIds);
+
+        handleAddNotification({
+          id: `NOTIF-RESET-LEAVE-${Date.now()}`,
+          targetRole: 'admin',
+          type: 'warning',
+          title: 'Pembersihan Data Izin & Sakit Berhasil',
+          message: `${completedIds.length} berkas permohonan lama yang telah diproses berhasil dibersihkan dari sistem.`,
+          timestamp: `${currentTimeString} WIB`,
+          read: false
+        });
+      } else if (mode === 'all') {
+        const allIds = leaveRequests.map(r => r.id);
+        setLeaveRequests([]);
+        try {
+          localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify([]));
+        } catch {}
+
+        await syncClearLeaveRequests(allIds);
+
+        handleAddNotification({
+          id: `NOTIF-RESET-LEAVE-${Date.now()}`,
+          targetRole: 'admin',
+          type: 'warning',
+          title: 'Seluruh Riwayat Izin & Sakit Dikosongkan',
+          message: 'Semua permohonan izin dan sakit berhasil dihapus dari database.',
+          timestamp: `${currentTimeString} WIB`,
+          read: false
+        });
+      } else if (mode === 'default') {
+        const initial = generateInitialLeaveRequests();
+        setLeaveRequests(initial);
+        try {
+          localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(initial));
+        } catch {}
+
+        await seedInitialLeaveRequests();
+
+        handleAddNotification({
+          id: `NOTIF-RESET-LEAVE-${Date.now()}`,
+          targetRole: 'admin',
+          type: 'success',
+          title: 'Data Izin & Sakit Direset ke Awal',
+          message: 'Daftar permohonan izin dan sakit berhasil dikembalikan ke data contoh awal.',
+          timestamp: `${currentTimeString} WIB`,
+          read: false
+        });
+      }
+    } catch (err) {
+      console.error('Error resetting leave requests:', err);
+    }
+  };
+
   // Admin PIN configuration handler
   const handleUpdateAdminPin = (newPin: string) => {
     setAdminPin(newPin);
@@ -992,7 +1083,14 @@ export default function App() {
   const pendingLeavesCount = leaveRequests.filter(r => r.status === 'pending').length;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col selection:bg-amber-500 selection:text-white">
+    <div className="min-h-screen modern-ambient-bg text-slate-800 flex flex-col selection:bg-amber-600 selection:text-white relative">
+      {/* Background Watermark with Uploaded Official Satpol PP Emblem */}
+      <SatpolPPWatermarkBackground size="xl" />
+
+      {/* Modern Ambient Visual Accents */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-amber-500/6 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="fixed top-20 right-10 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="fixed bottom-10 left-10 w-96 h-96 bg-indigo-500/4 rounded-full blur-3xl pointer-events-none -z-10" />
       
       {/* Top Bar Header */}
       <Header
@@ -1026,7 +1124,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
         
         {/* Simulation Banner Notice (if active - Admin only) */}
         {simulatedTime && currentRole === 'admin' && (
@@ -1097,7 +1195,7 @@ export default function App() {
                 onAddEmployee={handleAddEmployee}
                 onDeleteEmployee={handleDeleteEmployee}
                 onResetDeviceLock={handleResetDeviceLock}
-                onResetAllEmployees={handleResetEmployeesToDefault}
+                onResetAllEmployees={handleResetOrClearEmployees}
                 onOpenPrintMenu={handleOpenPrintMenu}
               />
             )}
@@ -1107,6 +1205,7 @@ export default function App() {
                 leaveRequests={leaveRequests}
                 onApproveLeaveRequest={handleApproveLeaveRequest}
                 onRejectLeaveRequest={handleRejectLeaveRequest}
+                onResetLeaveRequests={handleResetLeaveRequests}
               />
             )}
 
@@ -1154,7 +1253,7 @@ export default function App() {
               onClick={handleResetDemoData}
               className="text-slate-500 hover:text-amber-700 transition-colors font-medium"
             >
-              Reset Data Bawaan (150 Pegawai)
+              Hapus/Reset Data Seluruh Pegawai & Pos
             </button>
             <span>·</span>
             <span className="font-semibold text-slate-700">Praja Wibawa</span>
