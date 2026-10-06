@@ -74,9 +74,12 @@ const STORAGE_KEYS = {
 };
 
 export default function App() {
-  // 1. State: 150 Employees
+  // 1. State: 150 Employees (Dinamis penuh sesuai kelolaan admin & dapat dikosongkan total)
   const [employees, setEmployees] = useState<Employee[]>(() => {
     try {
+      if (localStorage.getItem('sipraja_employees_cleared') === 'true') {
+        return [];
+      }
       const saved = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
       if (saved) return JSON.parse(saved);
     } catch {
@@ -442,7 +445,14 @@ export default function App() {
   };
 
   const handleAddEmployee = (newEmp: Employee) => {
-    setEmployees(prev => [newEmp, ...prev]);
+    localStorage.removeItem('sipraja_employees_cleared');
+    setEmployees(prev => {
+      const next = [newEmp, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     syncSaveEmployee(newEmp).catch(console.error);
   };
 
@@ -713,11 +723,16 @@ export default function App() {
         scheduleType: targetEmp?.scheduleType || 'shift',
         locationSlotId: locId,
         locationName: loc.name,
-        checkInTime: req.type === 'izin' ? 'IZIN' : 'SAKIT',
+        checkInTime: req.type === 'izin' ? 'IZIN' : req.type === 'sakit' ? 'SAKIT' : 'DISPENSASI',
         checkInStatus: req.type,
         checkOutTime: '-',
-        notes: `[DISPOSISI ${req.type.toUpperCase()}] ${req.reason} (Disetujui Admin: ${updatedRequest.adminNote})`,
-        leaveRequestId: req.id
+        notes: `[DISPOSISI ${req.type === 'dispensasi_kantor' ? 'DISPENSASI SURAT KANTOR (HP RUSAK)' : req.type.toUpperCase()}] ${req.reason}${req.dispensationLetterNumber ? ` | No. Surat: ${req.dispensationLetterNumber}` : ''} (Disetujui Admin: ${updatedRequest.adminNote})`,
+        leaveRequestId: req.id,
+        isOfficeDispensation: req.type === 'dispensasi_kantor' || req.isOfficeDispensation,
+        dispensationLetterNumber: req.dispensationLetterNumber,
+        dispensationLetterPhoto: req.attachmentUrl,
+        dispensationReason: req.reason,
+        dispensationIssuedBy: req.dispensationIssuedBy || 'Kantor Satpol PP'
       };
 
       setAttendanceRecords(prev => {
@@ -856,6 +871,146 @@ export default function App() {
     } catch (err) {
       console.error('Error resetting leave requests:', err);
     }
+  };
+
+  // Direct Creation of Office Dispensation (Dispensasi Kendala HP Rusak / Pemutihan Absensi)
+  const handleCreateOfficeDispensation = (data: {
+    employeeId: string;
+    startDate: string;
+    endDate: string;
+    letterNumber: string;
+    issuedBy: string;
+    reason: string;
+    sessionMode?: 'full_day' | 'check_in_only' | 'check_out_only';
+    statusMode?: 'dispensasi_kantor' | 'tepat_waktu';
+    attachmentUrl?: string;
+    attachmentName?: string;
+  }) => {
+    const targetEmp = employees.find(e => e.id === data.employeeId);
+    if (!targetEmp) return;
+
+    const totalDays = getDatesInRange(data.startDate, data.endDate).length;
+    const nowStr = `${effectiveCurrentDate.toISOString().split('T')[0]} ${currentTimeString} WIB`;
+
+    const newRequest: LeaveRequest = {
+      id: `DISP-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      employeeId: targetEmp.id,
+      employeeName: targetEmp.name,
+      employeeNip: targetEmp.nip,
+      regu: targetEmp.regu,
+      type: 'dispensasi_kantor',
+      startDate: data.startDate,
+      endDate: data.endDate,
+      totalDays,
+      reason: data.reason,
+      attachmentName: data.attachmentName,
+      attachmentUrl: data.attachmentUrl,
+      status: 'approved',
+      appliedAt: nowStr,
+      reviewedAt: nowStr,
+      reviewedBy: 'Admin Komando',
+      adminNote: `Pemutihan absensi kendala HP rusak resmi No: ${data.letterNumber}. Pejabat: ${data.issuedBy}. Sesi: ${data.sessionMode || 'full_day'}.`,
+      isOfficeDispensation: true,
+      dispensationLetterNumber: data.letterNumber,
+      dispensationReason: data.reason,
+      dispensationIssuedBy: data.issuedBy,
+    };
+
+    setLeaveRequests(prev => [newRequest, ...prev]);
+    syncSaveLeaveRequest(newRequest).catch(console.error);
+
+    // Sync to attendance immediately for every day in range
+    const locId = targetEmp.locationSlotId || 1;
+    const loc = locations.find(l => l.id === locId) || locations[0];
+    const dates = getDatesInRange(data.startDate, data.endDate);
+    const sessionMode = data.sessionMode || 'full_day';
+    const statusMode = data.statusMode || 'dispensasi_kantor';
+    const defaultCheckIn = statusMode === 'tepat_waktu' ? '07:30' : 'DISPENSASI';
+    const defaultCheckOut = targetEmp.scheduleType === 'shift' ? '19:30' : '16:00';
+
+    dates.forEach(dateStr => {
+      const attendanceId = `ATT-DISP-${newRequest.id}-${dateStr}`;
+      
+      const checkInTime = sessionMode === 'check_out_only' ? '-' : defaultCheckIn;
+      const checkInStatus = sessionMode === 'check_out_only' ? undefined : statusMode;
+      const checkOutTime = sessionMode === 'check_in_only' ? '-' : defaultCheckOut;
+      const checkOutStatus = sessionMode === 'check_in_only' ? undefined : 'pulang_normal';
+
+      const dispRecord: AttendanceRecord = {
+        id: attendanceId,
+        employeeId: targetEmp.id,
+        employeeName: targetEmp.name,
+        employeeNip: targetEmp.nip,
+        date: dateStr,
+        regu: targetEmp.regu,
+        scheduleType: targetEmp.scheduleType,
+        locationSlotId: locId,
+        locationName: loc.name,
+        checkInTime,
+        checkInStatus,
+        checkOutTime,
+        checkOutStatus,
+        notes: `[PEMUTIHAN HP RUSAK] No: ${data.letterNumber} | ${data.reason} (${sessionMode === 'full_day' ? 'Seharian Penuh' : sessionMode === 'check_in_only' ? 'Masuk' : 'Pulang'})`,
+        leaveRequestId: newRequest.id,
+        isOfficeDispensation: true,
+        dispensationLetterNumber: data.letterNumber,
+        dispensationLetterPhoto: data.attachmentUrl,
+        dispensationReason: data.reason,
+        dispensationIssuedBy: data.issuedBy,
+      };
+
+      setAttendanceRecords(prev => {
+        const existingIdx = prev.findIndex(r => r.employeeId === targetEmp.id && r.date === dateStr);
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          updated[existingIdx] = { 
+            ...updated[existingIdx], 
+            ...dispRecord,
+            // If check_out_only, keep existing checkIn if present
+            checkInTime: sessionMode === 'check_out_only' && updated[existingIdx].checkInTime ? updated[existingIdx].checkInTime : dispRecord.checkInTime,
+            checkInStatus: sessionMode === 'check_out_only' && updated[existingIdx].checkInStatus ? updated[existingIdx].checkInStatus : dispRecord.checkInStatus,
+          };
+          return updated;
+        } else {
+          return [dispRecord, ...prev];
+        }
+      });
+      syncSaveAttendance(dispRecord).catch(console.error);
+    });
+
+    // Add Security Audit Log for accountability
+    const auditLog: SecurityLog = {
+      id: `SEC-DISP-${Date.now()}`,
+      timestamp: `Hari Ini, ${currentTimeString} WIB`,
+      employeeId: targetEmp.id,
+      employeeName: targetEmp.name,
+      eventType: 'device_reset',
+      details: `[PEMUTIHAN ABSENSI HP RUSAK] No: ${data.letterNumber} (${data.startDate} s/d ${data.endDate}) oleh ${data.issuedBy}. Keterangan: ${data.reason}`,
+      deviceId: 'CONSOLE-ADMIN-PEMUTIHAN'
+    };
+    setSecurityLogs(prev => [auditLog, ...prev]);
+    syncSaveSecurityLog(auditLog).catch(console.error);
+
+    handleAddNotification({
+      id: `NOTIF-DISP-${Date.now()}`,
+      targetRole: 'employee',
+      targetEmployeeId: targetEmp.id,
+      type: 'success',
+      title: 'Surat Dispensasi Kantor Diterbitkan',
+      message: `Dispensasi absensi kendala HP rusak resmi diterbitkan kantor (No: ${data.letterNumber}). Rekap presensi Anda telah disinkronkan.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+
+    handleAddNotification({
+      id: `NOTIF-ADM-DISP-${Date.now()}`,
+      targetRole: 'admin',
+      type: 'success',
+      title: 'Dispensasi Kantor Berhasil Disinkronkan',
+      message: `Dispensasi untuk ${targetEmp.name} (No: ${data.letterNumber}) langsung masuk ke rekap absensi dan cetak laporan.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
   };
 
   // Admin PIN configuration handler
@@ -1173,6 +1328,7 @@ export default function App() {
                 currentDate={effectiveCurrentDate}
                 onOpenPrintMenu={handleOpenPrintMenu}
                 onResetDailyAttendance={(recordIds, label) => handleResetAttendance('daily', label, recordIds)}
+                onNavigateToPemutihan={() => setActiveAdminTab('leaves')}
               />
             )}
 
@@ -1203,9 +1359,13 @@ export default function App() {
             {activeAdminTab === 'leaves' && (
               <AdminLeaveApprovals
                 leaveRequests={leaveRequests}
+                employees={employees}
+                locations={locations}
                 onApproveLeaveRequest={handleApproveLeaveRequest}
                 onRejectLeaveRequest={handleRejectLeaveRequest}
                 onResetLeaveRequests={handleResetLeaveRequests}
+                onCreateOfficeDispensation={handleCreateOfficeDispensation}
+                onOpenPrintMenu={handleOpenPrintMenu}
               />
             )}
 

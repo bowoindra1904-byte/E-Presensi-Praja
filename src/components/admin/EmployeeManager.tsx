@@ -51,7 +51,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
   // Reset all modal state
   const [isResetAllModalOpen, setIsResetAllModalOpen] = useState(false);
-  const [selectedResetAllMode, setSelectedResetAllMode] = useState<'reset_default' | 'clear_all'>('reset_default');
+  const [selectedResetAllMode, setSelectedResetAllMode] = useState<'reset_default' | 'clear_all'>('clear_all');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -143,13 +143,19 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   // Save Add New
   const handleSaveAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    const id = `POLPP-${String(employees.length + 1).padStart(3, '0')}`;
+    const maxIdNum = employees.reduce((max, emp) => {
+      const match = emp.id.match(/\d+/);
+      const val = match ? parseInt(match[0], 10) : 0;
+      return val > max ? val : max;
+    }, 0);
+    const nextNum = Math.max(employees.length + 1, maxIdNum + 1);
+    const id = `POLPP-${String(nextNum).padStart(3, '0')}`;
     const regu: ReguType = newEmployee.regu || 'Regu 1';
     const sched: ScheduleType = regu === 'Harian' ? 'harian' : 'shift';
 
     const emp: Employee = {
       id,
-      nip: newEmployee.nip || `19950101 202001 1 ${String(employees.length + 1).padStart(3, '0')}`,
+      nip: newEmployee.nip || `19950101 202001 1 ${String(nextNum).padStart(3, '0')}`,
       name: newEmployee.name || 'Anggota Baru',
       role: newEmployee.role || 'Anggota Regu Operasional',
       rank: newEmployee.rank || 'Pengatur Muda (II/a)',
@@ -1053,39 +1059,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             </div>
 
             <div className="space-y-3 text-xs">
-              {/* Option 1: Reset Default */}
-              <label 
-                className={`p-3.5 rounded-2xl border cursor-pointer block transition-all ${
-                  selectedResetAllMode === 'reset_default'
-                    ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-400/30'
-                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="resetAllEmployeeMode"
-                    checked={selectedResetAllMode === 'reset_default'}
-                    onChange={() => setSelectedResetAllMode('reset_default')}
-                    className="mt-0.5 text-amber-600 focus:ring-amber-500"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <strong className="text-slate-900 font-bold text-sm">
-                        Reset ke Data Default Personel Satpol PP
-                      </strong>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                        Standar Dinas
-                      </span>
-                    </div>
-                    <p className="text-slate-600 text-[11px] mt-1">
-                      Mengembalikan seluruh daftar personel ke formasi baku resmi Satpol PP lengkap dengan nama, NIP, pangkat, pembagian Regu 1, 2, 3, 4, dan Harian, serta penempatan slot pos dinas.
-                    </p>
-                  </div>
-                </div>
-              </label>
-
-              {/* Option 2: Kosongkan / Hapus Semua */}
+              {/* Option 1: Kosongkan / Hapus Semua (Permintaan User: Data Benar-benar Kosong) */}
               <label 
                 className={`p-3.5 rounded-2xl border cursor-pointer block transition-all ${
                   selectedResetAllMode === 'clear_all'
@@ -1104,14 +1078,46 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <strong className="text-slate-900 font-bold text-sm text-rose-700">
-                        Hapus / Kosongkan Seluruh Data Pegawai
+                        Hapus & Kosongkan Seluruh Data Pegawai Secara Total
                       </strong>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
-                        Hapus Total
+                        Data Kosong (0 Pegawai)
                       </span>
                     </div>
                     <p className="text-slate-600 text-[11px] mt-1">
-                      Mengosongkan seluruh database personel ({employees.length} pegawai) dari sistem untuk kebutuhan input formasi ulang secara manual atau impor file CSV baru.
+                      Menghapus seluruh database pegawai secara total ({employees.length} personel), termasuk data bawaan standar aplikasi, sehingga data menjadi benar-benar kosong untuk diisi mandiri oleh admin.
+                    </p>
+                  </div>
+                </div>
+              </label>
+
+              {/* Option 2: Reset Default */}
+              <label 
+                className={`p-3.5 rounded-2xl border cursor-pointer block transition-all ${
+                  selectedResetAllMode === 'reset_default'
+                    ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-400/30'
+                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="resetAllEmployeeMode"
+                    checked={selectedResetAllMode === 'reset_default'}
+                    onChange={() => setSelectedResetAllMode('reset_default')}
+                    className="mt-0.5 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <strong className="text-slate-900 font-bold text-sm">
+                        Kembalikan ke Data Formasi Bawaan Satpol PP
+                      </strong>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                        Standar Formasi
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] mt-1">
+                      Mengembalikan seluruh daftar personel ke formasi bawaan baku Satpol PP lengkap dengan nama, NIP, pangkat, pembagian Regu 1, 2, 3, 4, dan Harian.
                     </p>
                   </div>
                 </div>

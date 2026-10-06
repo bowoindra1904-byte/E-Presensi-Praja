@@ -45,7 +45,7 @@ export interface AttendanceRecord {
   // Check-In
   checkInTime?: string; // HH:mm:ss or '-'
   checkInTimestamp?: number;
-  checkInStatus?: 'tepat_waktu' | 'terlambat' | 'ditolak_waktu' | 'ditolak_lokasi' | 'ditolak_perangkat' | 'izin' | 'sakit';
+  checkInStatus?: 'tepat_waktu' | 'terlambat' | 'ditolak_waktu' | 'ditolak_lokasi' | 'ditolak_perangkat' | 'izin' | 'sakit' | 'dispensasi_kantor';
   checkInLat?: number;
   checkInLng?: number;
   checkInDistance?: number;
@@ -67,9 +67,16 @@ export interface AttendanceRecord {
   notes?: string;
   antiSpoofingFlags?: string[];
   leaveRequestId?: string;
+
+  // Office Dispensation (Kendala HP Rusak / Lapangan)
+  isOfficeDispensation?: boolean;
+  dispensationLetterNumber?: string;
+  dispensationLetterPhoto?: string;
+  dispensationReason?: string;
+  dispensationIssuedBy?: string;
 }
 
-export type LeaveType = 'izin' | 'sakit';
+export type LeaveType = 'izin' | 'sakit' | 'dispensasi_kantor';
 export type LeaveStatus = 'pending' | 'approved' | 'rejected';
 
 export interface LeaveRequest {
@@ -90,6 +97,12 @@ export interface LeaveRequest {
   reviewedAt?: string;
   reviewedBy?: string;
   adminNote?: string;
+
+  // Office Dispensation Metadata
+  isOfficeDispensation?: boolean;
+  dispensationLetterNumber?: string;
+  dispensationReason?: string;
+  dispensationIssuedBy?: string;
 }
 
 export interface SecurityLog {
@@ -143,6 +156,7 @@ export interface MonthlyEmployeeReport {
   totalLateCount: number;
   totalIzinCount?: number;
   totalSakitCount?: number;
+  totalDispensasiCount?: number;
   disciplineRate: number; // percentage 0 - 100
   attendancePattern: string; // e.g. "Disiplin Prima (100%)", "Keterlambatan Ringan (1x)", dll.
   records: AttendanceRecord[];

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { LeaveRequest } from '../../types';
+import { LeaveRequest, Employee, WorkLocation } from '../../types';
 import { 
   HeartHandshake, 
   Stethoscope, 
@@ -15,22 +15,44 @@ import {
   ExternalLink,
   RotateCcw,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Upload,
+  Printer
 } from 'lucide-react';
 
 interface AdminLeaveApprovalsProps {
   leaveRequests: LeaveRequest[];
+  employees?: Employee[];
+  locations?: WorkLocation[];
   onApproveLeaveRequest: (requestId: string, adminNote?: string) => void;
   onRejectLeaveRequest: (requestId: string, adminNote?: string) => void;
   onResetLeaveRequests?: (mode: 'completed' | 'all' | 'default') => void;
+  onCreateOfficeDispensation?: (data: {
+    employeeId: string;
+    startDate: string;
+    endDate: string;
+    letterNumber: string;
+    issuedBy: string;
+    reason: string;
+    sessionMode?: 'full_day' | 'check_in_only' | 'check_out_only';
+    statusMode?: 'dispensasi_kantor' | 'tepat_waktu';
+    attachmentUrl?: string;
+    attachmentName?: string;
+  }) => void;
+  onOpenPrintMenu?: (menu: 'daily' | 'monthly') => void;
   onClose?: () => void;
 }
 
 export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
   leaveRequests,
+  employees = [],
+  locations = [],
   onApproveLeaveRequest,
   onRejectLeaveRequest,
   onResetLeaveRequests,
+  onCreateOfficeDispensation,
+  onOpenPrintMenu,
   onClose,
 }) => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -42,6 +64,41 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
     action: 'approve' | 'reject';
   } | null>(null);
   const [actionNote, setActionNote] = useState('');
+
+  // Office Dispensation / Pemutihan Absensi Modal State (Solusi HP Rusak / Error Lapangan)
+  const [isDispensationModalOpen, setIsDispensationModalOpen] = useState(false);
+  const todayIso = new Date().toISOString().split('T')[0];
+  const [dispEmpId, setDispEmpId] = useState(employees[0]?.id || '');
+  const [dispStartDate, setDispStartDate] = useState(todayIso);
+  const [dispEndDate, setDispEndDate] = useState(todayIso);
+  const [dispLetterNumber, setDispLetterNumber] = useState(`005/DISP/POLPP/${new Date().getFullYear()}`);
+  const [dispIssuedBy, setDispIssuedBy] = useState('Kantor Satpol PP Bangka Barat');
+  const [dispReason, setDispReason] = useState('Kendala HP rusak/error saat apel pos pengamanan lapangan. Dilakukan pemutihan absensi kedinasan.');
+  const [dispSessionMode, setDispSessionMode] = useState<'full_day' | 'check_in_only' | 'check_out_only'>('full_day');
+  const [dispStatusMode, setDispStatusMode] = useState<'dispensasi_kantor' | 'tepat_waktu'>('dispensasi_kantor');
+  const [dispEmpSearch, setDispEmpSearch] = useState('');
+  const [dispFileUrl, setDispFileUrl] = useState('');
+  const [dispFileName, setDispFileName] = useState('');
+
+  const applyDatePreset = (preset: 'today' | 'yesterday' | 'this_week') => {
+    const d = new Date();
+    if (preset === 'today') {
+      const iso = d.toISOString().split('T')[0];
+      setDispStartDate(iso);
+      setDispEndDate(iso);
+    } else if (preset === 'yesterday') {
+      d.setDate(d.getDate() - 1);
+      const iso = d.toISOString().split('T')[0];
+      setDispStartDate(iso);
+      setDispEndDate(iso);
+    } else if (preset === 'this_week') {
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(d.setDate(diff));
+      setDispStartDate(monday.toISOString().split('T')[0]);
+      setDispEndDate(new Date().toISOString().split('T')[0]);
+    }
+  };
 
   // Reset modal state
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -69,9 +126,61 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
     });
   }, [leaveRequests, filterStatus, searchQuery]);
 
+  const handleDispensationFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Ukuran berkas surat maksimal 2 MB.");
+        return;
+      }
+      setDispFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDispFileUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCreateDispensationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dispEmpId) {
+      alert("Harap pilih personel Satpol PP.");
+      return;
+    }
+    if (!dispLetterNumber.trim()) {
+      alert("Harap isi nomor surat / memo pemutihan absensi.");
+      return;
+    }
+    if (onCreateOfficeDispensation) {
+      onCreateOfficeDispensation({
+        employeeId: dispEmpId,
+        startDate: dispStartDate,
+        endDate: dispEndDate,
+        letterNumber: dispLetterNumber.trim(),
+        issuedBy: dispIssuedBy.trim() || 'Kantor Satpol PP Bangka Barat',
+        reason: dispReason.trim(),
+        sessionMode: dispSessionMode,
+        statusMode: dispStatusMode,
+        attachmentUrl: dispFileUrl || undefined,
+        attachmentName: dispFileName || undefined,
+      });
+      setIsDispensationModalOpen(false);
+      setDispReason('Kendala HP rusak/error saat apel pos pengamanan lapangan. Dilakukan pemutihan absensi kedinasan.');
+      setDispFileUrl('');
+      setDispFileName('');
+    }
+  };
+
   const handleOpenAction = (request: LeaveRequest, action: 'approve' | 'reject') => {
     setActiveActionModal({ request, action });
-    setActionNote(action === 'approve' ? 'Disetujui oleh Komando Satpol PP.' : 'Permohonan ditolak karena kebutuhan operasional lapangan.');
+    setActionNote(
+      action === 'approve'
+        ? request.type === 'dispensasi_kantor'
+          ? `Disetujui Komando Satpol PP: Surat Dispensasi Kantor No. ${request.dispensationLetterNumber || '-'} sah & tersinkron ke rekapan.`
+          : 'Disetujui oleh Komando Satpol PP.'
+        : 'Permohonan ditolak karena kebutuhan operasional lapangan.'
+    );
   };
 
   const handleConfirmAction = () => {
@@ -104,6 +213,30 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
               <Clock className="w-3.5 h-3.5 text-amber-600" />
               <span>{pendingCount} Menunggu</span>
             </div>
+          )}
+
+          {onCreateOfficeDispensation && (
+            <button
+              type="button"
+              onClick={() => setIsDispensationModalOpen(true)}
+              className="px-3.5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Input Pemutihan Absensi untuk personel dengan kendala HP rusak/error kapan saja agar langsung terakomodir ke rekapan dan cetak absensi"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>⚡ Pemutihan Absensi (HP Rusak / Error)</span>
+            </button>
+          )}
+
+          {onOpenPrintMenu && (
+            <button
+              type="button"
+              onClick={() => onOpenPrintMenu('daily')}
+              className="px-3.5 py-2 text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-2xl transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Cetak Berita Acara Rekapitulasi Presensi & Dispensasi"
+            >
+              <Printer className="w-3.5 h-3.5 text-amber-600" />
+              <span>Cetak Rekap Dinas</span>
+            </button>
           )}
 
           {onResetLeaveRequests && (
@@ -206,11 +339,19 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   <span className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 ${
-                    req.type === 'sakit'
+                    req.type === 'dispensasi_kantor'
+                      ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                      : req.type === 'sakit'
                       ? 'bg-purple-100 text-purple-700 border border-purple-200'
                       : 'bg-amber-100 text-amber-800 border border-amber-200'
                   }`}>
-                    {req.type === 'sakit' ? <Stethoscope className="w-5 h-5" /> : <HeartHandshake className="w-5 h-5" />}
+                    {req.type === 'dispensasi_kantor' ? (
+                      <FileText className="w-5 h-5" />
+                    ) : req.type === 'sakit' ? (
+                      <Stethoscope className="w-5 h-5" />
+                    ) : (
+                      <HeartHandshake className="w-5 h-5" />
+                    )}
                   </span>
 
                   <div className="min-w-0 flex-1">
@@ -222,11 +363,31 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
                       <span className="text-[10px] font-mono text-slate-400">
                         NIP: {req.employeeNip}
                       </span>
+                      {req.dispensationLetterNumber && (
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                          Surat No: {req.dispensationLetterNumber}
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-xs text-slate-600 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-semibold text-slate-800">
-                        Jenis: <strong className={req.type === 'sakit' ? 'text-purple-700' : 'text-amber-800'}>{req.type === 'sakit' ? 'Sakit (Dokter)' : 'Izin Resmi'}</strong>
+                        Jenis:{' '}
+                        <strong
+                          className={
+                            req.type === 'dispensasi_kantor'
+                              ? 'text-blue-700'
+                              : req.type === 'sakit'
+                              ? 'text-purple-700'
+                              : 'text-amber-800'
+                          }
+                        >
+                          {req.type === 'dispensasi_kantor'
+                            ? 'Dispensasi Kantor (HP Rusak)'
+                            : req.type === 'sakit'
+                            ? 'Sakit (Dokter)'
+                            : 'Izin Resmi'}
+                        </strong>
                       </span>
                       <span>·</span>
                       <span className="flex items-center gap-1 font-mono text-slate-700">
@@ -544,6 +705,267 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
                 <span>{isResetting ? "Memproses..." : "Konfirmasi Reset"}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pemutihan Absensi (Kendala HP Rusak / Error Lapangan) Modal */}
+      {isDispensationModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 w-full max-w-xl shadow-2xl space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 font-bold shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Pemutihan Absensi (Kendala HP Rusak / Error)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Data dapat diinput kapan saja & terakomodir otomatis ke rekapan dan cetak absensi
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDispensationModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-blue-50/90 border border-blue-200 rounded-2xl text-blue-900 text-xs space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-blue-900">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Terakomodir Penuh ke Rekapan Harian, Bulanan & Cetak Dokumen</span>
+              </div>
+              <p className="text-[11px] text-blue-800 leading-relaxed">
+                Pemutihan ini mengesahkan kehadiran personel yang terkendala perangkat (HP rusak, mati total, atau aplikasi error di pos jaga). Sistem langsung memperbarui status presensi pada tanggal yang dipilih tanpa dikenakan sanksi alpha / tanpa keterangan.
+              </p>
+            </div>
+
+            <form onSubmit={handleCreateDispensationSubmit} className="space-y-4 text-xs">
+              {/* Select Employee with Search */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Pilih Personel Satpol PP (150 Anggota):
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ketik nama atau NIP untuk memfilter daftar..."
+                  value={dispEmpSearch}
+                  onChange={(e) => setDispEmpSearch(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                />
+                <select
+                  value={dispEmpId}
+                  onChange={(e) => setDispEmpId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                  required
+                >
+                  <option value="">-- Pilih Personel --</option>
+                  {employees
+                    .filter(emp => 
+                      !dispEmpSearch.trim() || 
+                      emp.name.toLowerCase().includes(dispEmpSearch.toLowerCase()) ||
+                      emp.nip.includes(dispEmpSearch) ||
+                      emp.regu.toLowerCase().includes(dispEmpSearch.toLowerCase())
+                    )
+                    .map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} (NIP: {emp.nip}) · {emp.regu} · Slot {emp.locationSlotId}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Tanggal Pemutihan (Input Kapan Saja) */}
+              <div className="space-y-2 bg-slate-50 border border-slate-200 p-3 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">
+                    Pilih Tanggal Presensi (Bisa Kapan Saja / Tanggal Lampau):
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => applyDatePreset('today')}
+                      className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    >
+                      Hari Ini
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyDatePreset('yesterday')}
+                      className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    >
+                      Kemarin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyDatePreset('this_week')}
+                      className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                    >
+                      Pekan Ini
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      Mulai Tanggal:
+                    </label>
+                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <input
+                        type="date"
+                        value={dispStartDate}
+                        onChange={(e) => setDispStartDate(e.target.value)}
+                        className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none w-full cursor-pointer"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      Sampai Tanggal:
+                    </label>
+                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <input
+                        type="date"
+                        value={dispEndDate}
+                        onChange={(e) => setDispEndDate(e.target.value)}
+                        className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none w-full cursor-pointer"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sesi Absensi & Status Pemutihan */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Sesi Absensi yang Diputihkan:
+                  </label>
+                  <select
+                    value={dispSessionMode}
+                    onChange={(e) => setDispSessionMode(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="full_day">Seharian Penuh (Masuk & Pulang)</option>
+                    <option value="check_in_only">Hanya Absen Masuk</option>
+                    <option value="check_out_only">Hanya Absen Pulang</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Status Hasil di Rekapan & Cetak:
+                  </label>
+                  <select
+                    value={dispStatusMode}
+                    onChange={(e) => setDispStatusMode(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="dispensasi_kantor">Dispensasi Kantor (HP Rusak - Sah)</option>
+                    <option value="tepat_waktu">Pemutihan Hadir Tepat Waktu</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Letter Number & Issued By */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Nomor Memo / Surat Disposisi:
+                  </label>
+                  <input
+                    type="text"
+                    value={dispLetterNumber}
+                    onChange={(e) => setDispLetterNumber(e.target.value)}
+                    placeholder="Contoh: 005/DISP/POLPP/2026"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 font-mono"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Pejabat / Verifikator Disposisi:
+                  </label>
+                  <input
+                    type="text"
+                    value={dispIssuedBy}
+                    onChange={(e) => setDispIssuedBy(e.target.value)}
+                    placeholder="Contoh: Kantor Satpol PP Bangka Barat"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Reason / Field Constraints */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Keterangan Kendala Lapangan (HP Rusak / Error):
+                </label>
+                <textarea
+                  rows={2}
+                  value={dispReason}
+                  onChange={(e) => setDispReason(e.target.value)}
+                  placeholder="Jelaskan kondisi kendala lapangan (contoh: HP personel blank/mati saat apel pos pengamanan lapangan)..."
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-800 text-xs focus:outline-none focus:border-blue-500 focus:bg-white"
+                  required
+                />
+              </div>
+
+              {/* Upload Letter Photo */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Unggah Nota Dinas / Foto Memo Fisik (Opsional):
+                </label>
+                <div className="relative border-2 border-dashed border-blue-200 hover:border-blue-400 bg-blue-50/30 rounded-2xl p-3 text-center transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleDispensationFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center justify-center gap-1 text-[11px] text-slate-500">
+                    <Upload className="w-4 h-4 text-blue-600" />
+                    <span className="font-semibold text-slate-700">
+                      {dispFileName ? dispFileName : "Pilih Berkas Foto / Scan Surat / Memo Kantor"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Maks. 2MB (Foto memo dinas atau disposisi komandan)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsDispensationModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Simpan Pemutihan & Sinkronkan ke Rekapan</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

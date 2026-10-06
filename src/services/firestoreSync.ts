@@ -5,7 +5,10 @@ import {
   deleteDoc, 
   onSnapshot, 
   getDocs, 
-  writeBatch 
+  getDoc,
+  writeBatch,
+  query,
+  limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Employee, WorkLocation, AttendanceRecord, SecurityLog, LeaveRequest } from '../types';
@@ -13,13 +16,27 @@ import { INITIAL_EMPLOYEES } from '../data/initialEmployees';
 import { INITIAL_WORK_LOCATIONS } from '../data/initialLocations';
 import { generateInitialLeaveRequests } from '../data/initialAttendance';
 
-// 1. Subscribe to Employees with auto-seed of 150 personnel
+// 1. Subscribe to Employees with auto-seed of 150 personnel only if never cleared
 export function subscribeEmployees(onData: (employees: Employee[]) => void) {
   const employeesCol = collection(db, 'employees');
   
   return onSnapshot(employeesCol, async (snapshot) => {
-    if (snapshot.empty && localStorage.getItem('sipraja_employees_cleared') !== 'true') {
-      console.log('Firestore employees empty. Seeding initial 150 employees...');
+    if (snapshot.empty) {
+      if (localStorage.getItem('sipraja_employees_cleared') === 'true') {
+        onData([]);
+        return;
+      }
+      try {
+        const seedStateSnap = await getDoc(doc(db, 'system_settings', 'seed_state'));
+        if (seedStateSnap.exists() && seedStateSnap.data()?.employeesCleared === true) {
+          localStorage.setItem('sipraja_employees_cleared', 'true');
+          onData([]);
+          return;
+        }
+      } catch (e) {
+        console.error('Error checking seed_state:', e);
+      }
+      console.log('Firestore employees empty and not marked cleared. Seeding initial 150 employees...');
       await seedInitialEmployees();
       return;
     }
@@ -88,11 +105,12 @@ export function subscribeAttendance(onData: (records: AttendanceRecord[]) => voi
   });
 }
 
-// 4. Subscribe to Security Logs
+// 4. Subscribe to Security Logs (Efficient query limit for bandwidth and read savings)
 export function subscribeSecurityLogs(onData: (logs: SecurityLog[]) => void) {
   const logsCol = collection(db, 'security_logs');
+  const logsQuery = query(logsCol, limit(200));
   
-  return onSnapshot(logsCol, (snapshot) => {
+  return onSnapshot(logsQuery, (snapshot) => {
     const items: SecurityLog[] = [];
     snapshot.forEach(docSnap => {
       items.push(docSnap.data() as SecurityLog);
@@ -264,6 +282,27 @@ export async function syncClearAllEmployees(employeeIds: string[]): Promise<void
     }
     await batch.commit();
   }
+
+  // Record permanent cleared state so default 150 employees never auto-seed back
+  try {
+    await setDoc(doc(db, 'system_settings', 'seed_state'), { 
+      employeesCleared: true, 
+      clearedAt: new Date().toISOString() 
+    }, { merge: true });
+    localStorage.setItem('sipraja_employees_cleared', 'true');
+  } catch (e) {
+    console.error('Error saving seed_state:', e);
+  }
+}
+
+export async function syncSaveOfficeDispensation(
+  record: AttendanceRecord, 
+  leaveRequest: LeaveRequest
+): Promise<void> {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'attendance', record.id), cleanFirestoreData(record), { merge: true });
+  batch.set(doc(db, 'leave_requests', leaveRequest.id), cleanFirestoreData(leaveRequest), { merge: true });
+  await batch.commit();
 }
 
 export async function syncClearLeaveRequests(requestIds: string[]): Promise<void> {

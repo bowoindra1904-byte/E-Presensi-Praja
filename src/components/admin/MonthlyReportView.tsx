@@ -81,6 +81,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       const totalPresentDays = presentRecords.length;
       const totalIzinCount = empRecords.filter(r => r.checkInStatus === 'izin').length;
       const totalSakitCount = empRecords.filter(r => r.checkInStatus === 'sakit').length;
+      const totalDispensasiCount = empRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length;
       
       // Calculate work hours
       let totalWorkHours = 0;
@@ -96,6 +97,8 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
           totalWorkHours += emp.scheduleType === 'shift' ? 12 : 8.5;
         }
       });
+      // Add work hours from office dispensations
+      totalWorkHours += totalDispensasiCount * (emp.scheduleType === 'shift' ? 12 : 8.5);
 
       const totalLateCount = presentRecords.filter(r => r.checkInStatus === 'terlambat').length;
       
@@ -128,6 +131,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         totalLateCount,
         totalIzinCount,
         totalSakitCount,
+        totalDispensasiCount,
         disciplineRate,
         attendancePattern,
         records: empRecords,
@@ -606,13 +610,13 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     </span>
                   </td>
 
-                  {/* Izin / Sakit */}
+                  {/* Izin / Dispensasi / Sakit */}
                   <td className="py-3 px-4 text-center">
                     <span className="font-mono font-bold text-slate-800 text-sm">
-                      {(item.totalIzinCount || 0) + (item.totalSakitCount || 0)} Hari
+                      {(item.totalIzinCount || 0) + (item.totalSakitCount || 0) + (item.totalDispensasiCount || 0)} Hari
                     </span>
                     <span className="text-[10px] text-slate-500 block">
-                      {item.totalIzinCount || 0} Izin · {item.totalSakitCount || 0} Sakit
+                      {item.totalIzinCount || 0} Izin · {item.totalDispensasiCount || 0} Disp. HP · {item.totalSakitCount || 0} Sakit
                     </span>
                   </td>
 

@@ -22,7 +22,8 @@ import {
   RotateCcw,
   Trash2,
   X,
-  HeartHandshake
+  HeartHandshake,
+  FileText
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -33,6 +34,7 @@ interface AdminDashboardProps {
   currentDate: Date;
   onOpenPrintMenu?: (menu: 'daily') => void;
   onResetDailyAttendance?: (recordIds: string[], dateLabel: string) => Promise<void>;
+  onNavigateToPemutihan?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -43,6 +45,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentDate,
   onOpenPrintMenu,
   onResetDailyAttendance,
+  onNavigateToPemutihan,
 }) => {
   const [selectedSlotFilter, setSelectedSlotFilter] = useState<string>('all');
   const [selectedScheduleFilter, setSelectedScheduleFilter] = useState<string>('all');
@@ -69,7 +72,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const totalHadir = hadirCount + terlambatCount;
   const izinCount = todayRecords.filter(r => r.checkInStatus === 'izin').length;
   const sakitCount = todayRecords.filter(r => r.checkInStatus === 'sakit').length;
-  const totalIzinSakit = izinCount + sakitCount;
+  const dispensasiCount = todayRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length;
+  const totalIzinSakit = izinCount + sakitCount + dispensasiCount;
   const belumAbsenCount = Math.max(0, totalEmployees - totalHadir - totalIzinSakit);
   const securityIncidentCount = securityLogs.length;
 
@@ -184,15 +188,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        {/* Izin & Sakit Disetujui */}
+        {/* Izin, Sakit & Dispensasi Kantor */}
         <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Izin & Sakit</span>
+            <span className="text-xs font-semibold text-slate-500">Izin & Dispensasi</span>
             <HeartHandshake className="w-4 h-4 text-blue-600" />
           </div>
           <div className="mt-3">
             <span className="text-2xl sm:text-3xl font-black text-blue-600 font-mono">{totalIzinSakit}</span>
-            <span className="text-[11px] text-slate-500 block mt-0.5">{izinCount} Izin · {sakitCount} Sakit</span>
+            <span className="text-[11px] text-slate-500 block mt-0.5">
+              {izinCount} Izin · {dispensasiCount} Disp. HP · {sakitCount} Sakit
+            </span>
           </div>
         </div>
 
@@ -263,6 +269,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {onNavigateToPemutihan && (
+              <button
+                type="button"
+                onClick={onNavigateToPemutihan}
+                className="px-3.5 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Input pemutihan absensi kendala HP rusak/error lapangan kapan saja"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>⚡ Pemutihan Absensi (HP Rusak)</span>
+              </button>
+            )}
             {onResetDailyAttendance && (
               <button
                 onClick={() => {
@@ -371,10 +388,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="font-mono font-bold text-slate-900 text-[11px]">{r.checkInTime} {r.checkInTime.includes(':') ? 'WIB' : ''}</span>
                       <span className={`block text-[9.5px] font-semibold ${
                         r.checkInStatus === 'terlambat' ? 'text-amber-700' :
-                        r.checkInStatus === 'izin' ? 'text-blue-700' :
+                        r.checkInStatus === 'dispensasi_kantor' ? 'text-blue-700' :
+                        r.checkInStatus === 'izin' ? 'text-indigo-700' :
                         r.checkInStatus === 'sakit' ? 'text-purple-700' : 'text-emerald-700'
                       }`}>
                         {r.checkInStatus === 'terlambat' ? 'Terlambat' :
+                         r.checkInStatus === 'dispensasi_kantor' ? 'Dispensasi HP Rusak' :
                          r.checkInStatus === 'izin' ? 'Izin Dinas' :
                          r.checkInStatus === 'sakit' ? 'Sakit' : 'Tepat Waktu'}
                       </span>
@@ -460,13 +479,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border inline-block ${
                           r.checkInStatus === 'tepat_waktu'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : r.checkInStatus === 'izin'
+                            : r.checkInStatus === 'dispensasi_kantor'
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : r.checkInStatus === 'izin'
+                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                             : r.checkInStatus === 'sakit'
                             ? 'bg-purple-50 text-purple-700 border-purple-200'
                             : 'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
                           {r.checkInStatus === 'tepat_waktu' ? 'Tepat Waktu' :
+                           r.checkInStatus === 'dispensasi_kantor' ? 'Dispensasi HP Rusak' :
                            r.checkInStatus === 'izin' ? 'Izin Dinas' :
                            r.checkInStatus === 'sakit' ? 'Sakit' : 'Terlambat'}
                         </span>

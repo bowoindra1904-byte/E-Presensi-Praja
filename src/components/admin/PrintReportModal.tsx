@@ -892,7 +892,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Menu 1: Rekap Harian */}
             {activeMenu === 'daily' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-4 gap-2 text-[11px] p-3 rounded-lg bg-slate-100 border border-slate-200">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] p-3 rounded-lg bg-slate-100 border border-slate-200">
                   <div>
                     <span className="text-slate-500 block">Total Personel:</span>
                     <strong className="text-slate-900">{employees.length} Pegawai</strong>
@@ -910,8 +910,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Toleransi Geofence:</span>
-                    <strong className="text-slate-800">15m - 25m (Sangat Dekat)</strong>
+                    <span className="text-slate-500 block">Dispensasi Kantor (HP Rusak):</span>
+                    <strong className="text-blue-700">
+                      {attendanceRecords.filter(r => r.date === filterDate && r.checkInStatus === 'dispensasi_kantor').length} Personel
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Izin & Sakit:</span>
+                    <strong className="text-purple-700">
+                      {attendanceRecords.filter(r => r.date === filterDate && (r.checkInStatus === 'izin' || r.checkInStatus === 'sakit')).length} Personel
+                    </strong>
                   </div>
                 </div>
 
@@ -924,7 +932,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <th className="p-1.5 border border-slate-300">Pos Penugasan</th>
                       <th className="p-1.5 border border-slate-300 text-center">Masuk</th>
                       <th className="p-1.5 border border-slate-300 text-center">Pulang</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Jarak GPS</th>
+                      <th className="p-1.5 border border-slate-300 text-center">Jarak / Surat</th>
                       <th className="p-1.5 border border-slate-300 text-center">Status</th>
                     </tr>
                   </thead>
@@ -937,9 +945,11 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       })
                       .map((emp, idx) => {
                         const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
-                        const loc = locations.find(l => l.id === emp.locationSlotId);
                         const isPresent = !!rec?.checkInTime;
                         const isLate = rec?.checkInStatus === 'terlambat';
+                        const isDisp = rec?.checkInStatus === 'dispensasi_kantor';
+                        const isIzin = rec?.checkInStatus === 'izin';
+                        const isSakit = rec?.checkInStatus === 'sakit';
 
                         return (
                           <tr key={emp.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
@@ -955,16 +965,38 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                               {getPosPenugasanLabel(emp)}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-semibold">
-                              {rec?.checkInTime || "-"}
+                              {isDisp ? (
+                                <span className="text-blue-800 font-bold">DISPENSASI</span>
+                              ) : (
+                                rec?.checkInTime || "-"
+                              )}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono">
-                              {rec?.checkOutTime || "-"}
+                              {isDisp ? (
+                                <span className="text-slate-500">Surat Kantor</span>
+                              ) : (
+                                rec?.checkOutTime || "-"
+                              )}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono">
-                              {rec?.checkInDistance !== undefined ? `${rec.checkInDistance}m` : "-"}
+                              {isDisp ? (
+                                <span className="font-bold text-blue-800 text-[9px] block">
+                                  {rec?.dispensationLetterNumber ? `No: ${rec.dispensationLetterNumber}` : "Surat Sah"}
+                                </span>
+                              ) : rec?.checkInDistance !== undefined ? (
+                                `${rec.checkInDistance}m`
+                              ) : (
+                                "-"
+                              )}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-bold">
-                              {isPresent ? (
+                              {isDisp ? (
+                                <span className="text-blue-800">DISPENSASI KANTOR</span>
+                              ) : isIzin ? (
+                                <span className="text-indigo-800">IZIN DINAS</span>
+                              ) : isSakit ? (
+                                <span className="text-purple-800">SAKIT</span>
+                              ) : isPresent ? (
                                 isLate ? (
                                   <span className="text-amber-800">TERLAMBAT</span>
                                 ) : (

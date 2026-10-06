@@ -44,6 +44,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
       if (filterStatus === 'terlambat') return r.checkInStatus === 'terlambat';
       if (filterStatus === 'izin') return r.checkInStatus === 'izin';
       if (filterStatus === 'sakit') return r.checkInStatus === 'sakit';
+      if (filterStatus === 'dispensasi_kantor') return r.checkInStatus === 'dispensasi_kantor';
       return true;
     }).sort((a, b) => b.date.localeCompare(a.date));
   }, [attendanceRecords, employee.id, selectedMonth, filterStatus]);
@@ -58,10 +59,14 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
   const totalTerlambat = allMonthlyRecords.filter(r => r.checkInStatus === 'terlambat').length;
   const totalIzin = allMonthlyRecords.filter(r => r.checkInStatus === 'izin').length;
   const totalSakit = allMonthlyRecords.filter(r => r.checkInStatus === 'sakit').length;
+  const totalDispensasi = allMonthlyRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length;
 
   // Work hours estimate
   const totalJamKerja = allMonthlyRecords.reduce((acc, r) => {
     if (r.checkInStatus === 'izin' || r.checkInStatus === 'sakit') return acc;
+    if (r.checkInStatus === 'dispensasi_kantor') {
+      return acc + (employee.scheduleType === 'shift' ? 12 : 8.5);
+    }
     if (r.checkInTime && r.checkOutTime && r.checkInTime !== '-' && r.checkOutTime !== '-') {
       const [hIn, mIn] = r.checkInTime.split(':').map(Number);
       const [hOut, mOut] = r.checkOutTime.split(':').map(Number);
@@ -96,10 +101,17 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
             Terlambat
           </span>
         );
-      case 'izin':
+      case 'dispensasi_kantor':
         return (
           <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
-            <HeartHandshake className="w-3 h-3 text-blue-600" />
+            <FileText className="w-3 h-3 text-blue-600" />
+            Dispensasi Kantor (HP Rusak)
+          </span>
+        );
+      case 'izin':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+            <HeartHandshake className="w-3 h-3 text-indigo-600" />
             Izin Resmi
           </span>
         );
@@ -162,7 +174,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
       </div>
 
       {/* Summary Stat Cards (Clean, luminous, elegant palette) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {/* Total Hadir */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
           <span className="text-[11px] font-semibold text-slate-500 block">Total Hari Hadir</span>
@@ -195,14 +207,26 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
           <span className="text-[10px] text-slate-500 block mt-1.5">Lewat jam toleransi</span>
         </div>
 
+        {/* Dispensasi Kantor (HP Rusak) */}
+        <div className="bg-white border border-blue-200/90 rounded-2xl p-4 shadow-xs">
+          <span className="text-[11px] font-semibold text-blue-700 block">Dispensasi Kantor</span>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className="text-xl sm:text-2xl font-black text-blue-700 font-mono">{totalDispensasi}</span>
+            <span className="text-xs text-slate-400 font-medium">Hari</span>
+          </div>
+          <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold mt-1.5 inline-block">
+            HP Rusak / Surat Sah
+          </span>
+        </div>
+
         {/* Izin Resmi */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
           <span className="text-[11px] font-semibold text-slate-500 block">Izin Resmi</span>
           <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-xl sm:text-2xl font-black text-blue-600 font-mono">{totalIzin}</span>
+            <span className="text-xl sm:text-2xl font-black text-indigo-600 font-mono">{totalIzin}</span>
             <span className="text-xs text-slate-400 font-medium">Hari</span>
           </div>
-          <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold mt-1.5 inline-block">
+          <span className="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded font-bold mt-1.5 inline-block">
             Disetujui Admin
           </span>
         </div>
@@ -252,6 +276,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
               <option value="hadir">Semua Hadir (Tepat Waktu & Terlambat)</option>
               <option value="tepat_waktu">Hanya Tepat Waktu</option>
               <option value="terlambat">Hanya Terlambat</option>
+              <option value="dispensasi_kantor">Hanya Dispensasi Kantor (HP Rusak)</option>
               <option value="izin">Hanya Izin</option>
               <option value="sakit">Hanya Sakit</option>
             </select>
@@ -281,8 +306,10 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
                   year: 'numeric'
                 });
 
+                const isDisp = r.checkInStatus === 'dispensasi_kantor';
+
                 return (
-                  <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr key={r.id} className={`hover:bg-slate-50/70 transition-colors ${isDisp ? 'bg-blue-50/30' : ''}`}>
                     <td className="py-3 px-3.5 font-medium text-slate-900 whitespace-nowrap">
                       {formattedDate}
                     </td>
@@ -293,16 +320,39 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
                       </span>
                     </td>
                     <td className="py-3 px-3.5 font-mono font-bold text-slate-800 whitespace-nowrap">
-                      {r.checkInTime && r.checkInTime !== '-' ? `${r.checkInTime} WIB` : '-'}
+                      {isDisp ? (
+                        <span className="text-blue-700 font-bold">DISPENSASI</span>
+                      ) : (
+                        r.checkInTime && r.checkInTime !== '-' ? `${r.checkInTime} WIB` : '-'
+                      )}
                     </td>
                     <td className="py-3 px-3.5 font-mono font-bold text-slate-800 whitespace-nowrap">
-                      {r.checkOutTime && r.checkOutTime !== '-' ? `${r.checkOutTime} WIB` : (r.checkInStatus === 'izin' || r.checkInStatus === 'sakit' ? '-' : <span className="text-slate-400 italic font-normal">Belum absen</span>)}
+                      {isDisp ? (
+                        <span className="text-slate-500 font-medium">Surat Kantor</span>
+                      ) : (
+                        r.checkOutTime && r.checkOutTime !== '-' ? `${r.checkOutTime} WIB` : (r.checkInStatus === 'izin' || r.checkInStatus === 'sakit' ? '-' : <span className="text-slate-400 italic font-normal">Belum absen</span>)
+                      )}
                     </td>
                     <td className="py-3 px-3.5 whitespace-nowrap">
                       {getStatusBadge(r.checkInStatus)}
                     </td>
-                    <td className="py-3 px-3.5 text-slate-600 text-[11px] max-w-xs truncate">
-                      {r.notes || '-'}
+                    <td className="py-3 px-3.5 text-slate-600 text-[11px] max-w-sm">
+                      <div>{r.notes || '-'}</div>
+                      {r.dispensationLetterNumber && (
+                        <div className="flex items-center gap-1.5 text-blue-700 font-semibold mt-0.5">
+                          <span>No. Surat: {r.dispensationLetterNumber}</span>
+                          {r.dispensationLetterPhoto && (
+                            <a
+                              href={r.dispensationLetterPhoto}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline text-[10px] hover:text-blue-900"
+                            >
+                              Lihat Surat
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
