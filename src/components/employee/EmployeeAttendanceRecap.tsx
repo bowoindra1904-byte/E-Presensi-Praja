@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Employee, AttendanceRecord, WorkLocation } from '../../types';
+import { Employee, AttendanceRecord, WorkLocation, LeaveRequest } from '../../types';
 import { 
   Calendar, 
   CheckCircle2, 
@@ -18,6 +18,7 @@ interface EmployeeAttendanceRecapProps {
   attendanceRecords: AttendanceRecord[];
   locations: WorkLocation[];
   currentDate: Date;
+  leaveRequests?: LeaveRequest[];
 }
 
 export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = ({
@@ -25,6 +26,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
   attendanceRecords,
   locations,
   currentDate,
+  leaveRequests = [],
 }) => {
   // Current month default: YYYY-MM
   const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -49,36 +51,70 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
     }).sort((a, b) => b.date.localeCompare(a.date));
   }, [attendanceRecords, employee.id, selectedMonth, filterStatus]);
 
+  // Approved leaves for this employee in selected month
+  const approvedMonthLeaves = useMemo(() => {
+    return leaveRequests.filter(lr => 
+      lr.employeeId === employee.id &&
+      lr.status === 'approved' &&
+      !lr.id.startsWith('LEAVE-REQ-') &&
+      !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(lr.id) &&
+      (lr.startDate.startsWith(selectedMonth) || lr.endDate.startsWith(selectedMonth))
+    );
+  }, [leaveRequests, employee.id, selectedMonth]);
+
   // Aggregate stats
   const allMonthlyRecords = useMemo(() => {
     return attendanceRecords.filter((r) => r.employeeId === employee.id && r.date.startsWith(selectedMonth));
   }, [attendanceRecords, employee.id, selectedMonth]);
 
-  const totalHadir = allMonthlyRecords.filter(r => r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat').length;
+  const totalHadir = allMonthlyRecords.filter(
+    r => r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat' || r.checkInStatus === 'dispensasi_kantor'
+  ).length;
   const totalTepatWaktu = allMonthlyRecords.filter(r => r.checkInStatus === 'tepat_waktu').length;
   const totalTerlambat = allMonthlyRecords.filter(r => r.checkInStatus === 'terlambat').length;
-  const totalIzin = allMonthlyRecords.filter(r => r.checkInStatus === 'izin').length;
-  const totalSakit = allMonthlyRecords.filter(r => r.checkInStatus === 'sakit').length;
-  const totalDispensasi = allMonthlyRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length;
+  const totalIzin = Math.max(
+    allMonthlyRecords.filter(r => r.checkInStatus === 'izin').length,
+    approvedMonthLeaves.filter(l => l.type === 'izin').reduce((acc, l) => acc + (l.totalDays || 1), 0)
+  );
+  const totalSakit = Math.max(
+    allMonthlyRecords.filter(r => r.checkInStatus === 'sakit').length,
+    approvedMonthLeaves.filter(l => l.type === 'sakit').reduce((acc, l) => acc + (l.totalDays || 1), 0)
+  );
+  const totalDispensasi = Math.max(
+    allMonthlyRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length,
+    approvedMonthLeaves.filter(l => l.type === 'dispensasi_kantor' || l.isOfficeDispensation).reduce((acc, l) => acc + (l.totalDays || 1), 0)
+  );
 
-  // Work hours estimate
+  // Work hours estimate safely
   const totalJamKerja = allMonthlyRecords.reduce((acc, r) => {
     if (r.checkInStatus === 'izin' || r.checkInStatus === 'sakit') return acc;
     if (r.checkInStatus === 'dispensasi_kantor') {
       return acc + (employee.scheduleType === 'shift' ? 12 : 8.5);
     }
-    if (r.checkInTime && r.checkOutTime && r.checkInTime !== '-' && r.checkOutTime !== '-') {
+    if (
+      r.checkInTime && 
+      r.checkOutTime && 
+      r.checkInTime !== '-' && 
+      r.checkOutTime !== '-' &&
+      r.checkInTime.includes(':') &&
+      r.checkOutTime.includes(':')
+    ) {
       const [hIn, mIn] = r.checkInTime.split(':').map(Number);
       const [hOut, mOut] = r.checkOutTime.split(':').map(Number);
-      const diff = (hOut * 60 + mOut) - (hIn * 60 + mIn);
-      return acc + (diff > 0 ? diff / 60 : (employee.scheduleType === 'shift' ? 12 : 8.5));
+      if (!isNaN(hIn) && !isNaN(hOut)) {
+        const diff = (hOut * 60 + (mOut || 0)) - (hIn * 60 + (mIn || 0));
+        let hours = diff > 0 ? diff / 60 : (employee.scheduleType === 'shift' ? 12 : 8.5);
+        return acc + (isNaN(hours) ? (employee.scheduleType === 'shift' ? 12 : 8.5) : hours);
+      }
     }
     return acc + (employee.scheduleType === 'shift' ? 12 : 8.5);
   }, 0);
 
-  const persentaseDisiplin = totalHadir > 0 
-    ? Math.round((totalTepatWaktu / totalHadir) * 100) 
+  const onTimeOrDispensed = totalTepatWaktu + totalDispensasi;
+  const rawDisiplin = totalHadir > 0 
+    ? Math.round((onTimeOrDispensed / totalHadir) * 100) 
     : 100;
+  const persentaseDisiplin = isNaN(rawDisiplin) ? 100 : Math.max(0, Math.min(100, rawDisiplin));
 
   const getLocationName = (slotId: number) => {
     const loc = locations.find(l => l.id === slotId);

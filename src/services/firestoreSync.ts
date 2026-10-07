@@ -82,15 +82,38 @@ export function subscribeLocations(onData: (locations: WorkLocation[]) => void) 
   });
 }
 
-// 3. Subscribe to Attendance Records
+// 3. Subscribe to Attendance Records (Only real records inputted by admin or users)
 export function subscribeAttendance(onData: (records: AttendanceRecord[]) => void) {
   const attendanceCol = collection(db, 'attendance');
   
   return onSnapshot(attendanceCol, (snapshot) => {
     const items: AttendanceRecord[] = [];
+    const sampleIdsToDelete: string[] = [];
+
     snapshot.forEach(docSnap => {
-      items.push(docSnap.data() as AttendanceRecord);
+      const data = docSnap.data() as AttendanceRecord;
+      // Filter out application default mock records (ATT-2026-xxx, ATT-HIST-xxx, ATT-SAMPLE-xxx)
+      if (
+        data.id && (
+          data.id.startsWith('ATT-2026-') || 
+          data.id.startsWith('ATT-HIST-') ||
+          data.id.startsWith('ATT-SAMPLE-')
+        )
+      ) {
+        sampleIdsToDelete.push(data.id);
+      } else {
+        items.push(data);
+      }
     });
+
+    // Asynchronously purge obsolete sample records from Firestore in background
+    if (sampleIdsToDelete.length > 0) {
+      const batch = writeBatch(db);
+      sampleIdsToDelete.slice(0, 100).forEach(id => {
+        batch.delete(doc(db, 'attendance', id));
+      });
+      batch.commit().catch(console.error);
+    }
 
     // Sort newest first
     items.sort((a, b) => {
@@ -139,21 +162,38 @@ export function subscribeAdminPin(onData: (pin: string) => void) {
   });
 }
 
-// 6. Subscribe to Leave Requests (Izin & Sakit)
+// 6. Subscribe to Leave Requests (Izin & Sakit) - Only real requests, sample dummy data purged
 export function subscribeLeaveRequests(onData: (requests: LeaveRequest[]) => void) {
   const leaveCol = collection(db, 'leave_requests');
   
   return onSnapshot(leaveCol, async (snapshot) => {
-    if (snapshot.empty && localStorage.getItem('sipraja_leaves_cleared') !== 'true') {
-      console.log('Firestore leave_requests empty. Seeding initial sample requests...');
-      await seedInitialLeaveRequests();
-      return;
-    }
-
     const items: LeaveRequest[] = [];
+    const sampleIdsToDelete: string[] = [];
+
     snapshot.forEach(docSnap => {
-      items.push(docSnap.data() as LeaveRequest);
+      const data = docSnap.data() as LeaveRequest;
+      // Filter out application default sample requests (LEAVE-REQ-xxx, LEAVE-SAMPLE-xxx)
+      if (
+        data.id && (
+          data.id.startsWith('LEAVE-REQ-') ||
+          data.id.startsWith('LEAVE-SAMPLE-') ||
+          ['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(data.id)
+        )
+      ) {
+        sampleIdsToDelete.push(data.id);
+      } else {
+        items.push(data);
+      }
     });
+
+    // Asynchronously delete obsolete sample requests from Firestore in background
+    if (sampleIdsToDelete.length > 0) {
+      const batch = writeBatch(db);
+      sampleIdsToDelete.forEach(id => {
+        batch.delete(doc(db, 'leave_requests', id));
+      });
+      batch.commit().catch(console.error);
+    }
 
     // Sort newest application first
     items.sort((a, b) => (b.appliedAt || '').localeCompare(a.appliedAt || ''));

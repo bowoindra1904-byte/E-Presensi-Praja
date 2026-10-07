@@ -51,14 +51,14 @@ export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
     }
   }, [initialType]);
 
-  // Calculate day count
+  // Calculate day count safely
   const calculateDays = (start: string, end: string) => {
     if (!start || !end) return 1;
     const s = new Date(start).getTime();
     const e = new Date(end).getTime();
-    if (e < s) return 1;
+    if (isNaN(s) || isNaN(e) || e < s) return 1;
     const diffDays = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
-    return Math.max(1, diffDays);
+    return isNaN(diffDays) ? 1 : Math.max(1, diffDays);
   };
 
   const totalDays = calculateDays(startDate, endDate);

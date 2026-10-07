@@ -68,6 +68,7 @@ export const ArchiveCleanupModal: React.FC<ArchiveCleanupModalProps> = ({
   }, [eligibleRecords, photosCount, cleanupMode]);
 
   const formatSize = (kb: number) => {
+    if (isNaN(kb) || kb <= 0) return '0 KB';
     if (kb >= 1024) {
       return `${(kb / 1024).toFixed(1)} MB`;
     }

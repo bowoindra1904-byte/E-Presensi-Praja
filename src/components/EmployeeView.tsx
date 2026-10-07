@@ -817,17 +817,17 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                   <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
                     <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Jarak GPS</span>
                     <span className={`font-mono font-bold text-xs sm:text-sm ${isWithinGeofence ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {currentDistance} m
+                      {isNaN(currentDistance) ? 0 : currentDistance} m
                     </span>
                   </div>
                   <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
                     <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Akurasi GPS</span>
-                    <span className="font-mono font-bold text-slate-800 text-xs sm:text-sm">±{Math.round(userCoords.accuracy)} m</span>
+                    <span className="font-mono font-bold text-slate-800 text-xs sm:text-sm">±{Math.round(isNaN(userCoords.accuracy) ? 10 : userCoords.accuracy)} m</span>
                   </div>
                   <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
                     <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Anti-Fake GPS</span>
                     <span className={`font-bold text-xs sm:text-sm ${antiSpoof.isValid ? 'text-emerald-700' : 'text-amber-700'}`}>
-                      {antiSpoof.securityScore}% Valid
+                      {isNaN(antiSpoof.securityScore) ? 100 : antiSpoof.securityScore}% Valid
                     </span>
                   </div>
                 </div>
@@ -934,6 +934,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
               attendanceRecords={attendanceRecords}
               locations={locations}
               currentDate={currentDate}
+              leaveRequests={leaveRequests}
             />
           )}
 

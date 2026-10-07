@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Employee, WorkLocation, AttendanceRecord, MonthlyEmployeeReport } from '../../types';
+import { Employee, WorkLocation, AttendanceRecord, MonthlyEmployeeReport, LeaveRequest } from '../../types';
 import { 
   FileText, 
   Download, 
@@ -27,6 +27,7 @@ interface MonthlyReportViewProps {
   employees: Employee[];
   locations: WorkLocation[];
   attendanceRecords: AttendanceRecord[];
+  leaveRequests?: LeaveRequest[];
   onOpenPrintMenu?: (menu: 'monthly') => void;
   onExecuteArchive?: (
     recordIds: string[], 
@@ -40,11 +41,19 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   employees,
   locations,
   attendanceRecords,
+  leaveRequests = [],
   onOpenPrintMenu,
   onExecuteArchive,
   onResetMonthlyAttendance,
 }) => {
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-09');
+  const currentMonthStr = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }, []);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
   const [selectedSlot, setSelectedSlot] = useState<string>('all');
   const [selectedSchedule, setSelectedSchedule] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -57,6 +66,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
 
   // Months available
   const availableMonths = [
+    { value: '2026-10', label: 'Oktober 2026' },
     { value: '2026-09', label: 'September 2026' },
     { value: '2026-08', label: 'Agustus 2026' },
     { value: '2026-07', label: 'Juli 2026' },
@@ -77,35 +87,70 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         r => r.employeeId === emp.id && r.date.startsWith(selectedMonth)
       );
 
-      const presentRecords = empRecords.filter(r => r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat');
+      const empLeaves = leaveRequests.filter(lr => 
+        lr.employeeId === emp.id && 
+        lr.status === 'approved' &&
+        !lr.id.startsWith('LEAVE-REQ-') &&
+        !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(lr.id) &&
+        (lr.startDate.startsWith(selectedMonth) || lr.endDate.startsWith(selectedMonth))
+      );
+
+      const presentRecords = empRecords.filter(
+        r => r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat' || r.checkInStatus === 'dispensasi_kantor'
+      );
       const totalPresentDays = presentRecords.length;
-      const totalIzinCount = empRecords.filter(r => r.checkInStatus === 'izin').length;
-      const totalSakitCount = empRecords.filter(r => r.checkInStatus === 'sakit').length;
-      const totalDispensasiCount = empRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length;
+      const totalIzinCount = Math.max(
+        empRecords.filter(r => r.checkInStatus === 'izin').length,
+        empLeaves.filter(l => l.type === 'izin').reduce((acc, l) => acc + (l.totalDays || 1), 0)
+      );
+      const totalSakitCount = Math.max(
+        empRecords.filter(r => r.checkInStatus === 'sakit').length,
+        empLeaves.filter(l => l.type === 'sakit').reduce((acc, l) => acc + (l.totalDays || 1), 0)
+      );
+      const totalDispensasiCount = Math.max(
+        empRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length,
+        empLeaves.filter(l => l.type === 'dispensasi_kantor' || l.isOfficeDispensation).reduce((acc, l) => acc + (l.totalDays || 1), 0)
+      );
       
-      // Calculate work hours
+      // Calculate work hours safely
       let totalWorkHours = 0;
       presentRecords.forEach((r) => {
-        if (r.checkInTime && r.checkOutTime && r.checkInTime !== '-' && r.checkOutTime !== '-') {
+        if (r.checkInStatus === 'dispensasi_kantor') {
+          totalWorkHours += emp.scheduleType === 'shift' ? 12 : 8.5;
+        } else if (
+          r.checkInTime && 
+          r.checkOutTime && 
+          r.checkInTime !== '-' && 
+          r.checkOutTime !== '-' &&
+          r.checkInTime.includes(':') &&
+          r.checkOutTime.includes(':')
+        ) {
           const inParts = r.checkInTime.split(':').map(Number);
           const outParts = r.checkOutTime.split(':').map(Number);
-          let hours = (outParts[0] + outParts[1] / 60) - (inParts[0] + inParts[1] / 60);
-          if (hours < 0) hours += 24; // overnight shift
-          totalWorkHours += hours;
+          const hIn = inParts[0];
+          const mIn = inParts[1] || 0;
+          const hOut = outParts[0];
+          const mOut = outParts[1] || 0;
+          if (!isNaN(hIn) && !isNaN(hOut)) {
+            let hours = (hOut + mOut / 60) - (hIn + mIn / 60);
+            if (hours < 0) hours += 24; // overnight shift
+            totalWorkHours += isNaN(hours) ? (emp.scheduleType === 'shift' ? 12 : 8.5) : hours;
+          } else {
+            totalWorkHours += emp.scheduleType === 'shift' ? 12 : 8.5;
+          }
         } else {
           // Standard day default if checkout in progress
           totalWorkHours += emp.scheduleType === 'shift' ? 12 : 8.5;
         }
       });
-      // Add work hours from office dispensations
-      totalWorkHours += totalDispensasiCount * (emp.scheduleType === 'shift' ? 12 : 8.5);
 
       const totalLateCount = presentRecords.filter(r => r.checkInStatus === 'terlambat').length;
       
       const onTimeCount = totalPresentDays - totalLateCount;
-      const disciplineRate = totalPresentDays > 0 
+      const rawDisciplineRate = totalPresentDays > 0 
         ? Math.round((onTimeCount / totalPresentDays) * 100) 
         : 100;
+      const disciplineRate = isNaN(rawDisciplineRate) ? 100 : Math.max(0, Math.min(100, rawDisciplineRate));
 
       let attendancePattern = "Disiplin Prima (100% Tepat Waktu)";
       if (disciplineRate < 70) {
@@ -127,7 +172,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         locationSlotId: emp.locationSlotId,
         locationName: loc.name,
         totalPresentDays,
-        totalWorkHours: Math.round(totalWorkHours * 10) / 10,
+        totalWorkHours: isNaN(totalWorkHours) ? 0 : Math.round(totalWorkHours * 10) / 10,
         totalLateCount,
         totalIzinCount,
         totalSakitCount,
@@ -137,7 +182,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         records: empRecords,
       };
     });
-  }, [employees, locations, attendanceRecords, selectedMonth]);
+  }, [employees, locations, attendanceRecords, selectedMonth, leaveRequests]);
 
   // Filtered reports
   const filteredReports = useMemo(() => {
@@ -156,15 +201,17 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
     });
   }, [monthlyReports, selectedSlot, selectedSchedule, searchQuery]);
 
-  // Aggregate monthly stats
-  const totalAccumulatedHours = filteredReports.reduce((acc, curr) => acc + curr.totalWorkHours, 0);
-  const avgWorkHours = filteredReports.length > 0 
+  // Aggregate monthly stats (guaranteed non-NaN)
+  const totalAccumulatedHours = filteredReports.reduce((acc, curr) => acc + (isNaN(curr.totalWorkHours) ? 0 : curr.totalWorkHours), 0);
+  const rawAvgWorkHours = filteredReports.length > 0 
     ? Math.round(totalAccumulatedHours / filteredReports.length) 
     : 0;
-  const totalLateOccurrences = filteredReports.reduce((acc, curr) => acc + curr.totalLateCount, 0);
-  const avgDisciplineRate = filteredReports.length > 0
-    ? Math.round(filteredReports.reduce((acc, curr) => acc + curr.disciplineRate, 0) / filteredReports.length)
+  const avgWorkHours = isNaN(rawAvgWorkHours) ? 0 : rawAvgWorkHours;
+  const totalLateOccurrences = filteredReports.reduce((acc, curr) => acc + (isNaN(curr.totalLateCount) ? 0 : curr.totalLateCount), 0);
+  const rawAvgDisciplineRate = filteredReports.length > 0
+    ? Math.round(filteredReports.reduce((acc, curr) => acc + (isNaN(curr.disciplineRate) ? 100 : curr.disciplineRate), 0) / filteredReports.length)
     : 100;
+  const avgDisciplineRate = isNaN(rawAvgDisciplineRate) ? 100 : Math.max(0, Math.min(100, rawAvgDisciplineRate));
 
   // Export CSV
   const handleExportCSV = () => {
@@ -498,9 +545,9 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                   </span>
                 </div>
                 <div className="bg-white p-2 rounded-xl border border-slate-200">
-                  <span className="text-[9px] text-slate-500 block">Izin/Sakit</span>
+                  <span className="text-[9px] text-slate-500 block">Izin / Disp</span>
                   <span className="font-mono font-bold text-blue-700 text-xs">
-                    {(item.totalIzinCount || 0) + (item.totalSakitCount || 0)}h
+                    {(item.totalIzinCount || 0) + (item.totalSakitCount || 0) + (item.totalDispensasiCount || 0)}h
                   </span>
                 </div>
               </div>
@@ -593,7 +640,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                       {item.totalWorkHours} Jam
                     </div>
                     <span className="text-[10px] text-slate-500 block">
-                      Rata-rata {(item.totalWorkHours / Math.max(1, item.totalPresentDays)).toFixed(1)}j / hari
+                      Rata-rata {((isNaN(item.totalWorkHours) ? 0 : item.totalWorkHours) / Math.max(1, item.totalPresentDays)).toFixed(1)}j / hari
                     </span>
                   </td>
 

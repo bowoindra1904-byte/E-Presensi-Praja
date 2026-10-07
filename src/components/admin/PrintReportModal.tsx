@@ -4,7 +4,8 @@ import {
   WorkLocation, 
   AttendanceRecord, 
   SecurityLog,
-  ReguType
+  ReguType,
+  LeaveRequest
 } from '../../types';
 import { SatpolPPLogo } from '../SatpolPPLogo';
 import { 
@@ -67,6 +68,7 @@ interface PrintReportModalProps {
   attendanceRecords: AttendanceRecord[];
   securityLogs: SecurityLog[];
   currentDate: Date;
+  leaveRequests?: LeaveRequest[];
   initialOpenEditSignConfig?: boolean;
 }
 
@@ -79,6 +81,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   attendanceRecords,
   securityLogs,
   currentDate,
+  leaveRequests = [],
   initialOpenEditSignConfig = false,
 }) => {
   const [activeMenu, setActiveMenu] = useState<PrintMenuType>(defaultMenu);
@@ -912,13 +915,21 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   <div>
                     <span className="text-slate-500 block">Dispensasi Kantor (HP Rusak):</span>
                     <strong className="text-blue-700">
-                      {attendanceRecords.filter(r => r.date === filterDate && r.checkInStatus === 'dispensasi_kantor').length} Personel
+                      {employees.filter(emp => {
+                        const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
+                        const hasLeave = leaveRequests.some(lr => lr.employeeId === emp.id && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'dispensasi_kantor' || lr.isOfficeDispensation));
+                        return rec?.checkInStatus === 'dispensasi_kantor' || rec?.isOfficeDispensation || hasLeave;
+                      }).length} Personel
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Izin & Sakit:</span>
+                    <span className="text-slate-500 block">Izin & Sakit Disetujui:</span>
                     <strong className="text-purple-700">
-                      {attendanceRecords.filter(r => r.date === filterDate && (r.checkInStatus === 'izin' || r.checkInStatus === 'sakit')).length} Personel
+                      {employees.filter(emp => {
+                        const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
+                        const hasLeave = leaveRequests.some(lr => lr.employeeId === emp.id && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'izin' || lr.type === 'sakit'));
+                        return rec?.checkInStatus === 'izin' || rec?.checkInStatus === 'sakit' || hasLeave;
+                      }).length} Personel
                     </strong>
                   </div>
                 </div>
@@ -945,11 +956,20 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       })
                       .map((emp, idx) => {
                         const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
-                        const isPresent = !!rec?.checkInTime;
+                        const activeLeave = leaveRequests.find(lr => 
+                          lr.employeeId === emp.id && 
+                          lr.status === 'approved' &&
+                          !lr.id.startsWith('LEAVE-REQ-') &&
+                          !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(lr.id) &&
+                          filterDate >= lr.startDate && 
+                          filterDate <= lr.endDate
+                        );
+
+                        const isDisp = rec?.checkInStatus === 'dispensasi_kantor' || rec?.isOfficeDispensation || activeLeave?.type === 'dispensasi_kantor' || activeLeave?.isOfficeDispensation;
+                        const isIzin = rec?.checkInStatus === 'izin' || activeLeave?.type === 'izin';
+                        const isSakit = rec?.checkInStatus === 'sakit' || activeLeave?.type === 'sakit';
+                        const isPresent = (!!rec?.checkInTime && rec.checkInTime !== '-') && !isIzin && !isSakit && !isDisp;
                         const isLate = rec?.checkInStatus === 'terlambat';
-                        const isDisp = rec?.checkInStatus === 'dispensasi_kantor';
-                        const isIzin = rec?.checkInStatus === 'izin';
-                        const isSakit = rec?.checkInStatus === 'sakit';
 
                         return (
                           <tr key={emp.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
@@ -966,14 +986,24 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-semibold">
                               {isDisp ? (
-                                <span className="text-blue-800 font-bold">DISPENSASI</span>
+                                <span className="text-blue-800 font-bold">
+                                  {rec?.checkInTime && rec.checkInTime !== 'DISPENSASI' ? `${rec.checkInTime} (DISP)` : 'DISPENSASI'}
+                                </span>
+                              ) : isIzin ? (
+                                <span className="text-indigo-800 font-bold">IZIN</span>
+                              ) : isSakit ? (
+                                <span className="text-purple-800 font-bold">SAKIT</span>
                               ) : (
                                 rec?.checkInTime || "-"
                               )}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono">
                               {isDisp ? (
-                                <span className="text-slate-500">Surat Kantor</span>
+                                <span className="text-blue-900 font-semibold text-[9.5px]">
+                                  {rec?.checkOutTime && rec.checkOutTime !== '-' ? rec.checkOutTime : "Surat Kantor"}
+                                </span>
+                              ) : isIzin || isSakit ? (
+                                <span className="text-slate-500 text-[9px] font-mono">Disahkan</span>
                               ) : (
                                 rec?.checkOutTime || "-"
                               )}
@@ -981,7 +1011,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                             <td className="p-1.5 border border-slate-300 text-center font-mono">
                               {isDisp ? (
                                 <span className="font-bold text-blue-800 text-[9px] block">
-                                  {rec?.dispensationLetterNumber ? `No: ${rec.dispensationLetterNumber}` : "Surat Sah"}
+                                  {rec?.dispensationLetterNumber || activeLeave?.dispensationLetterNumber 
+                                    ? `Memo: ${rec?.dispensationLetterNumber || activeLeave?.dispensationLetterNumber}` 
+                                    : "Disposisi Sah"}
+                                </span>
+                              ) : isIzin || isSakit ? (
+                                <span className="font-semibold text-purple-800 text-[9px] block truncate max-w-[120px]" title={activeLeave?.reason || 'Disetujui Admin'}>
+                                  {activeLeave?.attachmentName ? `Surat: ${activeLeave.attachmentName}` : "Disposisi Sah"}
                                 </span>
                               ) : rec?.checkInDistance !== undefined ? (
                                 `${rec.checkInDistance}m`
@@ -991,7 +1027,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-bold">
                               {isDisp ? (
-                                <span className="text-blue-800">DISPENSASI KANTOR</span>
+                                <span className="text-blue-800 font-black">PEMUTIHAN (HP RUSAK)</span>
                               ) : isIzin ? (
                                 <span className="text-indigo-800">IZIN DINAS</span>
                               ) : isSakit ? (
@@ -1014,7 +1050,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
             )}
 
-            {/* Menu 2: Laporan Bulanan */}
+            {/* Menu 2: Laporan Bulanan (Dengan Sinkronisasi Izin/Sakit/Pemutihan Penuh) */}
             {activeMenu === 'monthly' && (
               <div className="space-y-4">
                 <table className="w-full text-left border-collapse text-[10px] leading-tight">
@@ -1024,8 +1060,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <th className="p-1.5 border border-slate-300">Nama Personel & NIP</th>
                       <th className="p-1.5 border border-slate-300">Regu</th>
                       <th className="p-1.5 border border-slate-300">Pos Penugasan</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Hari Hadir</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Total Jam</th>
+                      <th className="p-1.5 border border-slate-300 text-center">Hadir (H)</th>
+                      <th className="p-1.5 border border-slate-300 text-center">Izin (I)</th>
+                      <th className="p-1.5 border border-slate-300 text-center">Sakit (S)</th>
+                      <th className="p-1.5 border border-slate-300 text-center">Disp. HP (D)</th>
                       <th className="p-1.5 border border-slate-300 text-center">Terlambat</th>
                       <th className="p-1.5 border border-slate-300 text-center">Disiplin %</th>
                       <th className="p-1.5 border border-slate-300">Pola Kehadiran</th>
@@ -1040,10 +1078,31 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       })
                       .map((emp, idx) => {
                         const empRecords = attendanceRecords.filter(r => r.employeeId === emp.id && r.date.startsWith(filterMonth));
-                        const presentDays = empRecords.filter(r => !!r.checkInTime).length;
+                        const empLeaves = leaveRequests.filter(lr => 
+                          lr.employeeId === emp.id && 
+                          lr.status === 'approved' &&
+                          !lr.id.startsWith('LEAVE-REQ-') &&
+                          !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(lr.id) &&
+                          (lr.startDate.startsWith(filterMonth) || lr.endDate.startsWith(filterMonth))
+                        );
+
+                        const hadirFisik = empRecords.filter(r => r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat').length;
+                        const izinCount = Math.max(
+                          empRecords.filter(r => r.checkInStatus === 'izin').length,
+                          empLeaves.filter(l => l.type === 'izin').reduce((acc, l) => acc + (l.totalDays || 1), 0)
+                        );
+                        const sakitCount = Math.max(
+                          empRecords.filter(r => r.checkInStatus === 'sakit').length,
+                          empLeaves.filter(l => l.type === 'sakit').reduce((acc, l) => acc + (l.totalDays || 1), 0)
+                        );
+                        const dispCount = Math.max(
+                          empRecords.filter(r => r.checkInStatus === 'dispensasi_kantor' || r.isOfficeDispensation).length,
+                          empLeaves.filter(l => l.type === 'dispensasi_kantor' || l.isOfficeDispensation).reduce((acc, l) => acc + (l.totalDays || 1), 0)
+                        );
                         const lateCount = empRecords.filter(r => r.checkInStatus === 'terlambat').length;
-                        const disciplineRate = presentDays > 0 ? Math.round(((presentDays - lateCount) / presentDays) * 100) : 100;
-                        const totalHours = (presentDays * (emp.scheduleType === 'shift' ? 12 : 8.5)).toFixed(1);
+                        const totalHadirSah = hadirFisik + dispCount;
+                        const rawDiscipline = totalHadirSah > 0 ? Math.round(((totalHadirSah - lateCount) / totalHadirSah) * 100) : 100;
+                        const disciplineRate = isNaN(rawDiscipline) ? 100 : Math.max(0, Math.min(100, rawDiscipline));
 
                         return (
                           <tr key={emp.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
@@ -1056,16 +1115,34 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                             <td className="p-1.5 border border-slate-300 font-medium">
                               {getPosPenugasanLabel(emp)}
                             </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold">{presentDays} Hari</td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono">{totalHours} Jam</td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 font-bold">{lateCount}x</td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-slate-900">
+                              {hadirFisik} Hari
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-indigo-800">
+                              {izinCount > 0 ? `${izinCount}x` : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-purple-800">
+                              {sakitCount > 0 ? `${sakitCount}x` : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-blue-800">
+                              {dispCount > 0 ? `${dispCount}x` : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 font-bold">
+                              {lateCount > 0 ? `${lateCount}x` : "-"}
+                            </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-bold">
                               <span className={disciplineRate >= 90 ? 'text-emerald-800' : 'text-amber-800'}>
                                 {disciplineRate}%
                               </span>
                             </td>
                             <td className="p-1.5 border border-slate-300 text-[9px] text-slate-600">
-                              {disciplineRate >= 95 ? "Disiplin Prima (Teladan)" : disciplineRate >= 80 ? "Disiplin Standar" : "Perlu Pembinaan Provost"}
+                              {disciplineRate >= 95 
+                                ? "Disiplin Prima (Teladan)" 
+                                : izinCount > 0 || sakitCount > 0 
+                                ? "Izin/Sakit Sah Terverifikasi" 
+                                : disciplineRate >= 80 
+                                ? "Disiplin Standar" 
+                                : "Perlu Pembinaan Provost"}
                             </td>
                           </tr>
                         );

@@ -104,15 +104,24 @@ export default function App() {
     return INITIAL_WORK_LOCATIONS;
   });
 
-  // 3. State: Attendance Records
+  // 3. State: Attendance Records (Only real records inputted by admin or users)
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as AttendanceRecord[];
+        if (Array.isArray(parsed)) {
+          return parsed.filter(r => 
+            !r.id.startsWith('ATT-2026-') && 
+            !r.id.startsWith('ATT-HIST-') &&
+            !r.id.startsWith('ATT-SAMPLE-')
+          );
+        }
+      }
     } catch {
       // ignore
     }
-    return generateInitialAttendanceRecords();
+    return [];
   });
 
   // 4. State: Security Logs
@@ -137,15 +146,24 @@ export default function App() {
     return generateInitialNotifications();
   });
 
-  // 5b. State: Izin & Sakit (Leave Requests)
+  // 5b. State: Izin & Sakit (Leave Requests) (Only real requests, sample dummy data purged)
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LEAVE_REQUESTS);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as LeaveRequest[];
+        if (Array.isArray(parsed)) {
+          return parsed.filter(r => 
+            !r.id.startsWith('LEAVE-REQ-') && 
+            !r.id.startsWith('LEAVE-SAMPLE-') &&
+            !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(r.id)
+          );
+        }
+      }
     } catch {
       // ignore
     }
-    return generateInitialLeaveRequests();
+    return [];
   });
 
   // Active floating toasts for immediate popup
@@ -280,6 +298,81 @@ export default function App() {
       unsubLeaves();
     };
   }, []);
+
+  // Guarantee every approved leave request is synchronized to attendance records
+  useEffect(() => {
+    const approvedLeaves = leaveRequests.filter(
+      r => r.status === 'approved' && 
+           !r.id.startsWith('LEAVE-REQ-') &&
+           !r.id.startsWith('LEAVE-SAMPLE-') &&
+           !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(r.id)
+    );
+    if (approvedLeaves.length === 0) return;
+
+    let hasNewSync = false;
+    const newRecordsToAdd: AttendanceRecord[] = [];
+
+    approvedLeaves.forEach(req => {
+      const dates = getDatesInRange(req.startDate, req.endDate);
+      const targetEmp = employees.find(e => e.id === req.employeeId);
+      const locId = targetEmp?.locationSlotId || 1;
+      const loc = locations.find(l => l.id === locId) || locations[0];
+
+      dates.forEach(dateStr => {
+        const attendanceId = `ATT-LEAVE-${req.id}-${dateStr}`;
+        const existing = attendanceRecords.find(
+          a => a.id === attendanceId || 
+               (a.employeeId === req.employeeId && a.date === dateStr)
+        );
+        
+        if (!existing) {
+          hasNewSync = true;
+          const leaveRec: AttendanceRecord = {
+            id: attendanceId,
+            employeeId: req.employeeId,
+            employeeName: req.employeeName,
+            employeeNip: req.employeeNip,
+            date: dateStr,
+            regu: req.regu,
+            scheduleType: targetEmp?.scheduleType || 'shift',
+            locationSlotId: locId,
+            locationName: loc.name,
+            checkInTime: req.type === 'izin' ? 'IZIN' : req.type === 'sakit' ? 'SAKIT' : 'DISPENSASI',
+            checkInStatus: req.type,
+            checkOutTime: '-',
+            notes: `[DISPOSISI ${req.type.toUpperCase()}] ${req.reason} (Disetujui Admin: ${req.adminNote || 'Disahkan'})`,
+            leaveRequestId: req.id,
+            isOfficeDispensation: req.type === 'dispensasi_kantor' || req.isOfficeDispensation,
+            dispensationLetterNumber: req.dispensationLetterNumber,
+            dispensationLetterPhoto: req.attachmentUrl,
+            dispensationReason: req.reason,
+            dispensationIssuedBy: req.dispensationIssuedBy || 'Kantor Satpol PP'
+          };
+          newRecordsToAdd.push(leaveRec);
+        } else if (existing.checkInStatus !== req.type) {
+          hasNewSync = true;
+          const updatedRec: AttendanceRecord = {
+            ...existing,
+            checkInTime: req.type === 'izin' ? 'IZIN' : req.type === 'sakit' ? 'SAKIT' : 'DISPENSASI',
+            checkInStatus: req.type,
+            notes: `[DISPOSISI ${req.type.toUpperCase()}] ${req.reason} (Disetujui Admin: ${req.adminNote || 'Disahkan'})`,
+            leaveRequestId: req.id,
+          };
+          newRecordsToAdd.push(updatedRec);
+        }
+      });
+    });
+
+    if (hasNewSync && newRecordsToAdd.length > 0) {
+      setAttendanceRecords(prev => {
+        const map = new Map<string, AttendanceRecord>();
+        prev.forEach(r => map.set(r.id, r));
+        newRecordsToAdd.forEach(r => map.set(r.id, r));
+        return Array.from(map.values());
+      });
+      newRecordsToAdd.forEach(rec => syncSaveAttendance(rec).catch(console.error));
+    }
+  }, [leaveRequests, employees, locations]);
 
   // Clock Ticker (Runs every second)
   useEffect(() => {
@@ -672,7 +765,18 @@ export default function App() {
 
   // 1. Submit new leave/sick request (Employee -> Admin live sync)
   const handleSubmitLeaveRequest = (request: LeaveRequest) => {
-    setLeaveRequests(prev => [request, ...prev]);
+    setLeaveRequests(prev => {
+      const clean = prev.filter(r => 
+        !r.id.startsWith('LEAVE-REQ-') &&
+        !r.id.startsWith('LEAVE-SAMPLE-') &&
+        !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(r.id)
+      );
+      const next = [request, ...clean];
+      try {
+        localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     syncSaveLeaveRequest(request).catch(console.error);
 
     // Notify admin
@@ -850,20 +954,25 @@ export default function App() {
           read: false
         });
       } else if (mode === 'default') {
-        const initial = generateInitialLeaveRequests();
-        setLeaveRequests(initial);
+        const sampleIds = ['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'];
+        const remaining = leaveRequests.filter(r => 
+          !sampleIds.includes(r.id) &&
+          !r.id.startsWith('LEAVE-REQ-') &&
+          !r.id.startsWith('LEAVE-SAMPLE-')
+        );
+        setLeaveRequests(remaining);
         try {
-          localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(initial));
+          localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(remaining));
         } catch {}
 
-        await seedInitialLeaveRequests();
+        await syncClearLeaveRequests(sampleIds);
 
         handleAddNotification({
           id: `NOTIF-RESET-LEAVE-${Date.now()}`,
           targetRole: 'admin',
           type: 'success',
-          title: 'Data Izin & Sakit Direset ke Awal',
-          message: 'Daftar permohonan izin dan sakit berhasil dikembalikan ke data contoh awal.',
+          title: 'Data Contoh Bawaan Berhasil Dibersihkan',
+          message: 'Seluruh permohonan contoh bawaan aplikasi telah dihapus. Hanya data permohonan riil yang dipertahankan.',
           timestamp: `${currentTimeString} WIB`,
           read: false
         });
@@ -916,7 +1025,18 @@ export default function App() {
       dispensationIssuedBy: data.issuedBy,
     };
 
-    setLeaveRequests(prev => [newRequest, ...prev]);
+    setLeaveRequests(prev => {
+      const clean = prev.filter(r => 
+        !r.id.startsWith('LEAVE-REQ-') &&
+        !r.id.startsWith('LEAVE-SAMPLE-') &&
+        !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(r.id)
+      );
+      const next = [newRequest, ...clean];
+      try {
+        localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     syncSaveLeaveRequest(newRequest).catch(console.error);
 
     // Sync to attendance immediately for every day in range
@@ -1326,6 +1446,7 @@ export default function App() {
                 attendanceRecords={attendanceRecords}
                 securityLogs={securityLogs}
                 currentDate={effectiveCurrentDate}
+                leaveRequests={leaveRequests}
                 onOpenPrintMenu={handleOpenPrintMenu}
                 onResetDailyAttendance={(recordIds, label) => handleResetAttendance('daily', label, recordIds)}
                 onNavigateToPemutihan={() => setActiveAdminTab('leaves')}
@@ -1374,6 +1495,7 @@ export default function App() {
                 employees={employees}
                 locations={locations}
                 attendanceRecords={attendanceRecords}
+                leaveRequests={leaveRequests}
                 onOpenPrintMenu={handleOpenPrintMenu}
                 onExecuteArchive={handleExecuteArchive}
                 onResetMonthlyAttendance={(recordIds, label) => handleResetAttendance('monthly', label, recordIds)}
@@ -1447,6 +1569,7 @@ export default function App() {
         attendanceRecords={attendanceRecords}
         securityLogs={securityLogs}
         currentDate={effectiveCurrentDate}
+        leaveRequests={leaveRequests}
       />
 
       {/* Petunjuk Operasional & SOP Dinas Modal */}

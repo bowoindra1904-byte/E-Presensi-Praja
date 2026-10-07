@@ -105,13 +105,33 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
   const [selectedResetMode, setSelectedResetMode] = useState<'completed' | 'all' | 'default'>('completed');
   const [isResetting, setIsResetting] = useState(false);
 
+  // Purge sample default requests so only real input from admin or user shows
+  const cleanRequests = useMemo(() => {
+    const validEmpIds = new Set(employees.map(e => e.id));
+    return leaveRequests.filter(r => {
+      // 1. Purge all bawaan / default sample requests
+      if (
+        r.id.startsWith('LEAVE-REQ-') ||
+        r.id.startsWith('LEAVE-SAMPLE-') ||
+        ['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(r.id)
+      ) {
+        return false;
+      }
+      // 2. Only show requests for registered employees
+      if (validEmpIds.size > 0 && !validEmpIds.has(r.employeeId)) {
+        return false;
+      }
+      return true;
+    });
+  }, [leaveRequests, employees]);
+
   // Counts
-  const pendingCount = leaveRequests.filter(r => r.status === 'pending').length;
-  const approvedCount = leaveRequests.filter(r => r.status === 'approved').length;
-  const rejectedCount = leaveRequests.filter(r => r.status === 'rejected').length;
+  const pendingCount = cleanRequests.filter(r => r.status === 'pending').length;
+  const approvedCount = cleanRequests.filter(r => r.status === 'approved').length;
+  const rejectedCount = cleanRequests.filter(r => r.status === 'rejected').length;
 
   const filteredRequests = useMemo(() => {
-    return leaveRequests.filter(r => {
+    return cleanRequests.filter(r => {
       const matchStatus = filterStatus === 'all' || r.status === filterStatus;
       const matchSearch = 
         r.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -124,7 +144,7 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
       if (a.status !== 'pending' && b.status === 'pending') return 1;
       return (b.appliedAt || '').localeCompare(a.appliedAt || '');
     });
-  }, [leaveRequests, filterStatus, searchQuery]);
+  }, [cleanRequests, filterStatus, searchQuery]);
 
   const handleDispensationFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -267,7 +287,7 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              Semua ({leaveRequests.length})
+              Semua ({cleanRequests.length})
             </button>
 
             <button
@@ -477,8 +497,12 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
           ))}
 
           {filteredRequests.length === 0 && (
-            <div className="py-12 text-center text-slate-400 text-xs">
-              Tidak ada permohonan izin atau sakit pada filter ini.
+            <div className="py-12 text-center text-slate-500 text-xs space-y-2 bg-slate-50/60 rounded-2xl border border-slate-200/80 p-6">
+              <HeartHandshake className="w-8 h-8 text-slate-400 mx-auto" />
+              <p className="font-bold text-slate-700">Belum Ada Permohonan Izin atau Sakit</p>
+              <p className="text-[11px] text-slate-400 max-w-md mx-auto">
+                Data bawaan aplikasi telah dibersihkan. Daftar ini hanya memuat permohonan riil dari personel atau input pemutihan dari Admin.
+              </p>
             </div>
           )}
         </div>
@@ -651,7 +675,7 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
                 </div>
               </label>
 
-              {/* Option 3: Reset ke Awal (Default) */}
+              {/* Option 3: Bersihkan Sampel Bawaan */}
               <label 
                 className={`p-3.5 rounded-2xl border cursor-pointer block transition-all ${
                   selectedResetMode === 'default'
@@ -669,10 +693,10 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
                   />
                   <div className="flex-1">
                     <strong className="text-slate-900 font-bold">
-                      Kembalikan ke Contoh Data Bawaan Satpol PP
+                      Bersihkan Data Sampel Bawaan Aplikasi
                     </strong>
                     <p className="text-slate-600 text-[11px] mt-1">
-                      Mengisi ulang sistem dengan 4 contoh data permohonan izin & sakit standar.
+                      Menghapus data permohonan contoh bawaan aplikasi dan memastikan hanya data riil yang tampil.
                     </p>
                   </div>
                 </div>

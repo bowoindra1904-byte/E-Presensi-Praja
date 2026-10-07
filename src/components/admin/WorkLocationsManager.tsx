@@ -494,7 +494,7 @@ export const WorkLocationsManager: React.FC<WorkLocationsManagerProps> = ({
           />
 
           <div className="text-[11px] text-slate-500 flex flex-wrap items-center justify-between pt-1 gap-2">
-            <span className="font-mono">Koordinat GPS: {selectedLoc.latitude.toFixed(6)}, {selectedLoc.longitude.toFixed(6)}</span>
+            <span className="font-mono">Koordinat GPS: {Number(selectedLoc.latitude || 0).toFixed(6)}, {Number(selectedLoc.longitude || 0).toFixed(6)}</span>
             <span className="text-amber-800 font-medium">Batas Geofence: Radius {selectedLoc.radiusMeters} Meter</span>
           </div>
         </div>
