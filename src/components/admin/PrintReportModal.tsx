@@ -29,10 +29,11 @@ import {
   Check,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Trophy
 } from 'lucide-react';
 
-export type PrintMenuType = 'daily' | 'monthly' | 'locations' | 'regu' | 'security';
+export type PrintMenuType = 'daily' | 'monthly' | 'locations' | 'regu' | 'security' | 'top_five';
 
 export interface PrintSignatureConfig {
   locationCity: string;
@@ -415,6 +416,18 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             <ShieldAlert className="w-3.5 h-3.5" />
             <span>5. Audit Kunci Perangkat & Keamanan</span>
           </button>
+
+          <button
+            onClick={() => setActiveMenu('top_five')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              activeMenu === 'top_five'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5" />
+            <span>6. TOP FIVE Disiplin (TK, Terlambat & Tepat Waktu)</span>
+          </button>
         </div>
 
         {/* Filter Controls for Current Menu (Screen Only) */}
@@ -463,7 +476,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             </>
           )}
 
-          {activeMenu === 'monthly' && (
+          {(activeMenu === 'monthly' || activeMenu === 'top_five') && (
             <>
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-600 font-medium">Bulan Laporan:</span>
@@ -472,6 +485,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   onChange={(e) => setFilterMonth(e.target.value)}
                   className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
                 >
+                  <option value="2026-10">Oktober 2026</option>
                   <option value="2026-09">September 2026</option>
                   <option value="2026-08">Agustus 2026</option>
                   <option value="2026-07">Juli 2026</option>
@@ -529,7 +543,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           )}
 
           <div className="flex items-center gap-2 ml-auto">
-            {activeMenu === 'monthly' && (
+            {(activeMenu === 'monthly' || activeMenu === 'top_five') && (
               <button
                 type="button"
                 onClick={() => setIsEditingSignConfig(!isEditingSignConfig)}
@@ -853,6 +867,17 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   {/* Nomor surat dihapus saja sesuai instruksi user */}
                   <p className="text-[11px] text-slate-600 mt-1">
                     Periode: <strong>{filterMonth === '2026-09' ? 'September 2026' : filterMonth}</strong> · Total Formasi: 150 Personel
+                  </p>
+                </>
+              )}
+
+              {activeMenu === 'top_five' && (
+                <>
+                  <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
+                    LAPORAN EKSEKUTIF TOP FIVE DISIPLIN & PELANGGARAN PRESENSI PERSONEL
+                  </h3>
+                  <p className="text-[11px] text-slate-600 mt-1">
+                    Periode: <strong>{filterMonth}</strong> · Evaluasi Personel Teladan Tepat Waktu, Sering Terlambat & Tanpa Keterangan (TK)
                   </p>
                 </>
               )}
@@ -1310,6 +1335,138 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 </table>
               </div>
             )}
+
+            {/* Menu 6: TOP FIVE Disiplin & Pelanggaran */}
+            {activeMenu === 'top_five' && (() => {
+              const reports = employees
+                .filter(emp => filterRegu === 'all' || emp.regu === filterRegu)
+                .map(emp => calculateSmartMonthlyReport(emp, filterMonth, attendanceRecords, leaveRequests, locations));
+
+              const topTepatWaktu = [...reports].sort((a, b) => b.onTimeCount - a.onTimeCount || b.disciplineRate - a.disciplineRate).slice(0, 5);
+              const topTerlambat = [...reports].sort((a, b) => b.lateCount - a.lateCount).slice(0, 5);
+              const topTK = [...reports].sort((a, b) => b.tanpaKeteranganCount - a.tanpaKeteranganCount).slice(0, 5);
+
+              return (
+                <div className="space-y-6">
+                  {/* Tabel 1: Top 5 Tepat Waktu */}
+                  <div>
+                    <div className="bg-emerald-100 border border-emerald-300 px-3 py-1.5 font-bold text-emerald-950 text-[10px] uppercase flex items-center justify-between mb-1">
+                      <span>1. TOP 5 PERSONEL PALING TEPAT WAKTU (TELADAN DISIPLIN)</span>
+                      <span className="text-[9px] font-normal">Kriteria: Akumulasi Hadir Tepat Waktu Terbanyak</span>
+                    </div>
+                    <table className="w-full text-left border-collapse text-[10px] leading-tight">
+                      <thead>
+                        <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
+                          <th className="p-1 border border-slate-300 text-center w-7">Rank</th>
+                          <th className="p-1 border border-slate-300 min-w-[140px]">Nama Personel & NIP</th>
+                          <th className="p-1 border border-slate-300 text-center w-14">Regu</th>
+                          <th className="p-1 border border-slate-300">Pos Penugasan</th>
+                          <th className="p-1 border border-slate-300 text-center w-14 text-emerald-900 bg-emerald-50 font-bold">Tepat Waktu</th>
+                          <th className="p-1 border border-slate-300 text-center w-12">Terlambat</th>
+                          <th className="p-1 border border-slate-300 text-center w-12 font-bold">% Disiplin</th>
+                          <th className="p-1 border border-slate-300">Rekomendasi Penghargaan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {topTepatWaktu.map((p, idx) => (
+                          <tr key={p.employeeId} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                            <td className="p-1 border border-slate-300 text-center font-bold">#{idx + 1}</td>
+                            <td className="p-1 border border-slate-300">
+                              <span className="font-bold text-slate-900">{p.employeeName}</span>
+                              <div className="text-slate-500 text-[8.5px] font-mono">NIP: {p.nip}</div>
+                            </td>
+                            <td className="p-1 border border-slate-300 text-center">{p.regu}</td>
+                            <td className="p-1 border border-slate-300 text-[9px]">{p.locationName}</td>
+                            <td className="p-1 border border-slate-300 text-center font-bold text-emerald-800 bg-emerald-50/50">{p.onTimeCount} Hari</td>
+                            <td className="p-1 border border-slate-300 text-center">{p.lateCount}x</td>
+                            <td className="p-1 border border-slate-300 text-center font-bold">{p.disciplineRate}%</td>
+                            <td className="p-1 border border-slate-300 text-emerald-900 font-semibold text-[9px]">Diusulkan Piagam Teladan Korps</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Tabel 2: Top 5 Terlambat */}
+                  <div>
+                    <div className="bg-amber-100 border border-amber-300 px-3 py-1.5 font-bold text-amber-950 text-[10px] uppercase flex items-center justify-between mb-1">
+                      <span>2. TOP 5 PERSONEL PALING SERING TERLAMBAT (PEMBINAAN WAKTU)</span>
+                      <span className="text-[9px] font-normal">Kriteria: Akumulasi Keterlambatan Masuk Jam Dinas</span>
+                    </div>
+                    <table className="w-full text-left border-collapse text-[10px] leading-tight">
+                      <thead>
+                        <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
+                          <th className="p-1 border border-slate-300 text-center w-7">Rank</th>
+                          <th className="p-1 border border-slate-300 min-w-[140px]">Nama Personel & NIP</th>
+                          <th className="p-1 border border-slate-300 text-center w-14">Regu</th>
+                          <th className="p-1 border border-slate-300">Pos Penugasan</th>
+                          <th className="p-1 border border-slate-300 text-center w-14 text-amber-900 bg-amber-50 font-bold">Terlambat</th>
+                          <th className="p-1 border border-slate-300 text-center w-12">Tepat Waktu</th>
+                          <th className="p-1 border border-slate-300 text-center w-12 font-bold">% Disiplin</th>
+                          <th className="p-1 border border-slate-300">Tindakan Pembinaan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {topTerlambat.map((p, idx) => (
+                          <tr key={p.employeeId} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                            <td className="p-1 border border-slate-300 text-center font-bold">#{idx + 1}</td>
+                            <td className="p-1 border border-slate-300">
+                              <span className="font-bold text-slate-900">{p.employeeName}</span>
+                              <div className="text-slate-500 text-[8.5px] font-mono">NIP: {p.nip}</div>
+                            </td>
+                            <td className="p-1 border border-slate-300 text-center">{p.regu}</td>
+                            <td className="p-1 border border-slate-300 text-[9px]">{p.locationName}</td>
+                            <td className="p-1 border border-slate-300 text-center font-bold text-amber-800 bg-amber-50/50">{p.lateCount} Kali</td>
+                            <td className="p-1 border border-slate-300 text-center">{p.onTimeCount}x</td>
+                            <td className="p-1 border border-slate-300 text-center font-bold">{p.disciplineRate}%</td>
+                            <td className="p-1 border border-slate-300 text-amber-900 text-[9px]">Pemberian Arahan Danru & Kasubag</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Tabel 3: Top 5 TK */}
+                  <div>
+                    <div className="bg-rose-100 border border-rose-300 px-3 py-1.5 font-bold text-rose-950 text-[10px] uppercase flex items-center justify-between mb-1">
+                      <span>3. TOP 5 PERSONEL PALING SERING TANPA KETERANGAN (TK / ALPHA)</span>
+                      <span className="text-[9px] font-normal">Kriteria: Hari Kerja Wajib Terlewati Tanpa Absen / Izin Sah</span>
+                    </div>
+                    <table className="w-full text-left border-collapse text-[10px] leading-tight">
+                      <thead>
+                        <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
+                          <th className="p-1 border border-slate-300 text-center w-7">Rank</th>
+                          <th className="p-1 border border-slate-300 min-w-[140px]">Nama Personel & NIP</th>
+                          <th className="p-1 border border-slate-300 text-center w-14">Regu</th>
+                          <th className="p-1 border border-slate-300">Pos Penugasan</th>
+                          <th className="p-1 border border-slate-300 text-center w-14 text-rose-900 bg-rose-50 font-black">Hari TK</th>
+                          <th className="p-1 border border-slate-300 text-center w-12">Hadir Sah</th>
+                          <th className="p-1 border border-slate-300 text-center w-12 font-bold">% Hadir</th>
+                          <th className="p-1 border border-slate-300">Rekomendasi Sidang Provost</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {topTK.map((p, idx) => (
+                          <tr key={p.employeeId} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                            <td className="p-1 border border-slate-300 text-center font-bold">#{idx + 1}</td>
+                            <td className="p-1 border border-slate-300">
+                              <span className="font-bold text-slate-900">{p.employeeName}</span>
+                              <div className="text-slate-500 text-[8.5px] font-mono">NIP: {p.nip}</div>
+                            </td>
+                            <td className="p-1 border border-slate-300 text-center">{p.regu}</td>
+                            <td className="p-1 border border-slate-300 text-[9px]">{p.locationName}</td>
+                            <td className="p-1 border border-slate-300 text-center font-black text-rose-700 bg-rose-50/70">{p.tanpaKeteranganCount} Hari</td>
+                            <td className="p-1 border border-slate-300 text-center">{p.totalHadirSah}h</td>
+                            <td className="p-1 border border-slate-300 text-center font-bold">{p.attendanceRate}%</td>
+                            <td className="p-1 border border-slate-300 text-rose-900 font-semibold text-[9px]">Pemeriksaan BAP Provost / Teguran Tertulis</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 4. LEMBAR PENGESAHAN / TANDA TANGAN RESMI (SEJAJAR PRESISI KIRI & KANAN) */}
             <div className="mt-10 pt-6 border-t border-slate-300 text-xs break-inside-avoid print:break-inside-avoid">

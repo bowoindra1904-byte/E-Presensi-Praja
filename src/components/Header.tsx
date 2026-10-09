@@ -16,13 +16,14 @@ import {
   BookOpen,
   MoreVertical,
   X,
-  HeartHandshake
+  HeartHandshake,
+  Trophy
 } from 'lucide-react';
 import { NotificationItem, Employee } from '../types';
 import { NotificationCenter } from './NotificationCenter';
 import { SatpolPPLogo } from './SatpolPPLogo';
 
-export type AdminTabType = 'monitoring' | 'locations' | 'employees' | 'leaves' | 'reports' | 'security';
+export type AdminTabType = 'monitoring' | 'locations' | 'employees' | 'leaves' | 'reports' | 'top_five' | 'security';
 
 interface HeaderProps {
   currentRole: 'pegawai' | 'admin';
@@ -381,6 +382,23 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <FileText className={`w-3.5 h-3.5 ${activeAdminTab === 'reports' ? 'text-white' : 'text-amber-500'}`} />
                 <span>Laporan Bulanan</span>
+              </button>
+
+              {/* Tab TOP FIVE Presensi (TK, Terlambat & Tepat Waktu) */}
+              <button
+                type="button"
+                onClick={() => onAdminTabChange('top_five')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                  activeAdminTab === 'top_five'
+                    ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md shadow-amber-600/20 ring-1 ring-amber-500/20'
+                    : 'text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs'
+                }`}
+              >
+                <Trophy className={`w-3.5 h-3.5 ${activeAdminTab === 'top_five' ? 'text-white' : 'text-amber-500'}`} />
+                <span>TOP FIVE Presensi</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-amber-950 font-black text-[9px] shadow-2xs">
+                  Top 5
+                </span>
               </button>
 
               <button

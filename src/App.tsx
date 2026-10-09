@@ -29,6 +29,7 @@ import { WorkLocationsManager } from './components/admin/WorkLocationsManager';
 import { EmployeeManager } from './components/admin/EmployeeManager';
 import { AdminLeaveApprovals } from './components/admin/AdminLeaveApprovals';
 import { MonthlyReportView } from './components/admin/MonthlyReportView';
+import { AdminTopFive } from './components/admin/AdminTopFive';
 import { SecurityAuditLog } from './components/admin/SecurityAuditLog';
 import { TimeSimulatorModal } from './components/TimeSimulatorModal';
 import { AdminPinModal } from './components/admin/AdminPinModal';
@@ -1392,6 +1393,7 @@ export default function App() {
             employees: 'regu',
             leaves: 'daily',
             reports: 'monthly',
+            top_five: 'monthly',
             security: 'security'
           };
           handleOpenPrintMenu(mapping[activeAdminTab] || 'daily');
@@ -1499,6 +1501,16 @@ export default function App() {
                 onOpenPrintMenu={handleOpenPrintMenu}
                 onExecuteArchive={handleExecuteArchive}
                 onResetMonthlyAttendance={(recordIds, label) => handleResetAttendance('monthly', label, recordIds)}
+              />
+            )}
+
+            {activeAdminTab === 'top_five' && (
+              <AdminTopFive
+                employees={employees}
+                locations={locations}
+                attendanceRecords={attendanceRecords}
+                leaveRequests={leaveRequests}
+                onOpenPrintMenu={handleOpenPrintMenu}
               />
             )}
 
