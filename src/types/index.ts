@@ -160,5 +160,35 @@ export interface MonthlyEmployeeReport {
   disciplineRate: number; // percentage 0 - 100
   attendancePattern: string; // e.g. "Disiplin Prima (100%)", "Keterlambatan Ringan (1x)", dll.
   records: AttendanceRecord[];
+
+  // Smart Attendance Metrics (Otomatis & Dinamis)
+  targetWorkDays?: number;
+  totalMonthWorkDays?: number;
+  hadirCount?: number;
+  lateCount?: number;
+  sakitCount?: number;
+  izinCount?: number;
+  tanpaKeteranganCount?: number;
+  pemutihanCount?: number;
+  liburCount?: number;
+  totalHadirSah?: number;
+  attendanceRate?: number; // Persentase Kehadiran Pintar (0-100%)
+  dailyBreakdown?: Array<{
+    date: string;
+    dayNumber: number;
+    dayOfWeek: number;
+    dayName: string;
+    isWorkDay: boolean;
+    scheduleLabel: string;
+    shiftCycleName?: 'Pagi' | 'Malam' | 'Libur';
+    isHoliday: boolean;
+    holidayName?: string;
+    code: 'H' | 'T' | 'S' | 'I' | 'TK' | 'P' | 'L' | '-';
+    codeLabel: string;
+    notes?: string;
+    workHours?: number;
+    record?: AttendanceRecord;
+    leaveRequest?: LeaveRequest;
+  }>;
 }
 

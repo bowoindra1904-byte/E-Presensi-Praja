@@ -7,6 +7,7 @@ import {
   ReguType,
   LeaveRequest
 } from '../../types';
+import { calculateSmartMonthlyReport } from '../../utils/smartAttendanceCalculator';
 import { SatpolPPLogo } from '../SatpolPPLogo';
 import { 
   Printer, 
@@ -1050,23 +1051,26 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
             )}
 
-            {/* Menu 2: Laporan Bulanan (Dengan Sinkronisasi Izin/Sakit/Pemutihan Penuh) */}
+            {/* Menu 2: Laporan Bulanan (Dengan Sistem Pintar Perhitungan Otomatis: H, S, I, TK, P) */}
             {activeMenu === 'monthly' && (
               <div className="space-y-4">
                 <table className="w-full text-left border-collapse text-[10px] leading-tight">
                   <thead>
-                    <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase">
-                      <th className="p-1.5 border border-slate-300 text-center w-8">No</th>
-                      <th className="p-1.5 border border-slate-300">Nama Personel & NIP</th>
-                      <th className="p-1.5 border border-slate-300">Regu</th>
+                    <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
+                      <th className="p-1.5 border border-slate-300 text-center w-7">No</th>
+                      <th className="p-1.5 border border-slate-300 min-w-[130px]">Nama Personel & NIP</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-14">Regu</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-16">Jadwal</th>
                       <th className="p-1.5 border border-slate-300">Pos Penugasan</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Hadir (H)</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Izin (I)</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Sakit (S)</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Disp. HP (D)</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Terlambat</th>
-                      <th className="p-1.5 border border-slate-300 text-center">Disiplin %</th>
-                      <th className="p-1.5 border border-slate-300">Pola Kehadiran</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-12 bg-slate-300/60" title="Target Hari Wajib Kerja">Wajib</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-8 text-emerald-900 bg-emerald-100/50" title="Hadir">H</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-8 text-indigo-900 bg-indigo-100/50" title="Izin">I</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-8 text-purple-900 bg-purple-100/50" title="Sakit">S</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-8 text-rose-900 bg-rose-100/60 font-black" title="Tanpa Keterangan">TK</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-8 text-cyan-900 bg-cyan-100/50" title="Pemutihan (Disp HP / Lapangan)">P</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-8 text-amber-900" title="Terlambat">T</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-14 font-black">% Hadir</th>
+                      <th className="p-1.5 border border-slate-300">Pola & Evaluasi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1077,78 +1081,83 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                         return matchRegu && matchSlot;
                       })
                       .map((emp, idx) => {
-                        const empRecords = attendanceRecords.filter(r => r.employeeId === emp.id && r.date.startsWith(filterMonth));
-                        const empLeaves = leaveRequests.filter(lr => 
-                          lr.employeeId === emp.id && 
-                          lr.status === 'approved' &&
-                          !lr.id.startsWith('LEAVE-REQ-') &&
-                          !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(lr.id) &&
-                          (lr.startDate.startsWith(filterMonth) || lr.endDate.startsWith(filterMonth))
+                        const smart = calculateSmartMonthlyReport(
+                          emp,
+                          filterMonth,
+                          attendanceRecords,
+                          leaveRequests,
+                          locations
                         );
-
-                        const hadirFisik = empRecords.filter(r => r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat').length;
-                        const izinCount = Math.max(
-                          empRecords.filter(r => r.checkInStatus === 'izin').length,
-                          empLeaves.filter(l => l.type === 'izin').reduce((acc, l) => acc + (l.totalDays || 1), 0)
-                        );
-                        const sakitCount = Math.max(
-                          empRecords.filter(r => r.checkInStatus === 'sakit').length,
-                          empLeaves.filter(l => l.type === 'sakit').reduce((acc, l) => acc + (l.totalDays || 1), 0)
-                        );
-                        const dispCount = Math.max(
-                          empRecords.filter(r => r.checkInStatus === 'dispensasi_kantor' || r.isOfficeDispensation).length,
-                          empLeaves.filter(l => l.type === 'dispensasi_kantor' || l.isOfficeDispensation).reduce((acc, l) => acc + (l.totalDays || 1), 0)
-                        );
-                        const lateCount = empRecords.filter(r => r.checkInStatus === 'terlambat').length;
-                        const totalHadirSah = hadirFisik + dispCount;
-                        const rawDiscipline = totalHadirSah > 0 ? Math.round(((totalHadirSah - lateCount) / totalHadirSah) * 100) : 100;
-                        const disciplineRate = isNaN(rawDiscipline) ? 100 : Math.max(0, Math.min(100, rawDiscipline));
 
                         return (
                           <tr key={emp.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                             <td className="p-1.5 border border-slate-300 text-center font-mono">{idx + 1}</td>
                             <td className="p-1.5 border border-slate-300">
                               <div className="font-bold text-slate-900">{emp.name}</div>
-                              <div className="text-slate-500 text-[9px]">NIP: {emp.nip}</div>
+                              <div className="text-slate-500 text-[8.5px] font-mono">NIP: {emp.nip}</div>
                             </td>
-                            <td className="p-1.5 border border-slate-300 font-semibold">{emp.regu}</td>
-                            <td className="p-1.5 border border-slate-300 font-medium">
-                              {getPosPenugasanLabel(emp)}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-slate-900">
-                              {hadirFisik} Hari
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-indigo-800">
-                              {izinCount > 0 ? `${izinCount}x` : "-"}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-purple-800">
-                              {sakitCount > 0 ? `${sakitCount}x` : "-"}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-blue-800">
-                              {dispCount > 0 ? `${dispCount}x` : "-"}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 font-bold">
-                              {lateCount > 0 ? `${lateCount}x` : "-"}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold">
-                              <span className={disciplineRate >= 90 ? 'text-emerald-800' : 'text-amber-800'}>
-                                {disciplineRate}%
+                            <td className="p-1.5 border border-slate-300 text-center font-semibold text-[9px]">{emp.regu}</td>
+                            <td className="p-1.5 border border-slate-300 text-center text-[8.5px]">
+                              <span className={`px-1 py-0.5 rounded font-bold ${
+                                emp.scheduleType === 'shift' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                {emp.scheduleType === 'shift' ? 'Shift 12J' : 'Harian'}
                               </span>
                             </td>
-                            <td className="p-1.5 border border-slate-300 text-[9px] text-slate-600">
-                              {disciplineRate >= 95 
-                                ? "Disiplin Prima (Teladan)" 
-                                : izinCount > 0 || sakitCount > 0 
-                                ? "Izin/Sakit Sah Terverifikasi" 
-                                : disciplineRate >= 80 
-                                ? "Disiplin Standar" 
-                                : "Perlu Pembinaan Provost"}
+                            <td className="p-1.5 border border-slate-300 font-medium text-[9px]">
+                              {getPosPenugasanLabel(emp)}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold bg-slate-100 text-slate-800">
+                              {smart.targetWorkDays}h
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-emerald-800">
+                              {smart.hadirCount > 0 ? smart.hadirCount : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-indigo-800">
+                              {smart.izinCount > 0 ? smart.izinCount : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-purple-800">
+                              {smart.sakitCount > 0 ? smart.sakitCount : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-black text-rose-800">
+                              {smart.tanpaKeteranganCount > 0 ? smart.tanpaKeteranganCount : "0"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-cyan-800">
+                              {smart.pemutihanCount > 0 ? smart.pemutihanCount : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 font-semibold">
+                              {smart.lateCount > 0 ? smart.lateCount : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-black">
+                              <span className={smart.attendanceRate >= 90 ? 'text-emerald-800' : smart.attendanceRate >= 75 ? 'text-amber-800' : 'text-rose-800'}>
+                                {smart.attendanceRate}%
+                              </span>
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-[8.5px] text-slate-700 leading-tight">
+                              {smart.attendancePattern}
                             </td>
                           </tr>
                         );
                       })}
                   </tbody>
                 </table>
+
+                {/* Legenda Resmi Cetak */}
+                <div className="p-2.5 bg-slate-50 border border-slate-300 rounded text-[9px] text-slate-700 space-y-1">
+                  <div className="font-bold text-slate-900">Keterangan Singkatan Kode Rekapan:</div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    <span><strong>H</strong> = Hadir Tepat Waktu</span>
+                    <span><strong>T</strong> = Terlambat</span>
+                    <span><strong>S</strong> = Sakit (Surat Dokter Sah)</span>
+                    <span><strong>I</strong> = Izin (Dinas / Pribadi Disetujui)</span>
+                    <span><strong>TK</strong> = Tanpa Keterangan (Alpha)</span>
+                    <span><strong>P</strong> = Pemutihan (Dispensasi HP Rusak / Lapangan Menyesuaikan Hadir Sah)</span>
+                    <span><strong>L</strong> = Libur (Weekend / Hari Besar Nasional / Off Siklus Shift)</span>
+                  </div>
+                  <div className="text-[8.5px] text-slate-500 italic pt-0.5 border-t border-slate-200">
+                    * Catatan: Jadwal Harian beroperasi Senin-Jumat (libur Sabtu, Minggu, & Hari Libur Nasional). Jadwal Shift 12 Jam beroperasi sesuai siklus dinamis: Pagi - Malam - Libur - Libur. Perubahan jadwal pegawai otomatis memperbarui persentase kehadiran.
+                  </div>
+                </div>
               </div>
             )}
 
