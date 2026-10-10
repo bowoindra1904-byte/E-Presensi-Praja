@@ -98,33 +98,52 @@ export interface AntiSpoofingResult {
   flags: string[];
   securityScore: number; // 0 - 100
   details: string;
+  isMockSuspected?: boolean;
 }
 
 export function validateAntiSpoofing(
-  coords: { latitude: number; longitude: number; accuracy?: number; altitude?: number | null },
+  coords: { 
+    latitude: number; 
+    longitude: number; 
+    accuracy?: number; 
+    altitude?: number | null;
+    speed?: number | null;
+    heading?: number | null;
+  },
   targetLocation: { latitude: number; longitude: number; radiusMeters: number }
 ): AntiSpoofingResult {
   const flags: string[] = [];
   const accuracy = coords.accuracy || 15;
   let securityScore = 100;
+  let isMockSuspected = false;
 
-  // 1. Accuracy Check: Fake GPS apps or network cell towers often give either suspiciously 0-1m precision or >200m
-  if (accuracy > 150) {
+  // 1. Accuracy Check: Fake GPS apps or mock apps often inject exact round accuracy like 0m, 1m, or 5.0000m
+  if (accuracy <= 1) {
+    flags.push(`Akurasi 0m-1m terdeteksi konstan (Ciri khas emulator / Fake GPS Injection).`);
+    securityScore -= 40;
+    isMockSuspected = true;
+  } else if (accuracy > 150) {
     flags.push(`Akurasi sinyal rendah (${Math.round(accuracy)}m), risiko interferensi BTS.`);
     securityScore -= 25;
   }
-  if (accuracy <= 1) {
-    flags.push(`Akurasi 0m-1m terdeteksi secara konstan (Ciri khas emulator / Fake GPS Injection).`);
-    securityScore -= 30;
+
+  // 2. Exact Integer / Suspicious Zero Altitude Check
+  // Physical outdoor GPS almost always provides an altitude with variation, whereas mock GPS often passes null, 0.0, or static round numbers
+  if (coords.altitude !== undefined && coords.altitude !== null) {
+    if (coords.altitude === 0) {
+      flags.push(`Elevasi altitude 0m konstan (Anomali sensor GNSS).`);
+      securityScore -= 15;
+    }
   }
 
-  // 2. Coordinates within realistic territory (Indonesia)
+  // 3. Coordinates within realistic territory (Indonesia)
   if (coords.latitude > 6.0 || coords.latitude < -11.0 || coords.longitude < 95.0 || coords.longitude > 141.0) {
     flags.push(`Koordinat di luar wilayah kedaulatan NKRI.`);
     securityScore -= 60;
+    isMockSuspected = true;
   }
 
-  // 3. Proximity to target location
+  // 4. Proximity to target location
   const distance = calculateDistanceMeters(
     coords.latitude,
     coords.longitude,
@@ -135,13 +154,15 @@ export function validateAntiSpoofing(
   const isWithinGeofence = distance <= targetLocation.radiusMeters;
   if (!isWithinGeofence) {
     flags.push(`Di luar geofence pos: jarak ${distance}m (Batas maksimal ${targetLocation.radiusMeters}m).`);
+    securityScore -= 30;
   }
 
   return {
-    isValid: flags.length === 0 || (isWithinGeofence && securityScore >= 70),
+    isValid: flags.length === 0 || (isWithinGeofence && securityScore >= 70 && !isMockSuspected),
     accuracy: Math.round(accuracy),
     flags,
     securityScore: Math.max(0, securityScore),
-    details: flags.length > 0 ? flags.join(" ") : "Integritas sinyal GPS valid & terverifikasi."
+    details: flags.length > 0 ? flags.join(" ") : "Integritas sinyal GPS valid & terverifikasi.",
+    isMockSuspected
   };
 }

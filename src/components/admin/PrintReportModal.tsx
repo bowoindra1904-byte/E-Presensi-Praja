@@ -5,7 +5,8 @@ import {
   AttendanceRecord, 
   SecurityLog,
   ReguType,
-  LeaveRequest
+  LeaveRequest,
+  AdminAccount
 } from '../../types';
 import { calculateSmartMonthlyReport } from '../../utils/smartAttendanceCalculator';
 import { SatpolPPLogo } from '../SatpolPPLogo';
@@ -65,6 +66,7 @@ interface PrintReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMenu?: PrintMenuType;
+  currentAdmin?: AdminAccount;
   employees: Employee[];
   locations: WorkLocation[];
   attendanceRecords: AttendanceRecord[];
@@ -78,6 +80,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   isOpen,
   onClose,
   defaultMenu = 'daily',
+  currentAdmin,
   employees,
   locations,
   attendanceRecords,
@@ -86,6 +89,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   leaveRequests = [],
   initialOpenEditSignConfig = false,
 }) => {
+  const isDanru = Boolean(currentAdmin && currentAdmin.role !== 'komando_pusat' && currentAdmin.reguScope !== 'all');
+  const adminRegu = isDanru ? (currentAdmin?.reguScope as ReguType) : null;
+
   const [activeMenu, setActiveMenu] = useState<PrintMenuType>(defaultMenu);
   
   // Signature & Document Header Config
@@ -122,7 +128,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   });
   const [filterMonth, setFilterMonth] = useState<string>('2026-09');
   const [filterSlot, setFilterSlot] = useState<string>('all');
-  const [filterRegu, setFilterRegu] = useState<string>('all');
+  const [filterRegu, setFilterRegu] = useState<string>(isDanru && adminRegu ? adminRegu : 'all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   // Sync defaultMenu when opened

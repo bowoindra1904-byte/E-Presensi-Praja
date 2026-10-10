@@ -192,3 +192,28 @@ export interface MonthlyEmployeeReport {
   }>;
 }
 
+export interface CustomHoliday {
+  id: string; // e.g. "HOL-2026-05-02" or auto-generated
+  date: string; // YYYY-MM-DD
+  name: string; // e.g. "HUT Kabupaten Bangka Barat"
+  type: 'libur_nasional' | 'libur_daerah' | 'cuti_bersama' | 'khusus_instansi';
+  appliesTo: 'all' | 'harian_only' | 'shift_only';
+  notes?: string;
+  createdAt?: string;
+  createdBy?: string;
+}
+
+export type AdminRole = 'komando_pusat' | 'danru_1' | 'danru_2' | 'danru_3' | 'danru_4';
+
+export interface AdminAccount {
+  id: string; // 'admin-komando', 'admin-danru-1', 'admin-danru-2', 'admin-danru-3', 'admin-danru-4'
+  username: string; // e.g. 'komando', 'danru1', 'danru2', 'danru3', 'danru4'
+  name: string; // e.g. 'Admin Komando Pusat', 'Danru Regu 1', etc.
+  role: AdminRole;
+  reguScope?: ReguType | 'all'; // 'all' for komando, or 'Regu 1'..'Regu 4'
+  pin: string; // 6-digit PIN riêng masing-masing admin
+  phone?: string;
+  lastLogin?: string;
+  updatedAt?: string;
+}
+

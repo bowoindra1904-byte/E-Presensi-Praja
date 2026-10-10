@@ -5,7 +5,8 @@ import {
   AttendanceRecord, 
   SecurityLog,
   NotificationItem,
-  LeaveRequest
+  LeaveRequest,
+  CustomHoliday
 } from '../types';
 import { 
   evaluateAttendanceTime, 
@@ -45,6 +46,7 @@ interface EmployeeViewProps {
   currentDate: Date;
   attendanceRecords: AttendanceRecord[];
   leaveRequests?: LeaveRequest[];
+  customHolidays?: CustomHoliday[];
   onSubmitLeaveRequest?: (request: LeaveRequest) => void;
   onAddAttendance: (record: AttendanceRecord) => void;
   onUpdateAttendance: (record: AttendanceRecord) => void;
@@ -60,6 +62,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
   currentDate,
   attendanceRecords,
   leaveRequests = [],
+  customHolidays = [],
   onSubmitLeaveRequest = () => {},
   onAddAttendance,
   onUpdateAttendance,
@@ -131,7 +134,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
   const antiSpoof = validateAntiSpoofing(userCoords, location);
 
   // Evaluate time window
-  const timeEval = evaluateAttendanceTime(employee.scheduleType, currentDate);
+  const timeEval = evaluateAttendanceTime(employee.scheduleType, currentDate, customHolidays);
 
   // Device match check
   const isDeviceMatched = !employee.boundDeviceId || employee.boundDeviceId === currentDevice.deviceId;
@@ -235,6 +238,37 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
       return;
     }
 
+    if (antiSpoof.isMockSuspected || !antiSpoof.isValid) {
+      const errTitle = 'Absensi Ditolak: Anomali Sinyal GPS / Mock Terdeteksi!';
+      const errDesc = `Sistem pertahanan Anti-Fake GPS mendeteksi sinyal tidak wajar: ${antiSpoof.details} Harap matikan aplikasi Fake GPS / Mock Location dan gunakan GPS fisik asli perangkat.`;
+      setAlertMessage({
+        type: 'error',
+        title: errTitle,
+        description: errDesc
+      });
+
+      onAddSecurityLog({
+        id: `SEC-MOCK-${Date.now()}`,
+        timestamp: `${currentDate.toLocaleTimeString('id-ID')} WIB`,
+        employeeId: employee.id,
+        employeeName: employee.name,
+        eventType: 'mock_gps_detected',
+        details: `Indikasi Fake GPS / Mock Location: ${antiSpoof.details} (Akurasi: ±${userCoords.accuracy}m).`,
+        deviceId: currentDevice.deviceId
+      });
+
+      onAddNotification({
+        id: `NOTIF-MOCK-${Date.now()}`,
+        targetRole: 'admin',
+        type: 'security',
+        title: `Indikasi Fake GPS: ${employee.name}`,
+        message: `${employee.name} terdeteksi menggunakan sinyal GPS anomali / Mock: ${antiSpoof.details}`,
+        timestamp: `${currentDate.toLocaleTimeString('id-ID')} WIB`,
+        read: false
+      });
+      return;
+    }
+
     if (!timeEval.canCheckIn) {
       setAlertMessage({
         type: 'warning',
@@ -334,6 +368,25 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
         type: 'error',
         title: 'Absensi Pulang Ditolak: Di Luar Radius Pos',
         description: `Jarak Anda saat ini ${currentDistance}m. Absen pulang harus dilakukan tepat di pos dinas Anda (${location.name}).`
+      });
+      return;
+    }
+
+    if (antiSpoof.isMockSuspected || !antiSpoof.isValid) {
+      setAlertMessage({
+        type: 'error',
+        title: 'Absensi Pulang Ditolak: Indikasi Fake GPS!',
+        description: `Terdeteksi anomali sinyal GPS: ${antiSpoof.details}`
+      });
+
+      onAddSecurityLog({
+        id: `SEC-MOCK-OUT-${Date.now()}`,
+        timestamp: `${currentDate.toLocaleTimeString('id-ID')} WIB`,
+        employeeId: employee.id,
+        employeeName: employee.name,
+        eventType: 'mock_gps_detected',
+        details: `Indikasi Fake GPS pada Absen Pulang: ${antiSpoof.details}`,
+        deviceId: currentDevice.deviceId
       });
       return;
     }
@@ -935,6 +988,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
               locations={locations}
               currentDate={currentDate}
               leaveRequests={leaveRequests}
+              customHolidays={customHolidays}
             />
           )}
 

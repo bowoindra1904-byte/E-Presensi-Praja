@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Employee, WorkLocation, ScheduleType, ReguType } from '../../types';
+import { Employee, WorkLocation, ScheduleType, ReguType, AdminAccount } from '../../types';
 import { formatScheduleBadge } from '../../utils/scheduleRules';
 import { 
   Users, 
@@ -18,11 +18,15 @@ import {
   Check,
   Printer,
   Trash2,
-  X
+  X,
+  Shield,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 
 interface EmployeeManagerProps {
   employees: Employee[];
+  currentAdmin?: AdminAccount;
   locations: WorkLocation[];
   onUpdateEmployee: (emp: Employee) => void;
   onAddEmployee: (emp: Employee) => void;
@@ -34,6 +38,7 @@ interface EmployeeManagerProps {
 
 export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   employees,
+  currentAdmin,
   locations,
   onUpdateEmployee,
   onAddEmployee,
@@ -42,10 +47,21 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   onResetAllEmployees,
   onOpenPrintMenu,
 }) => {
+  const isDanru = Boolean(currentAdmin && currentAdmin.role !== 'komando_pusat' && currentAdmin.reguScope !== 'all');
+  const adminRegu = isDanru ? (currentAdmin?.reguScope as ReguType) : null;
+
+  // Danru strictly manages their own regu's personnel (both shift and harian)
+  const scopedEmployees = useMemo(() => {
+    if (isDanru && adminRegu) {
+      return employees.filter(emp => emp.regu === adminRegu);
+    }
+    return employees;
+  }, [employees, isDanru, adminRegu]);
+
   // Search & Filters
   const [search, setSearch] = useState('');
   const [filterSlot, setFilterSlot] = useState<string>('all');
-  const [filterRegu, setFilterRegu] = useState<string>('all');
+  const [filterRegu, setFilterRegu] = useState<string>(isDanru && adminRegu ? adminRegu : 'all');
   const [filterSchedule, setFilterSchedule] = useState<string>('all');
   const [filterDevice, setFilterDevice] = useState<string>('all');
 
@@ -66,7 +82,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     nip: '',
     role: 'Anggota Regu Operasional',
     rank: 'Pengatur Muda (II/a)',
-    regu: 'Regu 1',
+    regu: adminRegu || 'Regu 1',
     scheduleType: 'shift',
     locationSlotId: 1,
     status: 'active'
@@ -74,7 +90,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
   // Filtered dataset
   const filteredList = useMemo(() => {
-    return employees.filter(emp => {
+    return scopedEmployees.filter(emp => {
       const matchSearch = 
         emp.name.toLowerCase().includes(search.toLowerCase()) ||
         emp.nip.includes(search) ||
@@ -82,7 +98,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         emp.id.toLowerCase().includes(search.toLowerCase());
 
       const matchSlot = filterSlot === 'all' || emp.locationSlotId === Number(filterSlot);
-      const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+      const matchRegu = isDanru ? true : (filterRegu === 'all' || emp.regu === filterRegu);
       const matchSchedule = filterSchedule === 'all' || emp.scheduleType === filterSchedule;
       const matchDevice = 
         filterDevice === 'all' || 
@@ -91,7 +107,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
       return matchSearch && matchSlot && matchRegu && matchSchedule && matchDevice;
     });
-  }, [employees, search, filterSlot, filterRegu, filterSchedule, filterDevice]);
+  }, [scopedEmployees, search, filterSlot, filterRegu, filterSchedule, filterDevice, isDanru]);
 
   // Pagination slice
   const totalPages = Math.ceil(filteredList.length / pageSize) || 1;
@@ -116,10 +132,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
   // Quick Inline Change for Regu (synchronizes scheduleType)
   const handleReguChange = (emp: Employee, newRegu: ReguType) => {
+    if (isDanru) return; // Danru tidak diizinkan memindahkan regu
     onUpdateEmployee({
       ...emp,
       regu: newRegu,
-      scheduleType: newRegu === 'Harian' ? 'harian' : 'shift'
     });
   };
 
@@ -150,8 +166,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     }, 0);
     const nextNum = Math.max(employees.length + 1, maxIdNum + 1);
     const id = `POLPP-${String(nextNum).padStart(3, '0')}`;
-    const regu: ReguType = newEmployee.regu || 'Regu 1';
-    const sched: ScheduleType = regu === 'Harian' ? 'harian' : 'shift';
+    const regu: ReguType = isDanru && adminRegu ? adminRegu : (newEmployee.regu || 'Regu 1');
+    const sched: ScheduleType = newEmployee.scheduleType || 'shift';
 
     const emp: Employee = {
       id,
@@ -172,7 +188,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       nip: '',
       role: 'Anggota Regu Operasional',
       rank: 'Pengatur Muda (II/a)',
-      regu: 'Regu 1',
+      regu: adminRegu || 'Regu 1',
       scheduleType: 'shift',
       locationSlotId: 1,
       status: 'active'
@@ -212,20 +228,75 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   return (
     <div className="space-y-6">
       
+      {/* Authority Banner (Danru vs Komando Pusat) */}
+      {isDanru ? (
+        <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <Shield className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-950 flex items-center gap-2">
+                <span>Otoritas Komandan {adminRegu}</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-200 text-amber-900 font-bold">
+                  Khusus {adminRegu}
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-900/90 mt-0.5 leading-relaxed">
+                Anda hanya memiliki wewenang mengelola data <strong>{scopedEmployees.length} personel {adminRegu}</strong> (baik yang bertugas <strong>Shift</strong> maupun <strong>Harian</strong>). Hak akses data seluruh 150 pegawai hanya ada pada <strong>Admin Komando Pusat</strong>.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 self-end sm:self-center">
+            <span className="text-[11px] font-bold bg-white/80 border border-amber-300 px-3 py-1 rounded-xl text-amber-900 shadow-2xs">
+              {scopedEmployees.filter(e => e.scheduleType === 'shift').length} Shift · {scopedEmployees.filter(e => e.scheduleType === 'harian').length} Harian
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-3xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-md border border-slate-800">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-300 flex items-center gap-2">
+                <span>Otoritas Penuh Admin Komando Pusat</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-500 text-slate-950 font-black">
+                  Seluruh Pegawai
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                Memegang kendali penuh data seluruh personel Satpol PP ({employees.length} orang) lintas Regu 1, Regu 2, Regu 3, Regu 4, dan Markas Komando (Harian).
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 self-end sm:self-center">
+            <span className="text-[11px] font-mono bg-slate-800 border border-slate-700 px-3 py-1 rounded-xl text-amber-400 font-bold">
+              {employees.length} Personel Terdata
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Title & Overview Banner */}
       <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Users className="w-5 h-5 text-amber-600" />
-            <span>Pengaturan Personel Satpol PP (Total: {employees.length} Pegawai)</span>
+            <span>
+              {isDanru 
+                ? `Personel Dinas ${adminRegu} (Total: ${scopedEmployees.length} Pegawai)`
+                : `Data Seluruh Pegawai Satpol PP (Total: ${employees.length} Pegawai)`
+              }
+            </span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Atur pembagian Regu 1, 2, 3, 4 atau Harian, penempatan {locations.length} slot pos lokasi, dan audit perangkat
+            {isDanru 
+              ? `Kelola daftar nama, pangkat, penempatan pos, kunci HP, serta jadwal Shift & Harian personel ${adminRegu}`
+              : `Atur pembagian Regu 1, 2, 3, 4 atau Harian, penempatan ${locations.length} slot pos lokasi, dan audit perangkat seluruh personel`
+            }
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {onResetAllEmployees && (
+          {!isDanru && onResetAllEmployees && (
             <button
               type="button"
               onClick={() => setIsResetAllModalOpen(true)}
@@ -242,7 +313,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               className="px-3.5 py-2 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs"
             >
               <Printer className="w-3.5 h-3.5 text-amber-600" />
-              <span>Cetak Daftar Regu</span>
+              <span>{isDanru ? `Cetak Daftar ${adminRegu}` : 'Cetak Daftar Regu'}</span>
             </button>
           )}
           <button
@@ -257,7 +328,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             className="px-3.5 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
-            Tambah Personel
+            <span>Tambah Personel {isDanru ? adminRegu : ''}</span>
           </button>
         </div>
       </div>
@@ -283,18 +354,27 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
           {/* Filter Regu (Regu 1, 2, 3, 4, Harian) */}
           <div>
-            <select
-              value={filterRegu}
-              onChange={(e) => handleFilterChange(setFilterRegu, e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
-            >
-              <option value="all">Semua Regu (1-4 & Harian)</option>
-              <option value="Regu 1">Regu 1 (Shift)</option>
-              <option value="Regu 2">Regu 2 (Shift)</option>
-              <option value="Regu 3">Regu 3 (Shift)</option>
-              <option value="Regu 4">Regu 4 (Shift)</option>
-              <option value="Harian">Harian (Staf)</option>
-            </select>
+            {isDanru ? (
+              <div className="w-full bg-amber-50 border border-amber-300 rounded-xl px-3 py-1.5 text-xs text-amber-950 font-bold flex items-center justify-between">
+                <span>{adminRegu}</span>
+                <span className="text-[9px] font-mono bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-black">
+                  Terkunci Danru
+                </span>
+              </div>
+            ) : (
+              <select
+                value={filterRegu}
+                onChange={(e) => handleFilterChange(setFilterRegu, e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
+              >
+                <option value="all">Semua Regu (1-4 & Harian)</option>
+                <option value="Regu 1">Regu 1 (Shift)</option>
+                <option value="Regu 2">Regu 2 (Shift)</option>
+                <option value="Regu 3">Regu 3 (Shift)</option>
+                <option value="Regu 4">Regu 4 (Shift)</option>
+                <option value="Harian">Harian (Mako)</option>
+              </select>
+            )}
           </div>
 
           {/* Filter 8 Slot Lokasi */}
@@ -318,11 +398,11 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <select
               value={filterSchedule}
               onChange={(e) => handleFilterChange(setFilterSchedule, e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
             >
-              <option value="all">Semua Tipe Jadwal</option>
-              <option value="shift">Shift (12 Jam)</option>
-              <option value="harian">Harian (Kantor/Dinas)</option>
+              <option value="all">Semua Tipe Jadwal (Shift & Harian)</option>
+              <option value="shift">Khusus Shift (12 Jam)</option>
+              <option value="harian">Khusus Harian (Jam Kantor)</option>
             </select>
           </div>
 
@@ -353,7 +433,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 onClick={() => {
                   setSearch('');
                   setFilterSlot('all');
-                  setFilterRegu('all');
+                  setFilterRegu(isDanru && adminRegu ? adminRegu : 'all');
                   setFilterSchedule('all');
                   setFilterDevice('all');
                   setCurrentPage(1);
@@ -428,18 +508,45 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Regu & Shift:</label>
-                    <select
-                      value={emp.regu}
-                      onChange={(e) => handleReguChange(emp, e.target.value as ReguType)}
-                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-500"
-                    >
-                      <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
-                      <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
-                      <option value="Regu 3">Regu 3 (Shift 12 Jam)</option>
-                      <option value="Regu 4">Regu 4 (Shift 12 Jam)</option>
-                      <option value="Harian">Harian (Kantor / Staf)</option>
-                    </select>
+                    <label className="text-[10px] text-slate-500 block mb-1">Regu & Jadwal Kerja:</label>
+                    {isDanru ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-100/80 text-amber-950 font-bold border border-amber-300 text-xs">
+                          <Lock className="w-3 h-3 text-amber-700" />
+                          <span>{emp.regu}</span>
+                        </div>
+                        <select
+                          value={emp.scheduleType}
+                          onChange={(e) => handleScheduleChange(emp, e.target.value as ScheduleType)}
+                          className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-2 py-1 text-xs font-semibold focus:outline-none focus:border-amber-500"
+                        >
+                          <option value="shift">Shift (12 Jam)</option>
+                          <option value="harian">Harian (Kantor)</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <select
+                          value={emp.regu}
+                          onChange={(e) => handleReguChange(emp, e.target.value as ReguType)}
+                          className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-amber-500"
+                        >
+                          <option value="Regu 1">Regu 1</option>
+                          <option value="Regu 2">Regu 2</option>
+                          <option value="Regu 3">Regu 3</option>
+                          <option value="Regu 4">Regu 4</option>
+                          <option value="Harian">Harian (Mako)</option>
+                        </select>
+                        <select
+                          value={emp.scheduleType}
+                          onChange={(e) => handleScheduleChange(emp, e.target.value as ScheduleType)}
+                          className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-2 py-1 text-[11px] font-medium focus:outline-none focus:border-amber-500"
+                        >
+                          <option value="shift">Shift (12 Jam)</option>
+                          <option value="harian">Harian (Jam Kantor)</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -548,25 +655,57 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       </div>
                     </td>
 
-                    {/* Penugasan Regu (Dropdown langsung untuk admin: Regu 1, 2, 3, 4, Harian) */}
+                    {/* Penugasan Regu & Jadwal Kerja (Shift & Harian) */}
                     <td className="py-3 px-4">
-                      <select
-                        value={emp.regu}
-                        onChange={(e) => handleReguChange(emp, e.target.value as ReguType)}
-                        className={`border rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-amber-500 ${
-                          emp.regu === 'Harian' 
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-                            : 'bg-amber-50 border-amber-200 text-amber-800'
-                        }`}
-                      >
-                        <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
-                        <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
-                        <option value="Regu 3">Regu 3 (Shift 12 Jam)</option>
-                        <option value="Regu 4">Regu 4 (Shift 12 Jam)</option>
-                        <option value="Harian">Harian (Kantor / Staf)</option>
-                      </select>
+                      {isDanru ? (
+                        <div className="space-y-1.5">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100/80 text-amber-950 font-bold border border-amber-300 text-xs">
+                            <Lock className="w-3 h-3 text-amber-700" />
+                            <span>{emp.regu}</span>
+                          </div>
+                          <div>
+                            <select
+                              value={emp.scheduleType}
+                              onChange={(e) => handleScheduleChange(emp, e.target.value as ScheduleType)}
+                              className="bg-white border border-slate-200 text-slate-800 rounded-lg px-2 py-1 text-[11px] font-semibold focus:outline-none focus:border-amber-500 shadow-2xs"
+                              title="Ubah tipe jadwal personel: Shift atau Harian"
+                            >
+                              <option value="shift">Shift 12 Jam</option>
+                              <option value="harian">Harian (Kantor)</option>
+                            </select>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <select
+                            value={emp.regu}
+                            onChange={(e) => handleReguChange(emp, e.target.value as ReguType)}
+                            className={`border rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:border-amber-500 ${
+                              emp.regu === 'Harian' 
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                                : 'bg-amber-50 border-amber-200 text-amber-800'
+                            }`}
+                          >
+                            <option value="Regu 1">Regu 1</option>
+                            <option value="Regu 2">Regu 2</option>
+                            <option value="Regu 3">Regu 3</option>
+                            <option value="Regu 4">Regu 4</option>
+                            <option value="Harian">Harian (Mako)</option>
+                          </select>
+                          <div>
+                            <select
+                              value={emp.scheduleType}
+                              onChange={(e) => handleScheduleChange(emp, e.target.value as ScheduleType)}
+                              className="bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-2 py-0.5 text-[10px] font-medium focus:outline-none focus:border-amber-500"
+                            >
+                              <option value="shift">Shift (12 Jam)</option>
+                              <option value="harian">Harian (Jam Kantor)</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
                       <div className="text-[10px] text-slate-400 mt-1">
-                        {emp.regu === 'Harian' ? 'Senin-Kamis & Jumat' : 'Rotasi Shift 12 Jam (Pagi/Malam)'}
+                        {emp.scheduleType === 'harian' ? '07.30 - 16.00 WIB' : 'Rotasi 08.00-20.00 / 20.00-08.00'}
                       </div>
                     </td>
 
@@ -754,31 +893,56 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-700 font-semibold block mb-1">Penugasan Regu / Jam Kerja</label>
-                  <select
-                    value={editingEmployee.regu}
-                    onChange={(e) => {
-                      const newRegu = e.target.value as ReguType;
-                      setEditingEmployee({ 
-                        ...editingEmployee, 
-                        regu: newRegu,
-                        scheduleType: newRegu === 'Harian' ? 'harian' : 'shift'
-                      });
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
-                  >
-                    <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
-                    <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
-                    <option value="Regu 3">Regu 3 (Shift 12 Jam)</option>
-                    <option value="Regu 4">Regu 4 (Shift 12 Jam)</option>
-                    <option value="Harian">Harian (Kantor / Staf)</option>
-                  </select>
+                  <label className="text-slate-700 font-semibold block mb-1">Regu Penugasan</label>
+                  {isDanru ? (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-950 flex items-center gap-2">
+                      <Lock className="w-3.5 h-3.5 text-amber-700" />
+                      <span>{adminRegu} (Otoritas Danru)</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={editingEmployee.regu}
+                      onChange={(e) => {
+                        const newRegu = e.target.value as ReguType;
+                        setEditingEmployee({ 
+                          ...editingEmployee, 
+                          regu: newRegu,
+                          scheduleType: newRegu === 'Harian' ? 'harian' : editingEmployee.scheduleType
+                        });
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
+                    >
+                      <option value="Regu 1">Regu 1</option>
+                      <option value="Regu 2">Regu 2</option>
+                      <option value="Regu 3">Regu 3</option>
+                      <option value="Regu 4">Regu 4</option>
+                      <option value="Harian">Harian (Mako)</option>
+                    </select>
+                  )}
                 </div>
               </div>
-              <div className="text-[10px] text-slate-500 -mt-2">
-                {editingEmployee.regu === 'Harian' 
-                  ? 'Pegawai Harian: Masuk 07.30 (Jumat 07.00) & Pulang 16.00 (Jumat 16.30 WIB)' 
-                  : `Personel ${editingEmployee.regu}: Rotasi Shift 12 Jam (Pagi 08.00-20.00 / Malam 20.00-08.00 WIB)`}
+
+              {/* Tipe Jadwal Kerja (Shift vs Harian) */}
+              <div>
+                <label className="text-slate-700 font-semibold block mb-1">Tipe Jadwal Kerja</label>
+                <select
+                  value={editingEmployee.scheduleType}
+                  onChange={(e) => {
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      scheduleType: e.target.value as ScheduleType
+                    });
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
+                >
+                  <option value="shift">Shift (12 Jam: Pagi 08.00-20.00 / Malam 20.00-08.00 WIB)</option>
+                  <option value="harian">Harian (Jam Kantor: 07.30-16.00 / Jumat 07.00-16.30 WIB)</option>
+                </select>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {editingEmployee.scheduleType === 'harian' 
+                    ? 'Personel Harian: Jam kantor normal dengan validasi apel pagi dan hari kerja Senin-Jumat' 
+                    : `Personel Shift: Jam dinas 12 jam bergantian sesuai siklus regu`}
+                </div>
               </div>
 
               {/* Device lock status in modal */}
@@ -921,26 +1085,51 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-700 font-semibold block mb-1">Penugasan Regu / Jam Kerja</label>
-                  <select
-                    value={newEmployee.regu || 'Regu 1'}
-                    onChange={(e) => {
-                      const newRegu = e.target.value as ReguType;
-                      setNewEmployee({ 
-                        ...newEmployee, 
-                        regu: newRegu,
-                        scheduleType: newRegu === 'Harian' ? 'harian' : 'shift'
-                      });
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
-                  >
-                    <option value="Regu 1">Regu 1 (Shift 12 Jam)</option>
-                    <option value="Regu 2">Regu 2 (Shift 12 Jam)</option>
-                    <option value="Regu 3">Regu 3 (Shift 12 Jam)</option>
-                    <option value="Regu 4">Regu 4 (Shift 12 Jam)</option>
-                    <option value="Harian">Harian (Kantor / Staf)</option>
-                  </select>
+                  <label className="text-slate-700 font-semibold block mb-1">Regu Penugasan</label>
+                  {isDanru ? (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-950 flex items-center gap-2">
+                      <Lock className="w-3.5 h-3.5 text-amber-700" />
+                      <span>{adminRegu} (Otoritas Danru)</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={newEmployee.regu || 'Regu 1'}
+                      onChange={(e) => {
+                        const newRegu = e.target.value as ReguType;
+                        setNewEmployee({ 
+                          ...newEmployee, 
+                          regu: newRegu,
+                          scheduleType: newRegu === 'Harian' ? 'harian' : (newEmployee.scheduleType || 'shift')
+                        });
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
+                    >
+                      <option value="Regu 1">Regu 1</option>
+                      <option value="Regu 2">Regu 2</option>
+                      <option value="Regu 3">Regu 3</option>
+                      <option value="Regu 4">Regu 4</option>
+                      <option value="Harian">Harian (Mako)</option>
+                    </select>
+                  )}
                 </div>
+              </div>
+
+              {/* Tipe Jadwal Kerja Baru */}
+              <div>
+                <label className="text-slate-700 font-semibold block mb-1">Tipe Jadwal Kerja</label>
+                <select
+                  value={newEmployee.scheduleType || 'shift'}
+                  onChange={(e) => {
+                    setNewEmployee({
+                      ...newEmployee,
+                      scheduleType: e.target.value as ScheduleType
+                    });
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-amber-500 font-semibold"
+                >
+                  <option value="shift">Shift (12 Jam: Pagi 08.00-20.00 / Malam 20.00-08.00 WIB)</option>
+                  <option value="harian">Harian (Jam Kantor: 07.30-16.00 / Jumat 07.00-16.30 WIB)</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

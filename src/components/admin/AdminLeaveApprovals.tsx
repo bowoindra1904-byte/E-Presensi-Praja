@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { LeaveRequest, Employee, WorkLocation } from '../../types';
+import { LeaveRequest, Employee, WorkLocation, AdminAccount, ReguType } from '../../types';
 import { 
   HeartHandshake, 
   Stethoscope, 
@@ -18,11 +18,15 @@ import {
   AlertTriangle,
   Plus,
   Upload,
-  Printer
+  Printer,
+  Shield,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 
 interface AdminLeaveApprovalsProps {
   leaveRequests: LeaveRequest[];
+  currentAdmin?: AdminAccount;
   employees?: Employee[];
   locations?: WorkLocation[];
   onApproveLeaveRequest: (requestId: string, adminNote?: string) => void;
@@ -46,6 +50,7 @@ interface AdminLeaveApprovalsProps {
 
 export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
   leaveRequests,
+  currentAdmin,
   employees = [],
   locations = [],
   onApproveLeaveRequest,
@@ -55,6 +60,15 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
   onOpenPrintMenu,
   onClose,
 }) => {
+  const isDanru = Boolean(currentAdmin && currentAdmin.role !== 'komando_pusat' && currentAdmin.reguScope !== 'all');
+  const adminRegu = isDanru ? (currentAdmin?.reguScope as ReguType) : null;
+
+  const scopedEmployees = useMemo(() => {
+    if (isDanru && adminRegu) {
+      return employees.filter(emp => emp.regu === adminRegu);
+    }
+    return employees;
+  }, [employees, isDanru, adminRegu]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -68,7 +82,7 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
   // Office Dispensation / Pemutihan Absensi Modal State (Solusi HP Rusak / Error Lapangan)
   const [isDispensationModalOpen, setIsDispensationModalOpen] = useState(false);
   const todayIso = new Date().toISOString().split('T')[0];
-  const [dispEmpId, setDispEmpId] = useState(employees[0]?.id || '');
+  const [dispEmpId, setDispEmpId] = useState(scopedEmployees[0]?.id || '');
   const [dispStartDate, setDispStartDate] = useState(todayIso);
   const [dispEndDate, setDispEndDate] = useState(todayIso);
   const [dispLetterNumber, setDispLetterNumber] = useState(`005/DISP/POLPP/${new Date().getFullYear()}`);
@@ -107,7 +121,7 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
 
   // Purge sample default requests so only real input from admin or user shows
   const cleanRequests = useMemo(() => {
-    const validEmpIds = new Set(employees.map(e => e.id));
+    const validEmpIds = new Set(scopedEmployees.map(e => e.id));
     return leaveRequests.filter(r => {
       // 1. Purge all bawaan / default sample requests
       if (
@@ -117,13 +131,13 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
       ) {
         return false;
       }
-      // 2. Only show requests for registered employees
+      // 2. Only show requests for registered employees in current scope (Danru or Komando)
       if (validEmpIds.size > 0 && !validEmpIds.has(r.employeeId)) {
         return false;
       }
       return true;
     });
-  }, [leaveRequests, employees]);
+  }, [leaveRequests, scopedEmployees]);
 
   // Counts
   const pendingCount = cleanRequests.filter(r => r.status === 'pending').length;
@@ -215,6 +229,53 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
 
   return (
     <div className="space-y-5">
+      {/* Authority Banner (Danru vs Komando Pusat) */}
+      {isDanru ? (
+        <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <Shield className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-950 flex items-center gap-2">
+                <span>Wewenang Persetujuan Danru {adminRegu}</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-200 text-amber-900 font-bold">
+                  Khusus {adminRegu}
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-900/90 mt-0.5 leading-relaxed">
+                Anda hanya memvalidasi permohonan izin, sakit, dan pemutihan untuk <strong>{scopedEmployees.length} personel {adminRegu}</strong> (Shift & Harian).
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 self-end sm:self-center">
+            <span className="text-[11px] font-bold bg-white/80 border border-amber-300 px-3 py-1 rounded-xl text-amber-900 shadow-2xs">
+              {cleanRequests.length} Permohonan Terdata
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-3xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-md border border-slate-800">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-300 flex items-center gap-2">
+                <span>Pusat Verifikasi Komando Satpol PP</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-500 text-slate-950 font-black">
+                  Seluruh 150 Pegawai
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                Memegang hak persetujuan dan dispensasi kantor untuk seluruh personel Satpol PP lintas Regu 1, Regu 2, Regu 3, Regu 4, dan Harian.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 self-end sm:self-center">
+            <span className="text-[11px] font-mono bg-slate-800 border border-slate-700 px-3 py-1 rounded-xl text-amber-400 font-bold">
+              {employees.length} Personel Satpol PP
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Header Info Banner */}
       <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

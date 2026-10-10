@@ -9,7 +9,6 @@ import {
   AlertTriangle, 
   X, 
   HardDrive, 
-  Image as ImageIcon,
   FileSpreadsheet
 } from 'lucide-react';
 import { AttendanceRecord } from '../../types';
@@ -33,7 +32,7 @@ export const ArchiveCleanupModal: React.FC<ArchiveCleanupModalProps> = ({
 }) => {
   // Retention period choice in months (default: 6 months as requested)
   const [monthsThreshold, setMonthsThreshold] = useState<number>(6);
-  const [cleanupMode, setCleanupMode] = useState<'photos_only' | 'delete_all'>('photos_only');
+  const [cleanupMode, setCleanupMode] = useState<'photos_only' | 'delete_all'>('delete_all');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [hasExported, setHasExported] = useState<boolean>(false);
 
@@ -54,26 +53,7 @@ export const ArchiveCleanupModal: React.FC<ArchiveCleanupModalProps> = ({
     });
   }, [attendanceRecords, cutoffDateString]);
 
-  // Photo count in eligible records
-  const photosCount = useMemo(() => {
-    return eligibleRecords.filter(r => r.checkInPhoto || r.checkOutPhoto).length;
-  }, [eligibleRecords]);
 
-  // Estimated memory saved (assuming ~40KB per record with photo, ~1KB for pure text)
-  const estimatedSavedKb = useMemo(() => {
-    if (cleanupMode === 'photos_only') {
-      return photosCount * 38;
-    }
-    return (photosCount * 38) + (eligibleRecords.length * 1.5);
-  }, [eligibleRecords, photosCount, cleanupMode]);
-
-  const formatSize = (kb: number) => {
-    if (isNaN(kb) || kb <= 0) return '0 KB';
-    if (kb >= 1024) {
-      return `${(kb / 1024).toFixed(1)} MB`;
-    }
-    return `${Math.round(kb)} KB`;
-  };
 
   if (!isOpen) return null;
 
@@ -242,19 +222,19 @@ export const ArchiveCleanupModal: React.FC<ArchiveCleanupModalProps> = ({
               </div>
 
               <div className="bg-white rounded-xl p-2.5 border border-slate-200 shadow-xs">
-                <div className="text-[11px] text-slate-500">Foto Selfie</div>
+                <div className="text-[11px] text-slate-500">Periode Arsip</div>
                 <div className="text-lg font-bold text-amber-700 mt-0.5 font-mono">
-                  {photosCount}
+                  &gt; {monthsThreshold} Bln
                 </div>
-                <div className="text-[10px] text-slate-400">berkas foto</div>
+                <div className="text-[10px] text-slate-400">kedaluwarsa</div>
               </div>
 
               <div className="bg-white rounded-xl p-2.5 border border-slate-200 shadow-xs">
-                <div className="text-[11px] text-slate-500">Ruang Pulih</div>
-                <div className="text-lg font-bold text-emerald-600 mt-0.5 font-mono">
-                  ~{formatSize(estimatedSavedKb)}
+                <div className="text-[11px] text-slate-500">Status Backup</div>
+                <div className={`text-xs font-bold mt-1.5 font-sans ${hasExported ? 'text-emerald-600' : 'text-slate-600'}`}>
+                  {hasExported ? '✓ CSV Siap' : 'Perlu Unduh'}
                 </div>
-                <div className="text-[10px] text-emerald-600 font-semibold">efisiensi</div>
+                <div className="text-[10px] text-slate-400">{hasExported ? 'tersimpan aman' : 'unduh dahulu'}</div>
               </div>
             </div>
 
@@ -301,72 +281,21 @@ export const ArchiveCleanupModal: React.FC<ArchiveCleanupModalProps> = ({
           {/* Action Step 2: Cleanup Mode Selection */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-2">
-              Langkah 2: Tentukan Metode Pembersihan:
+              Langkah 2: Konfirmasi Pembersihan Database Cloud Firestore:
             </label>
-            <div className="space-y-2">
-              
-              <label 
-                className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  cleanupMode === 'photos_only'
-                    ? 'bg-amber-50/50 border-amber-300 ring-1 ring-amber-300/40'
-                    : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="cleanupMode"
-                  value="photos_only"
-                  checked={cleanupMode === 'photos_only'}
-                  onChange={() => setCleanupMode('photos_only')}
-                  className="mt-1 accent-amber-600"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-amber-600" />
-                    <span className="text-xs font-bold text-slate-900">
-                      Hanya Kosongkan Foto Selfie Lama (Sangat Direkomendasikan)
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">
-                      Aman 100%
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-1">
-                    Menghapus string foto selfie lama yang memakan kuota, namun <strong>tetap mempertahankan seluruh data teks jam masuk, jam pulang, NIP, status, dan nama pos</strong>. Laporan bulanan tetap lengkap!
-                  </p>
-                </div>
-              </label>
-
-              <label 
-                className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  cleanupMode === 'delete_all'
-                    ? 'bg-rose-50/50 border-rose-300 ring-1 ring-rose-300/40'
-                    : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="cleanupMode"
-                  value="delete_all"
-                  checked={cleanupMode === 'delete_all'}
-                  onChange={() => setCleanupMode('delete_all')}
-                  className="mt-1 accent-rose-600"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Trash2 className="w-4 h-4 text-rose-600" />
-                    <span className="text-xs font-bold text-slate-900">
-                      Hapus & Bersihkan Seluruh Dokumen Presensi Lama
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-semibold">
-                      Total Reset
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-1">
-                    Menghapus seluruh rekaman presensi lama dari database Cloud Firebase setelah berkas CSV diunduh ke arsip dinas.
-                  </p>
-                </div>
-              </label>
-
+            <div className="p-3.5 rounded-2xl border bg-amber-50/50 border-amber-300 ring-1 ring-amber-300/40 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-amber-700" />
+                <span className="text-xs font-bold text-slate-900">
+                  Bersihkan Dokumen Presensi Lama (&gt; {monthsThreshold} Bulan)
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">
+                  Aman via CSV
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Menghapus {eligibleRecords.length} rekaman presensi lama yang telah berhasil diunduh ke file CSV cadangan komputer dinas, menjaga database Cloud Firestore tetap ringan, cepat, dan rapi.
+              </p>
             </div>
           </div>
 
@@ -391,12 +320,8 @@ export const ArchiveCleanupModal: React.FC<ArchiveCleanupModalProps> = ({
             <button
               type="button"
               onClick={handleConfirmCleanup}
-              disabled={eligibleRecords.length === 0 || isProcessing}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-xs ${
-                cleanupMode === 'photos_only'
-                  ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                  : 'bg-rose-600 hover:bg-rose-500 text-white'
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
+              disabled={eligibleRecords.length === 0 || isProcessing || !hasExported}
+              className="px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isProcessing ? (
                 <>
@@ -405,11 +330,7 @@ export const ArchiveCleanupModal: React.FC<ArchiveCleanupModalProps> = ({
                 </>
               ) : (
                 <>
-                  {cleanupMode === 'photos_only' ? (
-                    <ImageIcon className="w-3.5 h-3.5" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
-                  )}
+                  <Trash2 className="w-3.5 h-3.5" />
                   <span>Jalankan Pembersihan</span>
                 </>
               )}

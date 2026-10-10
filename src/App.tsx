@@ -3,17 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Employee, 
   WorkLocation, 
   AttendanceRecord, 
   SecurityLog,
   NotificationItem,
-  LeaveRequest
+  LeaveRequest,
+  CustomHoliday,
+  AdminAccount
 } from './types';
 import { INITIAL_WORK_LOCATIONS } from './data/initialLocations';
 import { INITIAL_EMPLOYEES } from './data/initialEmployees';
+import { INITIAL_ADMIN_ACCOUNTS } from './data/initialAdmins';
 import { 
   generateInitialAttendanceRecords, 
   generateInitialSecurityLogs,
@@ -31,8 +34,9 @@ import { AdminLeaveApprovals } from './components/admin/AdminLeaveApprovals';
 import { MonthlyReportView } from './components/admin/MonthlyReportView';
 import { AdminTopFive } from './components/admin/AdminTopFive';
 import { SecurityAuditLog } from './components/admin/SecurityAuditLog';
+import { HolidayManager } from './components/admin/HolidayManager';
 import { TimeSimulatorModal } from './components/TimeSimulatorModal';
-import { AdminPinModal } from './components/admin/AdminPinModal';
+import { AdminAccountModal } from './components/admin/AdminAccountModal';
 import { PrintReportModal, PrintMenuType } from './components/admin/PrintReportModal';
 import { OperationalGuideModal } from './components/OperationalGuideModal';
 import { SatpolPPWatermarkBackground } from './components/SatpolPPWatermarkBackground';
@@ -46,6 +50,8 @@ import {
   subscribeSecurityLogs,
   subscribeAdminPin,
   subscribeLeaveRequests,
+  subscribeCustomHolidays,
+  subscribeAdminAccounts,
   syncSaveEmployee,
   syncDeleteEmployee,
   syncSaveLocation,
@@ -54,6 +60,9 @@ import {
   syncSaveSecurityLog,
   syncSaveAdminPin,
   syncSaveLeaveRequest,
+  syncSaveCustomHoliday,
+  syncDeleteCustomHoliday,
+  syncSaveAdminAccount,
   seedInitialEmployees,
   seedInitialLeaveRequests,
   syncClearAllEmployees,
@@ -72,6 +81,9 @@ const STORAGE_KEYS = {
   IS_LOGGED_IN: 'sipraja_is_logged_in_v2',
   ADMIN_PIN: 'sipraja_admin_pin_v2',
   LEAVE_REQUESTS: 'sipraja_leave_requests_v2',
+  CUSTOM_HOLIDAYS: 'sipraja_custom_holidays_v2',
+  ADMIN_ACCOUNTS: 'sipraja_admin_accounts_v2',
+  CURRENT_ADMIN_ID: 'sipraja_current_admin_id_v2',
 };
 
 export default function App() {
@@ -167,6 +179,17 @@ export default function App() {
     return [];
   });
 
+  // 5c. State: Hari Libur Kustom & Tanggal Merah Tambahan
+  const [customHolidays, setCustomHolidays] = useState<CustomHoliday[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.CUSTOM_HOLIDAYS);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
   // Active floating toasts for immediate popup
   const [toasts, setToasts] = useState<NotificationItem[]>([]);
 
@@ -211,7 +234,32 @@ export default function App() {
   const [isTimeSimulatorOpen, setIsTimeSimulatorOpen] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date());
 
-  // 11. Admin Security PIN (Can be customized by Admin)
+  // 11. Multi-Admin Accounts (1 Komando Pusat + 4 Danru)
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ADMIN_ACCOUNTS);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_ADMIN_ACCOUNTS;
+  });
+
+  const [currentAdminId, setCurrentAdminId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_ADMIN_ID);
+      if (saved) return saved;
+    } catch {
+      // ignore
+    }
+    return 'admin-komando';
+  });
+
+  const currentAdmin = useMemo(() => {
+    return adminAccounts.find(a => a.id === currentAdminId) || adminAccounts[0];
+  }, [adminAccounts, currentAdminId]);
+
+  // Admin Security PIN (Can be customized by Admin)
   const [adminPin, setAdminPin] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ADMIN_PIN);
@@ -290,6 +338,26 @@ export default function App() {
       }
     });
 
+    // 8. Subscribe to Custom Holidays
+    const unsubHolidays = subscribeCustomHolidays((syncedHolidays) => {
+      if (syncedHolidays) {
+        setCustomHolidays(syncedHolidays);
+        try {
+          localStorage.setItem(STORAGE_KEYS.CUSTOM_HOLIDAYS, JSON.stringify(syncedHolidays));
+        } catch {}
+      }
+    });
+
+    // 9. Subscribe to Multi-Admin Accounts (1 Komando + 4 Danru)
+    const unsubAdminAccounts = subscribeAdminAccounts((syncedAccounts) => {
+      if (syncedAccounts && syncedAccounts.length > 0) {
+        setAdminAccounts(syncedAccounts);
+        try {
+          localStorage.setItem(STORAGE_KEYS.ADMIN_ACCOUNTS, JSON.stringify(syncedAccounts));
+        } catch {}
+      }
+    });
+
     return () => {
       unsubEmployees();
       unsubLocations();
@@ -297,6 +365,8 @@ export default function App() {
       unsubSecurity();
       unsubPin();
       unsubLeaves();
+      unsubHolidays();
+      unsubAdminAccounts();
     };
   }, []);
 
@@ -1134,34 +1204,48 @@ export default function App() {
     });
   };
 
-  // Admin PIN configuration handler
-  const handleUpdateAdminPin = (newPin: string) => {
-    setAdminPin(newPin);
-    syncSaveAdminPin(newPin).catch(console.error);
+  // Handler Pembaruan Akun & PIN Mandiri Admin (Masing-masing admin mengelola akunnya sendiri)
+  const handleUpdateAdminAccount = (updatedAccount: AdminAccount) => {
+    // ENFORCE SECURITY ISOLATION: Admin cannot modify other admin's account!
+    if (currentAdmin.id !== updatedAccount.id) {
+      console.error('Pelanggaran keamanan: Anda tidak berhak mengubah akun admin lain!');
+      return;
+    }
+
+    const newAccounts = adminAccounts.map(a => a.id === updatedAccount.id ? updatedAccount : a);
+    setAdminAccounts(newAccounts);
+    syncSaveAdminAccount(updatedAccount).catch(console.error);
     try {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_PIN, newPin);
-    } catch {
-      // ignore
+      localStorage.setItem(STORAGE_KEYS.ADMIN_ACCOUNTS, JSON.stringify(newAccounts));
+    } catch {}
+
+    // If Komando Pusat, also sync global adminPin fallback
+    if (updatedAccount.role === 'komando_pusat') {
+      setAdminPin(updatedAccount.pin);
+      syncSaveAdminPin(updatedAccount.pin).catch(console.error);
+      try {
+        localStorage.setItem(STORAGE_KEYS.ADMIN_PIN, updatedAccount.pin);
+      } catch {}
     }
 
     const log: SecurityLog = {
-      id: `SEC-PIN-${Date.now()}`,
+      id: `SEC-ADMIN-UPD-${Date.now()}`,
       timestamp: `Hari Ini, ${currentTimeString} WIB`,
-      employeeId: 'ADMIN-KOMANDO',
-      employeeName: 'Admin Komando',
+      employeeId: updatedAccount.id,
+      employeeName: updatedAccount.name,
       eventType: 'device_reset',
-      details: 'PIN Keamanan Komando Admin berhasil diperbarui oleh Administrator.',
-      deviceId: 'PORTAL-KOMANDO'
+      details: `[KEAMANAN MANDIRI] ${updatedAccount.name} (@${updatedAccount.username}) memperbarui data profil & PIN mandiri.`,
+      deviceId: 'PORTAL-ADMIN'
     };
     setSecurityLogs(prev => [log, ...prev]);
     syncSaveSecurityLog(log).catch(console.error);
 
     handleAddNotification({
-      id: `NOTIF-PIN-${Date.now()}`,
+      id: `NOTIF-ADMIN-UPD-${Date.now()}`,
       targetRole: 'admin',
-      type: 'security',
-      title: 'Pembaruan PIN Keamanan Admin',
-      message: 'PIN Keamanan akses Komando Admin berhasil diperbarui.',
+      type: 'success',
+      title: 'Akun Anda Berhasil Diperbarui',
+      message: `Profil dan PIN login untuk ${updatedAccount.name} telah disimpan.`,
       timestamp: `${currentTimeString} WIB`,
       read: false
     });
@@ -1261,6 +1345,39 @@ export default function App() {
     });
   };
 
+  // Custom Holiday Handlers
+  const handleAddCustomHoliday = (holiday: CustomHoliday) => {
+    setCustomHolidays(prev => {
+      const updated = [holiday, ...prev.filter(h => h.id !== holiday.id)];
+      try {
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_HOLIDAYS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    syncSaveCustomHoliday(holiday).catch(console.error);
+
+    handleAddNotification({
+      id: `NOTIF-HOLIDAY-${Date.now()}`,
+      targetRole: 'all',
+      type: 'success',
+      title: `Hari Libur Resmi Ditambahkan: ${holiday.name}`,
+      message: `Komando menetapkan tanggal ${holiday.date} sebagai ${holiday.name} (${holiday.appliesTo === 'all' ? 'Seluruh Personel' : holiday.appliesTo === 'harian_only' ? 'Khusus Harian' : 'Khusus Shift'}). Bebas presensi dan terhitung Libur (L).`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+  };
+
+  const handleDeleteCustomHoliday = (holidayId: string) => {
+    setCustomHolidays(prev => {
+      const updated = prev.filter(h => h.id !== holidayId);
+      try {
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_HOLIDAYS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    syncDeleteCustomHoliday(holidayId).catch(console.error);
+  };
+
   // Open specific print menu
   const handleOpenPrintMenu = (menu: PrintMenuType) => {
     setPrintDefaultMenu(menu);
@@ -1312,9 +1429,23 @@ export default function App() {
     }
   };
 
-  const handleLoginAsAdmin = () => {
+  const handleLoginAsAdmin = (admin: AdminAccount) => {
+    setCurrentAdminId(admin.id);
+    try {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_ADMIN_ID, admin.id);
+    } catch {}
     setCurrentRole('admin');
     setIsLoggedIn(true);
+
+    handleAddNotification({
+      id: `NOTIF-ADM-LOGIN-${Date.now()}`,
+      targetRole: 'admin',
+      type: 'success',
+      title: `Selamat Bertugas, ${admin.name.split(' (')[0]}`,
+      message: `Anda masuk ke Dashboard Sistem Presensi SI-PRAJA dengan hak akses ${admin.role === 'komando_pusat' ? 'Komando Pusat (Seluruh Regu & Pengaturan)' : admin.reguScope}.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
   };
 
   const handleLogout = () => {
@@ -1345,6 +1476,7 @@ export default function App() {
     return (
       <LoginPortal
         employees={employees}
+        adminAccounts={adminAccounts}
         onLoginAsEmployee={handleLoginAsEmployee}
         onLoginAsAdmin={handleLoginAsAdmin}
         configuredAdminPin={adminPin}
@@ -1372,6 +1504,7 @@ export default function App() {
       <Header
         currentRole={currentRole}
         currentEmployee={activeEmployee}
+        currentAdmin={currentAdmin}
         activeAdminTab={activeAdminTab}
         onAdminTabChange={setActiveAdminTab}
         onLogout={handleLogout}
@@ -1386,12 +1519,14 @@ export default function App() {
         locationsCount={locations.length}
         employeesCount={employees.length}
         pendingLeavesCount={pendingLeavesCount}
+        customHolidaysCount={customHolidays.length}
         onOpenPrintModal={() => {
           const mapping: Record<string, PrintMenuType> = {
             monitoring: 'daily',
             locations: 'locations',
             employees: 'regu',
             leaves: 'daily',
+            holidays: 'monthly',
             reports: 'monthly',
             top_five: 'monthly',
             security: 'security'
@@ -1430,6 +1565,7 @@ export default function App() {
             currentDate={effectiveCurrentDate}
             attendanceRecords={attendanceRecords}
             leaveRequests={leaveRequests}
+            customHolidays={customHolidays}
             onSubmitLeaveRequest={handleSubmitLeaveRequest}
             onAddAttendance={handleAddAttendance}
             onUpdateAttendance={handleUpdateAttendance}
@@ -1437,13 +1573,14 @@ export default function App() {
             onAddNotification={handleAddNotification}
           />
         ) : (
-          /* ADMIN VIEW: sees Command Center, Pos Lokasi, Pegawai, Izin & Sakit, Laporan Bulanan, Kunci & Audit */
+          /* ADMIN VIEW: sees Command Center, Pos Lokasi, Pegawai, Izin & Sakit, Hari Libur, Laporan Bulanan, Top 5, Kunci & Audit */
           <div className="space-y-6">
             
             {/* Active Admin Tab Content */}
             {activeAdminTab === 'monitoring' && (
               <AdminDashboard
                 employees={employees}
+                currentAdmin={currentAdmin}
                 locations={locations}
                 attendanceRecords={attendanceRecords}
                 securityLogs={securityLogs}
@@ -1469,6 +1606,7 @@ export default function App() {
             {activeAdminTab === 'employees' && (
               <EmployeeManager
                 employees={employees}
+                currentAdmin={currentAdmin}
                 locations={locations}
                 onUpdateEmployee={handleUpdateEmployee}
                 onAddEmployee={handleAddEmployee}
@@ -1482,6 +1620,7 @@ export default function App() {
             {activeAdminTab === 'leaves' && (
               <AdminLeaveApprovals
                 leaveRequests={leaveRequests}
+                currentAdmin={currentAdmin}
                 employees={employees}
                 locations={locations}
                 onApproveLeaveRequest={handleApproveLeaveRequest}
@@ -1492,12 +1631,25 @@ export default function App() {
               />
             )}
 
+            {/* TAB HARI LIBUR KUSTOM & TANGGAL MERAH */}
+            {activeAdminTab === 'holidays' && (
+              <HolidayManager
+                customHolidays={customHolidays}
+                onAddHoliday={handleAddCustomHoliday}
+                onDeleteHoliday={handleDeleteCustomHoliday}
+                currentDate={effectiveCurrentDate}
+                onOpenPrintMenu={() => handleOpenPrintMenu('monthly')}
+              />
+            )}
+
             {activeAdminTab === 'reports' && (
               <MonthlyReportView
                 employees={employees}
+                currentAdmin={currentAdmin}
                 locations={locations}
                 attendanceRecords={attendanceRecords}
                 leaveRequests={leaveRequests}
+                customHolidays={customHolidays}
                 onOpenPrintMenu={handleOpenPrintMenu}
                 onExecuteArchive={handleExecuteArchive}
                 onResetMonthlyAttendance={(recordIds, label) => handleResetAttendance('monthly', label, recordIds)}
@@ -1507,9 +1659,11 @@ export default function App() {
             {activeAdminTab === 'top_five' && (
               <AdminTopFive
                 employees={employees}
+                currentAdmin={currentAdmin}
                 locations={locations}
                 attendanceRecords={attendanceRecords}
                 leaveRequests={leaveRequests}
+                customHolidays={customHolidays}
                 onOpenPrintMenu={handleOpenPrintMenu}
               />
             )}
@@ -1563,12 +1717,13 @@ export default function App() {
         onApplySimulatedTime={setSimulatedTime}
       />
 
-      {/* Admin PIN Configuration Modal */}
-      <AdminPinModal
+      {/* Multi-Admin Account & PIN Management Modal (Isolated self-management) */}
+      <AdminAccountModal
         isOpen={isAdminPinModalOpen}
         onClose={() => setIsAdminPinModalOpen(false)}
-        currentPin={adminPin}
-        onUpdatePin={handleUpdateAdminPin}
+        currentAdmin={currentAdmin}
+        allAdmins={adminAccounts}
+        onUpdateAdminAccount={handleUpdateAdminAccount}
       />
 
       {/* Official Satpol PP Document Print Center Modal */}
@@ -1576,6 +1731,7 @@ export default function App() {
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         defaultMenu={printDefaultMenu}
+        currentAdmin={currentAdmin}
         employees={employees}
         locations={locations}
         attendanceRecords={attendanceRecords}

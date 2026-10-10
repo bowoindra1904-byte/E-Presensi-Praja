@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Employee, SecurityLog, NotificationItem } from '../types';
+import { Employee, SecurityLog, NotificationItem, AdminAccount } from '../types';
+import { INITIAL_ADMIN_ACCOUNTS } from '../data/initialAdmins';
 import { getOrCreateDeviceId } from '../utils/deviceLock';
 import { SatpolPPLogo } from './SatpolPPLogo';
 import { SatpolPPWatermarkBackground } from './SatpolPPWatermarkBackground';
@@ -26,9 +27,10 @@ import {
 
 interface LoginPortalProps {
   employees: Employee[];
+  adminAccounts?: AdminAccount[];
   onLoginAsEmployee: (employee: Employee, isFirstBinding?: boolean) => void;
-  onLoginAsAdmin: () => void;
-  configuredAdminPin: string;
+  onLoginAsAdmin: (admin: AdminAccount) => void;
+  configuredAdminPin?: string;
   onResetDeviceLock?: (employeeId: string) => void;
   onUpdateEmployee?: (emp: Employee) => void;
   onAddSecurityLog?: (log: SecurityLog) => void;
@@ -45,9 +47,10 @@ interface DeviceMismatchState {
 
 export const LoginPortal: React.FC<LoginPortalProps> = ({
   employees,
+  adminAccounts = INITIAL_ADMIN_ACCOUNTS,
   onLoginAsEmployee,
   onLoginAsAdmin,
-  configuredAdminPin,
+  configuredAdminPin = '123456',
   onResetDeviceLock,
   onUpdateEmployee,
   onAddSecurityLog,
@@ -61,6 +64,11 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   const [employeeError, setEmployeeError] = useState('');
   const [isNameSuggestionsOpen, setIsNameSuggestionsOpen] = useState(false);
   const [deviceMismatchError, setDeviceMismatchError] = useState<DeviceMismatchState | null>(null);
+
+  // Multi-Admin Login State: 1 Komando + 4 Danru
+  const availableAdmins = adminAccounts && adminAccounts.length > 0 ? adminAccounts : INITIAL_ADMIN_ACCOUNTS;
+  const [selectedAdminId, setSelectedAdminId] = useState<string>('admin-komando');
+  const selectedAdmin = availableAdmins.find(a => a.id === selectedAdminId) || availableAdmins[0];
 
   // Admin PIN verification modal for legitimate device transfer
   const [showAdminUnlockModal, setShowAdminUnlockModal] = useState(false);
@@ -209,7 +217,10 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     if (!deviceMismatchError) return;
 
     const cleanPin = adminUnlockPin.trim();
-    if (cleanPin === configuredAdminPin || cleanPin === '123456') {
+    // Authorizing admin can be any of the 5 official admins with matching PIN, or fallback configuredAdminPin
+    const authorizingAdmin = availableAdmins.find(a => a.pin === cleanPin) || (cleanPin === configuredAdminPin ? availableAdmins[0] : null);
+
+    if (authorizingAdmin) {
       const targetEmp = deviceMismatchError.employee;
       
       // Reset & immediately bind the current device as the new official device
@@ -235,7 +246,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
           employeeId: targetEmp.id,
           employeeName: targetEmp.name,
           eventType: 'device_reset',
-          details: `OTORISASI ADMIN KOMANDO: Kunci perangkat personel ${targetEmp.name} berhasil diperbarui ke perangkat baru [${currentDevice.deviceName} / ${currentDevice.deviceId}] melalui verifikasi PIN resmi.`,
+          details: `OTORISASI ${authorizingAdmin.name.toUpperCase()}: Kunci perangkat personel ${targetEmp.name} diperbarui ke HP baru [${currentDevice.deviceName} / ${currentDevice.deviceId}] melalui verifikasi PIN mandiri.`,
           deviceId: currentDevice.deviceId
         });
       }
@@ -246,7 +257,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
           targetRole: 'all',
           targetEmployeeId: targetEmp.id,
           type: 'success',
-          title: 'Pengikatan HP Baru Disetujui Komando',
+          title: `Pengikatan HP Baru Disetujui (${authorizingAdmin.name.split(' (')[0]})`,
           message: `Perangkat baru ${currentDevice.deviceName} (${currentDevice.deviceId}) telah resmi dikunci untuk personel ${targetEmp.name}.`,
           timestamp: `${currentTimeStr} WIB`,
           read: false
@@ -256,25 +267,33 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
       setShowAdminUnlockModal(false);
       setAdminUnlockPin('');
       setDeviceMismatchError(null);
-      setUnlockSuccessMsg(`Perangkat baru berhasil diotorisasi dan dikunci ke ${targetEmp.name}! Mengalihkan ke portal presensi...`);
+      setUnlockSuccessMsg(`Perangkat baru berhasil diotorisasi oleh ${authorizingAdmin.name.split(' (')[0]} dan dikunci ke ${targetEmp.name}! Mengalihkan ke portal presensi...`);
 
       setTimeout(() => {
         onLoginAsEmployee(reboundEmp, false);
       }, 1200);
 
     } else {
-      setAdminUnlockError('PIN Komando salah! Otorisasi reset perangkat ditolak.');
+      setAdminUnlockError('PIN Admin/Danru tidak sesuai! Otorisasi reset perangkat ditolak.');
     }
   };
 
   const handleAdminLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanInput = adminPinInput.trim();
-    if (cleanInput === configuredAdminPin || cleanInput === '123456') {
+    if (!selectedAdmin) return;
+
+    // Check against this specific admin's PIN or configured PIN
+    if (cleanInput === selectedAdmin.pin || (selectedAdmin.role === 'komando_pusat' && cleanInput === configuredAdminPin)) {
       setAdminError('');
-      onLoginAsAdmin();
+      // Update last login
+      const loggedAdmin: AdminAccount = {
+        ...selectedAdmin,
+        lastLogin: new Date().toISOString()
+      };
+      onLoginAsAdmin(loggedAdmin);
     } else {
-      setAdminError('PIN Komando salah. Silakan masukkan PIN Admin yang telah dikonfigurasi.');
+      setAdminError(`PIN Keamanan untuk ${selectedAdmin.name} tidak cocok. Setiap admin memiliki PIN login mandiri.`);
     }
   };
 
@@ -518,45 +537,121 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
           </form>
         )}
 
-        {/* Tab 2: Admin Login */}
+        {/* Tab 2: Admin Login (1 Komando Pusat + 4 Admin Danru) */}
         {activeTab === 'admin' && (
           <form onSubmit={handleAdminLoginSubmit} className="space-y-4">
-            <div className="space-y-2">
+            
+            {/* Pemilihan Akun Admin (1 Komando + 4 Danru) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                  Pilih Akun Admin Kedinasan
+                </span>
+                <span className="text-[10px] text-amber-400 font-mono">
+                  5 Akun Mandiri
+                </span>
+              </label>
+
+              <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-0.5 scrollbar-thin">
+                {availableAdmins.map((acc) => {
+                  const isSelected = acc.id === selectedAdminId;
+                  const isKomando = acc.role === 'komando_pusat';
+
+                  return (
+                    <button
+                      key={acc.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAdminId(acc.id);
+                        setAdminPinInput('');
+                        setAdminError('');
+                      }}
+                      className={`text-left p-2.5 rounded-xl transition-all border flex items-center justify-between gap-2.5 ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-amber-950/80 to-slate-900 border-amber-500/80 text-white shadow-xs ring-1 ring-amber-500/30'
+                          : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 ${
+                          isSelected
+                            ? 'bg-amber-600 text-white'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          {isKomando ? 'KP' : acc.role.replace('danru_', 'D')}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-bold truncate ${isSelected ? 'text-amber-300' : 'text-slate-300'}`}>
+                              {acc.name.split(' (')[0]}
+                            </span>
+                            <span className="text-[9px] font-mono text-slate-500">
+                              @{acc.username}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 block truncate">
+                            {isKomando ? 'Komando Pusat · Seluruh Regu' : `Pengawas ${acc.reguScope}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          isSelected
+                            ? 'border-amber-400 bg-amber-500 text-slate-950'
+                            : 'border-slate-700 bg-slate-900'
+                        }`}>
+                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Input PIN Mandiri untuk Akun yang Terpilih */}
+            <div className="space-y-1.5 pt-1">
               <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-amber-500" />
-                  PIN Komando / Sandi Admin
+                  PIN Mandiri: <span className="text-amber-400 font-semibold">{selectedAdmin?.name.split(' (')[0]}</span>
                 </span>
-                <span className="text-[10px] text-amber-400 font-normal">
-                  Dapat Diatur oleh Admin
+                <span className="text-[10px] text-slate-400 font-mono">
+                  @{selectedAdmin?.username}
                 </span>
               </label>
+
               <input
                 type="password"
-                placeholder="Masukkan PIN Admin..."
+                placeholder={`Masukkan PIN ${selectedAdmin?.name.split(' (')[0]}...`}
                 value={adminPinInput}
                 onChange={(e) => {
                   setAdminPinInput(e.target.value);
                   setAdminError('');
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center text-base sm:text-sm"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center text-sm"
               />
               {adminError && (
                 <p className="text-[11px] text-rose-400 font-medium">{adminError}</p>
               )}
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
-              <span className="text-amber-400 font-semibold block mb-0.5">Otoritas Komando Satpol PP:</span>
-              Mengatur 12 slot pos lokasi penugasan, pembagian Regu 1-4 & Harian, PIN keamanan, audit kunci perangkat, dan laporan resmi.
+            {/* Info Isolasi Akun & Prinsip Keamanan */}
+            <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-[10.5px] text-slate-400 leading-relaxed flex items-start gap-2">
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+              <span>
+                <strong>Isolasi Akun Mandiri:</strong> Masing-masing admin memiliki login dan PIN terpisah. Admin Danru hanya mengelola akunnya sendiri dan tidak dapat mengubah data akun admin lainnya.
+              </span>
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <KeyRound className="w-4 h-4" />
-              Masuk Dashboard Komando & Admin
+              <span>Masuk sebagai {selectedAdmin?.name.split(' (')[0]}</span>
             </button>
           </form>
         )}

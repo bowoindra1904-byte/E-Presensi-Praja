@@ -1,4 +1,4 @@
-import { Employee, AttendanceRecord, LeaveRequest, WorkLocation, ReguType, ScheduleType } from '../types';
+import { Employee, AttendanceRecord, LeaveRequest, WorkLocation, ReguType, ScheduleType, CustomHoliday } from '../types';
 
 // ============================================================================
 // DAFTAR HARI LIBUR NASIONAL RESMI INDONESIA (HARI BESAR LAINNYA) TAHUN 2026
@@ -34,12 +34,33 @@ export const INDONESIAN_MONTH_NAMES = [
 ];
 
 /**
- * Cek apakah suatu tanggal adalah hari libur nasional / hari besar lainnya
+ * Cek apakah suatu tanggal adalah hari libur nasional / cuti bersama / libur custom daerah
  */
-export function isIndonesianHoliday(dateStr: string): { isHoliday: boolean; name?: string } {
+export function isIndonesianHoliday(
+  dateStr: string, 
+  customHolidays?: CustomHoliday[],
+  scheduleType?: ScheduleType
+): { isHoliday: boolean; name?: string; holidayType?: string } {
+  // 1. Cek custom holidays dari database / admin jika ada
+  if (customHolidays && customHolidays.length > 0) {
+    const custom = customHolidays.find(h => h.date === dateStr);
+    if (custom) {
+      // Periksa apakah berlaku untuk tipe jadwal ini
+      if (
+        custom.appliesTo === 'all' || 
+        !scheduleType || 
+        (custom.appliesTo === 'harian_only' && scheduleType === 'harian') ||
+        (custom.appliesTo === 'shift_only' && scheduleType === 'shift')
+      ) {
+        return { isHoliday: true, name: custom.name, holidayType: custom.type };
+      }
+    }
+  }
+
+  // 2. Cek hari libur nasional resmi kalender 2026
   const holidayName = INDONESIAN_HOLIDAYS_2026[dateStr];
   if (holidayName) {
-    return { isHoliday: true, name: holidayName };
+    return { isHoliday: true, name: holidayName, holidayType: 'libur_nasional' };
   }
   return { isHoliday: false };
 }
@@ -136,13 +157,14 @@ export function getShiftCycleForDate(
 export function getEmployeeDaySchedule(
   scheduleType: ScheduleType,
   regu: ReguType,
-  dateStr: string
+  dateStr: string,
+  customHolidays?: CustomHoliday[]
 ): DayScheduleInfo {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dateObj = new Date(y, m - 1, d);
   const dayOfWeek = dateObj.getDay();
   const dayName = INDONESIAN_DAY_NAMES[dayOfWeek];
-  const holidayCheck = isIndonesianHoliday(dateStr);
+  const holidayCheck = isIndonesianHoliday(dateStr, customHolidays, scheduleType);
 
   if (scheduleType === 'harian') {
     // HARIAN: Senin-Jumat kecuali Sabtu, Minggu dan Hari Besar Lainnya
@@ -166,7 +188,7 @@ export function getEmployeeDaySchedule(
         dayOfWeek,
         dayName,
         isWorkDay: false,
-        scheduleLabel: `Hari Libur Nasional: ${holidayCheck.name}`,
+        scheduleLabel: `Hari Libur: ${holidayCheck.name}`,
         isHoliday: true,
         holidayName: holidayCheck.name
       };
@@ -208,9 +230,10 @@ export function evaluateEmployeeDayAttendance(
   dateStr: string,
   records: AttendanceRecord[],
   leaveRequests: LeaveRequest[],
-  todayStr: string
+  todayStr: string,
+  customHolidays?: CustomHoliday[]
 ): DayAttendanceStatus {
-  const schedule = getEmployeeDaySchedule(employee.scheduleType, employee.regu, dateStr);
+  const schedule = getEmployeeDaySchedule(employee.scheduleType, employee.regu, dateStr, customHolidays);
 
   // 1. Cari record presensi di tanggal ini
   const record = records.find(r => r.employeeId === employee.id && r.date === dateStr);
@@ -373,7 +396,8 @@ export function calculateSmartMonthlyReport(
   allAttendanceRecords: AttendanceRecord[],
   allLeaveRequests: LeaveRequest[],
   locations: WorkLocation[],
-  currentDateOverride?: string // opsional tanggal acuan
+  currentDateOverride?: string, // opsional tanggal acuan
+  customHolidays?: CustomHoliday[]
 ): SmartMonthlyReportResult {
   const [yearStr, monthStr] = selectedMonth.split('-');
   const year = parseInt(yearStr, 10);
@@ -421,7 +445,7 @@ export function calculateSmartMonthlyReport(
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dayStr = `${selectedMonth}-${String(day).padStart(2, '0')}`;
-    const status = evaluateEmployeeDayAttendance(employee, dayStr, empRecords, empLeaves, todayStr);
+    const status = evaluateEmployeeDayAttendance(employee, dayStr, empRecords, empLeaves, todayStr, customHolidays);
     dailyBreakdown.push(status);
 
     if (status.isWorkDay) {

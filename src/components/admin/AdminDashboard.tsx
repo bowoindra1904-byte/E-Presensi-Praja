@@ -4,7 +4,9 @@ import {
   WorkLocation, 
   AttendanceRecord, 
   SecurityLog,
-  LeaveRequest 
+  LeaveRequest,
+  AdminAccount,
+  ReguType
 } from '../../types';
 import { MapComponent } from '../MapComponent';
 import { 
@@ -18,7 +20,6 @@ import {
   Search, 
   MapPin, 
   Filter,
-  Camera,
   Printer,
   RotateCcw,
   Trash2,
@@ -28,11 +29,15 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Check
+  Check,
+  Shield,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 
 interface AdminDashboardProps {
   employees: Employee[];
+  currentAdmin?: AdminAccount;
   locations: WorkLocation[];
   attendanceRecords: AttendanceRecord[];
   securityLogs: SecurityLog[];
@@ -45,6 +50,7 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   employees,
+  currentAdmin,
   locations,
   attendanceRecords,
   securityLogs,
@@ -54,11 +60,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onResetDailyAttendance,
   onNavigateToPemutihan,
 }) => {
+  const isDanru = Boolean(currentAdmin && currentAdmin.role !== 'komando_pusat' && currentAdmin.reguScope !== 'all');
+  const adminRegu = isDanru ? (currentAdmin?.reguScope as ReguType) : null;
+
+  // Danru strictly oversees their own regu's personnel (both shift and harian)
+  const scopedEmployees = useMemo(() => {
+    if (isDanru && adminRegu) {
+      return employees.filter(emp => emp.regu === adminRegu);
+    }
+    return employees;
+  }, [employees, isDanru, adminRegu]);
   const [selectedSlotFilter, setSelectedSlotFilter] = useState<string>('all');
   const [selectedScheduleFilter, setSelectedScheduleFilter] = useState<string>('all');
   const [attendanceViewTab, setAttendanceViewTab] = useState<'all' | 'tepat_waktu' | 'terlambat' | 'izin_sakit' | 'belum_absen'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<string | null>(null);
 
   // Reset Daily Attendance State
   const [isResetDailyModalOpen, setIsResetDailyModalOpen] = useState(false);
@@ -83,10 +98,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>(todayStr);
 
-  // Map of registered employees currently in database
+  // Map of registered employees currently in scope
   const registeredEmployeeMap = useMemo(() => {
-    return new Map(employees.map(e => [e.id, e]));
-  }, [employees]);
+    return new Map(scopedEmployees.map(e => [e.id, e]));
+  }, [scopedEmployees]);
 
   // 1. Purge bawaan/sample records and ONLY keep records for registered employees
   const cleanAttendanceRecords = useMemo(() => {
@@ -163,7 +178,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, [cleanAttendanceRecords, selectedDateFilter, approvedLeavesForDate, registeredEmployeeMap, locations]);
 
   // Metric Computations for the selected date
-  const totalEmployees = employees.length;
+  const totalEmployees = scopedEmployees.length;
   const hadirCount = activeDateRecords.filter(r => r.checkInStatus === 'tepat_waktu').length;
   const terlambatCount = activeDateRecords.filter(r => r.checkInStatus === 'terlambat').length;
   const totalHadir = hadirCount + terlambatCount;
@@ -218,7 +233,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const fullRoster = useMemo(() => {
     const recordByEmpId = new Map(activeDateRecords.map(r => [r.employeeId, r]));
 
-    return employees.map(emp => {
+    return scopedEmployees.map(emp => {
       const record = recordByEmpId.get(emp.id);
       const loc = locations.find(l => l.id === emp.locationSlotId) || locations[0];
 
@@ -230,7 +245,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         locationName: loc?.name || `Slot ${emp.locationSlotId}`,
       };
     });
-  }, [employees, activeDateRecords, locations]);
+  }, [scopedEmployees, activeDateRecords, locations]);
 
   // Filtered log records (Guaranteed date-scoped so previous days are NEVER mixed in)
   const filteredRecords = useMemo(() => {
@@ -256,7 +271,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const unattendedEmployees = useMemo(() => {
     if (selectedDateFilter === 'all') return [];
     const recordedIds = new Set(activeDateRecords.map(r => r.employeeId));
-    return employees.filter(emp => {
+    return scopedEmployees.filter(emp => {
       if (recordedIds.has(emp.id)) return false;
       const matchSlot = selectedSlotFilter === 'all' || emp.locationSlotId === Number(selectedSlotFilter);
       const matchSchedule = selectedScheduleFilter === 'all' || emp.scheduleType === selectedScheduleFilter;
@@ -265,7 +280,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         emp.nip.includes(searchQuery);
       return matchSlot && matchSchedule && matchSearch;
     });
-  }, [employees, activeDateRecords, selectedDateFilter, selectedSlotFilter, selectedScheduleFilter, searchQuery]);
+  }, [scopedEmployees, activeDateRecords, selectedDateFilter, selectedSlotFilter, selectedScheduleFilter, searchQuery]);
 
   // Export CSV
   const handleExportCSV = () => {
@@ -321,6 +336,53 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div className="space-y-6">
       
+      {/* Authority Banner (Danru vs Komando Pusat) */}
+      {isDanru ? (
+        <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <Shield className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-950 flex items-center gap-2">
+                <span>Pusat Kendali Danru {adminRegu}</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-200 text-amber-900 font-bold">
+                  Khusus {adminRegu}
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-900/90 mt-0.5 leading-relaxed">
+                Monitoring presensi realtime difokuskan pada <strong>{scopedEmployees.length} personel {adminRegu}</strong> (baik yang bertugas <strong>Shift</strong> maupun <strong>Harian</strong>). Hak akses data seluruh pegawai hanya ada pada <strong>Admin Komando Pusat</strong>.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 self-end sm:self-center">
+            <span className="text-[11px] font-bold bg-white/80 border border-amber-300 px-3 py-1 rounded-xl text-amber-900 shadow-2xs">
+              {scopedEmployees.filter(e => e.scheduleType === 'shift').length} Shift · {scopedEmployees.filter(e => e.scheduleType === 'harian').length} Harian
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-3xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-md border border-slate-800">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-300 flex items-center gap-2">
+                <span>Pusat Komando Monitoring Satpol PP (Kasatpol PP & Provost)</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-500 text-slate-950 font-black">
+                  Seluruh 150 Pegawai
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                Pemantauan komprehensif mencakup seluruh 150 personel lintas Regu 1, Regu 2, Regu 3, Regu 4, dan Markas Komando (Harian).
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 self-end sm:self-center">
+            <span className="text-[11px] font-mono bg-slate-800 border border-slate-700 px-3 py-1 rounded-xl text-amber-400 font-bold">
+              {employees.length} Personel Satpol PP
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Top Prominent Date & Calendar Command Bar (Pusat Kendali Tanggal Monitoring) */}
       <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -829,15 +891,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="font-bold text-slate-900 text-xs truncate">{r.employeeName}</div>
                     <div className="text-[10px] text-slate-500 font-mono">NIP: {r.employeeNip}</div>
                   </div>
-                  {r.checkInPhoto && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPhotoPreview(r.checkInPhoto || null)}
-                      className="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 hover:border-amber-500 shrink-0 shadow-xs"
-                    >
-                      <img src={r.checkInPhoto} alt="Foto" className="w-full h-full object-cover" />
-                    </button>
-                  )}
                 </div>
 
                 <div className="text-[11px] text-slate-700 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 flex items-center justify-between">
@@ -913,8 +966,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <th className="py-3 px-3">Status Masuk</th>
                 <th className="py-3 px-3">Jarak dari Pos</th>
                 <th className="py-3 px-3">Status Pulang</th>
-                <th className="py-3 px-3">Kunci Perangkat</th>
-                <th className="py-3 px-3 text-right">Foto</th>
+                <th className="py-3 px-3 text-right">Kunci Perangkat</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1045,24 +1097,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </td>
 
                     {/* Kunci Perangkat */}
-                    <td className="py-2.5 px-3">
-                      <span className="font-mono text-[10px] text-slate-700 truncate max-w-[130px] block" title={r.checkInDeviceId}>
+                    <td className="py-2.5 px-3 text-right">
+                      <span className="font-mono text-[10px] text-slate-700 truncate max-w-[130px] inline-block" title={r.checkInDeviceId}>
                         {r.checkInDeviceId ? `✓ ${r.checkInDeviceId}` : "-"}
                       </span>
-                    </td>
-
-                    {/* Foto Selfie */}
-                    <td className="py-2.5 px-3 text-right">
-                      {r.checkInPhoto ? (
-                        <button
-                          onClick={() => setSelectedPhotoPreview(r.checkInPhoto || null)}
-                          className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 hover:border-amber-500 transition-colors inline-block"
-                        >
-                          <img src={r.checkInPhoto} alt="Foto" className="w-full h-full object-cover" />
-                        </button>
-                      ) : (
-                        <span className="text-slate-400 text-xs">-</span>
-                      )}
                     </td>
 
                   </tr>
@@ -1071,7 +1109,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               {attendanceViewTab !== 'belum_absen' && filteredRecords.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
+                  <td colSpan={6} className="py-8 text-center text-slate-500 text-xs">
                     Tidak ada rekaman presensi pada filter ini.
                   </td>
                 </tr>
@@ -1081,30 +1119,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {/* Photo Preview Modal */}
-      {selectedPhotoPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 max-w-sm w-full space-y-3 shadow-2xl">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <h4 className="text-xs font-bold text-slate-900">Verifikasi Foto Presensi</h4>
-              <button
-                onClick={() => setSelectedPhotoPreview(null)}
-                className="text-slate-400 hover:text-slate-700"
-              >
-                ✕
-              </button>
-            </div>
-            <img
-              src={selectedPhotoPreview}
-              alt="Bukti Kehadiran"
-              className="w-full h-64 object-cover rounded-2xl border border-slate-200"
-            />
-            <div className="text-[11px] text-slate-500 text-center">
-              Foto seragam dinas tervalidasi dengan cap waktu dan GPS digital.
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Reset Daily Attendance Modal */}
       {isResetDailyModalOpen && (

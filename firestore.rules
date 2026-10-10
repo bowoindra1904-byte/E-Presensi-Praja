@@ -32,6 +32,16 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Hari Libur Custom & Tanggal Merah Tambahan
+    match /custom_holidays/{holidayId} {
+      allow read, write: if true;
+    }
+
+    // Akun Multi-Admin (1 Komando Pusat + 4 Danru)
+    match /admin_accounts/{adminId} {
+      allow read, write: if true;
+    }
+
     // Health check test doc
     match /test/{docId} {
       allow read, write: if true;

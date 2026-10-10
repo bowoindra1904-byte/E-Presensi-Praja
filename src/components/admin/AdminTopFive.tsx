@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Employee, WorkLocation, AttendanceRecord, LeaveRequest, ReguType, ScheduleType } from '../../types';
+import { Employee, WorkLocation, AttendanceRecord, LeaveRequest, ReguType, ScheduleType, CustomHoliday, AdminAccount } from '../../types';
 import { 
   Trophy, 
   Award, 
@@ -24,7 +24,9 @@ import {
   TrendingUp,
   TrendingDown,
   UserX,
-  UserCheck
+  UserCheck,
+  Shield,
+  Lock
 } from 'lucide-react';
 import { 
   calculateSmartMonthlyReport, 
@@ -35,19 +37,33 @@ import {
 
 interface AdminTopFiveProps {
   employees: Employee[];
+  currentAdmin?: AdminAccount;
   locations: WorkLocation[];
   attendanceRecords: AttendanceRecord[];
   leaveRequests?: LeaveRequest[];
+  customHolidays?: CustomHoliday[];
   onOpenPrintMenu?: (menu: 'monthly') => void;
 }
 
 export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
   employees,
+  currentAdmin,
   locations,
   attendanceRecords,
   leaveRequests = [],
+  customHolidays = [],
   onOpenPrintMenu
 }) => {
+  const isDanru = Boolean(currentAdmin && currentAdmin.role !== 'komando_pusat' && currentAdmin.reguScope !== 'all');
+  const adminRegu = isDanru ? (currentAdmin?.reguScope as ReguType) : null;
+
+  const scopedEmployees = useMemo(() => {
+    if (isDanru && adminRegu) {
+      return employees.filter(emp => emp.regu === adminRegu);
+    }
+    return employees;
+  }, [employees, isDanru, adminRegu]);
+
   const currentMonthStr = useMemo(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -56,7 +72,7 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
   }, []);
 
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
-  const [selectedRegu, setSelectedRegu] = useState<string>('all');
+  const [selectedRegu, setSelectedRegu] = useState<string>(isDanru && adminRegu ? adminRegu : 'all');
   const [selectedSlot, setSelectedSlot] = useState<string>('all');
   const [selectedSchedule, setSelectedSchedule] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -75,16 +91,18 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
 
   // Calculate smart monthly metrics for all employees in selected month
   const allMonthlyReports: SmartMonthlyReportResult[] = useMemo(() => {
-    return employees.map((emp) => {
+    return scopedEmployees.map((emp) => {
       return calculateSmartMonthlyReport(
         emp,
         selectedMonth,
         attendanceRecords,
         leaveRequests,
-        locations
+        locations,
+        undefined,
+        customHolidays
       );
     });
-  }, [employees, selectedMonth, attendanceRecords, leaveRequests, locations]);
+  }, [scopedEmployees, selectedMonth, attendanceRecords, leaveRequests, locations, customHolidays]);
 
   // Filter based on controls
   const filteredReports = useMemo(() => {
@@ -213,6 +231,53 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in">
       
+      {/* Authority Banner (Danru vs Komando Pusat) */}
+      {isDanru ? (
+        <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <Shield className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-950 flex items-center gap-2">
+                <span>Top Five Personel Danru {adminRegu}</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-200 text-amber-900 font-bold">
+                  Khusus {adminRegu}
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-900/90 mt-0.5 leading-relaxed">
+                Pemeringkatan disiplin dan evaluasi performa kehadiran dikhususkan untuk <strong>{scopedEmployees.length} personel {adminRegu}</strong> (baik <strong>Shift</strong> maupun <strong>Harian</strong>). Hak akses data seluruh pegawai hanya ada pada <strong>Admin Komando Pusat</strong>.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 self-end sm:self-center">
+            <span className="text-[11px] font-bold bg-white/80 border border-amber-300 px-3 py-1 rounded-xl text-amber-900 shadow-2xs">
+              {scopedEmployees.filter(e => e.scheduleType === 'shift').length} Shift · {scopedEmployees.filter(e => e.scheduleType === 'harian').length} Harian
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-3xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-md border border-slate-800">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black text-sm text-amber-300 flex items-center gap-2">
+                <span>Pusat Evaluasi Disiplin Satpol PP (Kasatpol PP & Provost)</span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-amber-500 text-slate-950 font-black">
+                  Seluruh 150 Pegawai
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                Leaderboard pemantauan 5 Personel teratas mencakup seluruh anggota Satpol PP lintas Regu 1, Regu 2, Regu 3, Regu 4, dan Harian.
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 self-end sm:self-center">
+            <span className="text-[11px] font-mono bg-slate-800 border border-slate-700 px-3 py-1 rounded-xl text-amber-400 font-bold">
+              {employees.length} Personel Satpol PP
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -224,7 +289,12 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
           </div>
           <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-600" />
-            TOP FIVE Presensi Personel Satpol PP
+            <span>
+              {isDanru 
+                ? `TOP FIVE Presensi Personel ${adminRegu}` 
+                : 'TOP FIVE Presensi Personel Satpol PP'
+              }
+            </span>
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
             Pemantauan 5 Personel teratas untuk kategori <strong>Tepat Waktu (Teladan)</strong>, <strong>Sering Terlambat</strong>, dan <strong>Tanpa Keterangan (TK / Alpha)</strong> guna keperluan evaluasi pembinaan dan reward disiplin.
@@ -280,18 +350,25 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
               <Users className="w-3 h-3 text-amber-600" />
               Regu Operasional
             </label>
-            <select
-              value={selectedRegu}
-              onChange={(e) => setSelectedRegu(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
-            >
-              <option value="all">Semua Regu (1-4 & Harian)</option>
-              <option value="Regu 1">Regu 1</option>
-              <option value="Regu 2">Regu 2</option>
-              <option value="Regu 3">Regu 3</option>
-              <option value="Regu 4">Regu 4</option>
-              <option value="Harian">Regu Harian</option>
-            </select>
+            {isDanru ? (
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5 text-xs text-amber-950 font-bold flex items-center gap-1.5">
+                <Lock className="w-3 h-3 text-amber-700" />
+                <span>{adminRegu} (Terkunci)</span>
+              </div>
+            ) : (
+              <select
+                value={selectedRegu}
+                onChange={(e) => setSelectedRegu(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-amber-500"
+              >
+                <option value="all">Semua Regu (1-4 & Harian)</option>
+                <option value="Regu 1">Regu 1</option>
+                <option value="Regu 2">Regu 2</option>
+                <option value="Regu 3">Regu 3</option>
+                <option value="Regu 4">Regu 4</option>
+                <option value="Harian">Regu Harian</option>
+              </select>
+            )}
           </div>
 
           {/* Pos Lokasi */}

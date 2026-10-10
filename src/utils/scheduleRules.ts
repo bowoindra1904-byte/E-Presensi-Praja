@@ -1,4 +1,5 @@
-import { ScheduleType, TimeEvaluation } from '../types';
+import { ScheduleType, TimeEvaluation, CustomHoliday } from '../types';
+import { isIndonesianHoliday } from './smartAttendanceCalculator';
 
 export const DAY_NAMES = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -35,12 +36,32 @@ export function parseDateToEvaluatedTime(date: Date): EvaluatedTime {
 
 export function evaluateAttendanceTime(
   scheduleType: ScheduleType,
-  currentDate: Date = new Date()
+  currentDate: Date = new Date(),
+  customHolidays?: CustomHoliday[]
 ): TimeEvaluation {
   const ev = parseDateToEvaluatedTime(currentDate);
   const m = ev.totalMinutes;
   const isFriday = ev.dayIndex === 5;
   const isWeekend = ev.dayIndex === 0 || ev.dayIndex === 6;
+
+  // Format dateStr YYYY-MM-DD
+  const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+  const holidayCheck = isIndonesianHoliday(dateStr, customHolidays, scheduleType);
+
+  if (scheduleType === 'harian' && holidayCheck.isHoliday) {
+    return {
+      canCheckIn: false,
+      canCheckOut: false,
+      checkInReason: `Hari ini Libur Resmi (${holidayCheck.name}). Pegawai jadwal harian dibebaskan dari kewajiban presensi dinas.`,
+      checkOutReason: `Hari Libur Resmi (${holidayCheck.name}).`,
+      scheduleLabel: `Hari Libur: ${holidayCheck.name}`,
+      workHoursLabel: 'Hari Libur Kedinasan',
+      checkInWindowLabel: 'Libur Kedinasan',
+      checkOutWindowLabel: 'Libur Kedinasan',
+      isLate: false,
+      currentDayName: ev.dayName
+    };
+  }
 
   if (scheduleType === 'shift') {
     // Tipe Shift Pol PP: 2 rotasi (Pagi 08.00-20.00 WIB & Malam 20.00-08.00 WIB)

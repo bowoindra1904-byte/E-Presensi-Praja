@@ -11,10 +11,11 @@ import {
   limit
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Employee, WorkLocation, AttendanceRecord, SecurityLog, LeaveRequest } from '../types';
+import { Employee, WorkLocation, AttendanceRecord, SecurityLog, LeaveRequest, CustomHoliday, AdminAccount } from '../types';
 import { INITIAL_EMPLOYEES } from '../data/initialEmployees';
 import { INITIAL_WORK_LOCATIONS } from '../data/initialLocations';
 import { generateInitialLeaveRequests } from '../data/initialAttendance';
+import { INITIAL_ADMIN_ACCOUNTS } from '../data/initialAdmins';
 
 // 1. Subscribe to Employees with auto-seed of 150 personnel only if never cleared
 export function subscribeEmployees(onData: (employees: Employee[]) => void) {
@@ -355,4 +356,68 @@ export async function syncClearLeaveRequests(requestIds: string[]): Promise<void
     }
     await batch.commit();
   }
+}
+
+// 7. Subscribe to Custom Holidays
+export function subscribeCustomHolidays(onData: (holidays: CustomHoliday[]) => void) {
+  const holidaysCol = collection(db, 'custom_holidays');
+  
+  return onSnapshot(holidaysCol, (snapshot) => {
+    const items: CustomHoliday[] = [];
+    snapshot.forEach(docSnap => {
+      items.push(docSnap.data() as CustomHoliday);
+    });
+
+    // Sort by date ascending
+    items.sort((a, b) => a.date.localeCompare(b.date));
+    onData(items);
+  }, (err) => {
+    console.error('Error subscribing to custom_holidays:', err);
+  });
+}
+
+export async function syncSaveCustomHoliday(holiday: CustomHoliday): Promise<void> {
+  const docRef = doc(db, 'custom_holidays', holiday.id);
+  await setDoc(docRef, cleanFirestoreData(holiday), { merge: true });
+}
+
+export async function syncDeleteCustomHoliday(holidayId: string): Promise<void> {
+  const docRef = doc(db, 'custom_holidays', holidayId);
+  await deleteDoc(docRef);
+}
+
+// 8. Multi-Admin Accounts (1 Komando Pusat + 4 Danru)
+export function subscribeAdminAccounts(onData: (accounts: AdminAccount[]) => void) {
+  const adminCol = collection(db, 'admin_accounts');
+  
+  return onSnapshot(adminCol, async (snapshot) => {
+    if (snapshot.empty) {
+      console.log('Seeding initial 5 Admin accounts (1 Komando + 4 Danru)...');
+      try {
+        const batch = writeBatch(db);
+        INITIAL_ADMIN_ACCOUNTS.forEach(acc => {
+          batch.set(doc(db, 'admin_accounts', acc.id), cleanFirestoreData(acc));
+        });
+        await batch.commit();
+      } catch (err) {
+        console.error('Error seeding admin accounts:', err);
+      }
+      onData(INITIAL_ADMIN_ACCOUNTS);
+      return;
+    }
+
+    const items: AdminAccount[] = [];
+    snapshot.forEach(docSnap => {
+      items.push(docSnap.data() as AdminAccount);
+    });
+
+    onData(items);
+  }, (err) => {
+    console.error('Error subscribing to admin accounts:', err);
+  });
+}
+
+export async function syncSaveAdminAccount(account: AdminAccount): Promise<void> {
+  const docRef = doc(db, 'admin_accounts', account.id);
+  await setDoc(docRef, cleanFirestoreData(account), { merge: true });
 }

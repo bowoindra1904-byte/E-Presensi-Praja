@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Employee, AttendanceRecord, WorkLocation, LeaveRequest } from '../../types';
+import { Employee, AttendanceRecord, WorkLocation, LeaveRequest, CustomHoliday } from '../../types';
 import { 
   Calendar, 
   CheckCircle2, 
@@ -30,6 +30,7 @@ interface EmployeeAttendanceRecapProps {
   locations: WorkLocation[];
   currentDate: Date;
   leaveRequests?: LeaveRequest[];
+  customHolidays?: CustomHoliday[];
 }
 
 export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = ({
@@ -38,6 +39,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
   locations,
   currentDate,
   leaveRequests = [],
+  customHolidays = [],
 }) => {
   // Current month default: YYYY-MM
   const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -53,9 +55,11 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
       selectedMonth,
       attendanceRecords,
       leaveRequests,
-      locations
+      locations,
+      undefined,
+      customHolidays
     );
-  }, [employee, selectedMonth, attendanceRecords, leaveRequests, locations]);
+  }, [employee, selectedMonth, attendanceRecords, leaveRequests, locations, customHolidays]);
 
   // Filter records for this employee and selected month (for logs view)
   const monthlyRecords = useMemo(() => {

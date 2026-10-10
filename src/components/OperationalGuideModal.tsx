@@ -117,7 +117,7 @@ export const OperationalGuideModal: React.FC<OperationalGuideModalProps> = ({
               <span>5. Pemeliharaan Kuota Cloud Firebase (&gt; 6 Bulan)</span>
             </div>
             <p className="text-slate-700 leading-relaxed">
-              Gunakan tombol <strong>"Arsip & Bersihkan &gt; 6 Bulan"</strong> di menu Laporan Bulanan setiap akhir semester. Unduh file cadangan CSV ke komputer dinas terlebih dahulu, lalu pilih opsi <em>"Hanya Kosongkan Foto Selfie"</em> agar kuota Firebase selalu 100% lega tanpa menghilangkan catatan jam kehadiran.
+              Gunakan tombol <strong>"Arsip & Bersihkan &gt; 6 Bulan"</strong> di menu Laporan Bulanan setiap akhir semester. Unduh file cadangan CSV ke komputer dinas terlebih dahulu, lalu lakukan pembersihan dokumen arsip lama agar database Cloud Firestore selalu tertata rapi dan optimal tanpa menghilangkan data rekap yang sudah dibukukan.
             </p>
           </div>
 

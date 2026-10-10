@@ -66,10 +66,10 @@ export function generate150SatpolPPEmployees(): Employee[] {
     id: "POLPP-003",
     nip: "19920120 201402 1 003",
     name: "Agus Prasetyo, A.Md.",
-    role: "Petugas Provost Penegak Disiplin Internal",
+    role: "Staf Administrasi & Logistik Regu 1",
     rank: "Pengatur Tk.I (II/d)",
-    regu: "Harian",
-    scheduleType: "harian",
+    regu: "Regu 1",
+    scheduleType: "harian", // Regu 1 Personel Harian
     locationSlotId: 1, // Slot 1: Mako
     boundDeviceId: "DEV-POLPP-KUNCI-SAMPLE-003",
     boundDeviceName: "Xiaomi Redmi Note 12",
@@ -87,15 +87,20 @@ export function generate150SatpolPPEmployees(): Employee[] {
     // Distribute evenly among 12 slots (1 to 12)
     const locationSlotId = ((i - 1) % 12) + 1;
     
-    // Distribute regu: Regu 1, Regu 2, Regu 3, Regu 4, or Harian
-    const isHarian = (i % 5 === 0 || i % 5 === 2);
-    let regu: ReguType = 'Harian';
-    let sched: ScheduleType = 'harian';
+    // Distribute regu: Regu 1, Regu 2, Regu 3, Regu 4, or Harian (Mako Komando)
+    // Most personnel belong to Regu 1..4 (each Danru's jurisdiction), with a portion in Mako / Komando
+    const isMako = (i % 12 === 0);
+    let regu: ReguType = 'Regu 1';
+    let sched: ScheduleType = 'shift';
 
-    if (!isHarian) {
+    if (isMako) {
+      regu = 'Harian';
+      sched = 'harian';
+    } else {
       const reguNum = ((i % 4) + 1);
       regu = `Regu ${reguNum}` as ReguType;
-      sched = 'shift';
+      // In each Regu 1..4: approx 28% are 'harian' (staf/logistik/administrasi regu), 72% are 'shift' (patroli/pos)
+      sched = (i % 7 === 0 || i % 7 === 3) ? 'harian' : 'shift';
     }
 
     // Bound device distribution
