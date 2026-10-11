@@ -106,14 +106,48 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
   const [activeMenu, setActiveMenu] = useState<PrintMenuType>(defaultMenu);
   
-  // Signature & Document Header Config
+  // Signature & Document Header Config scoped per Admin (Danru vs Komando Pusat)
+  const defaultDanruConfig: PrintSignatureConfig = useMemo(() => {
+    if (isDanru && adminRegu) {
+      return {
+        locationCity: "Muntok",
+        customDate: "30 September 2026",
+        signatory1Role: `KOMANDAN ${adminRegu.toUpperCase()}`,
+        signatory1Name: currentAdmin?.name || `KOMANDAN ${adminRegu.toUpperCase()}`,
+        signatory1Rank: "Pengatur (II/c)",
+        signatory1Nip: currentAdmin?.username ? currentAdmin.username.toUpperCase() : "DANRU",
+        signatory2Role: "KEPALA SATUAN POLISI PAMONG PRAJA KABUPATEN BANGKA BARAT",
+        signatory2Name: "SIDARTA GAUTAMA, S.STP",
+        signatory2Rank: "Pembina Utama Muda (IV/c)",
+        signatory2Nip: "19740512 199903 1 002",
+      };
+    }
+    return DEFAULT_SIGNATURE_CONFIG;
+  }, [isDanru, adminRegu, currentAdmin]);
+
+  const storageKey = useMemo(() => {
+    return currentAdmin?.id ? `satpolpp_print_sign_config_${currentAdmin.id}` : 'satpolpp_print_sign_config';
+  }, [currentAdmin?.id]);
+
   const [signConfig, setSignConfig] = useState<PrintSignatureConfig>(() => {
     try {
-      const saved = localStorage.getItem('satpolpp_print_sign_config');
+      const saved = localStorage.getItem(storageKey);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return DEFAULT_SIGNATURE_CONFIG;
+    return defaultDanruConfig;
   });
+
+  // Keep signConfig in sync when switching between Danru and Komando accounts
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setSignConfig(JSON.parse(saved));
+        return;
+      }
+    } catch {}
+    setSignConfig(defaultDanruConfig);
+  }, [storageKey, defaultDanruConfig]);
 
   const [isEditingSignConfig, setIsEditingSignConfig] = useState<boolean>(initialOpenEditSignConfig);
 
@@ -121,16 +155,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
     setSignConfig(prev => {
       const next = { ...prev, ...updates };
       try {
-        localStorage.setItem('satpolpp_print_sign_config', JSON.stringify(next));
+        localStorage.setItem(storageKey, JSON.stringify(next));
       } catch {}
       return next;
     });
   };
 
   const handleResetSignConfig = () => {
-    setSignConfig(DEFAULT_SIGNATURE_CONFIG);
+    setSignConfig(defaultDanruConfig);
     try {
-      localStorage.setItem('satpolpp_print_sign_config', JSON.stringify(DEFAULT_SIGNATURE_CONFIG));
+      localStorage.setItem(storageKey, JSON.stringify(defaultDanruConfig));
     } catch {}
   };
 
@@ -789,23 +823,23 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 </div>
               </div>
 
-              {/* Kolom 2: Penanda Tangan Kiri (Pemeriksa / Verifikator) */}
+              {/* Kolom 2: Penanda Tangan Kiri (Komandan Regu / Pemeriksa) */}
               <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-xs">
                 <div className="flex items-center gap-1.5 font-bold text-amber-700 border-b border-slate-100 pb-1.5">
                   <Users className="w-3.5 h-3.5" />
-                  <span>2. Pejabat Pemeriksa (Kiri)</span>
+                  <span>2. {isDanru && adminRegu ? `Komandan ${adminRegu} (Kiri)` : 'Pejabat Pemeriksa / Danru (Kiri)'}</span>
                 </div>
 
                 <div>
                   <label className="text-[11px] text-slate-600 font-semibold block mb-1">
-                    Jabatan Pemeriksa:
+                    {isDanru ? 'Jabatan Penanda Tangan:' : 'Jabatan Pemeriksa:'}
                   </label>
                   <input
                     type="text"
                     value={signConfig.signatory1Role}
                     onChange={(e) => handleUpdateSignConfig({ signatory1Role: e.target.value })}
-                    placeholder="Perwira Piket / Kasubag Tata Usaha"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-amber-500"
+                    placeholder={isDanru && adminRegu ? `KOMANDAN ${adminRegu.toUpperCase()}` : "Perwira Piket / Kasubag Tata Usaha"}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-amber-500 font-semibold"
                   />
                 </div>
 
@@ -817,7 +851,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     type="text"
                     value={signConfig.signatory1Name}
                     onChange={(e) => handleUpdateSignConfig({ signatory1Name: e.target.value })}
-                    placeholder="AGUS PRASETYO, A.Md."
+                    placeholder={isDanru && currentAdmin?.name ? currentAdmin.name : "AGUS PRASETYO, A.Md."}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 font-semibold focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -829,17 +863,17 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       type="text"
                       value={signConfig.signatory1Rank}
                       onChange={(e) => handleUpdateSignConfig({ signatory1Rank: e.target.value })}
-                      placeholder="Penata Muda (III/a)"
+                      placeholder={isDanru ? "Pengatur (II/c)" : "Penata Muda (III/a)"}
                       className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-slate-900 text-[11px]"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">NIP Pejabat:</label>
+                    <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">NIP / ID Pejabat:</label>
                     <input
                       type="text"
                       value={signConfig.signatory1Nip}
                       onChange={(e) => handleUpdateSignConfig({ signatory1Nip: e.target.value })}
-                      placeholder="19920120 201402 1 003"
+                      placeholder={isDanru ? `ID: ${currentAdmin?.username?.toUpperCase() || 'DANRU'}` : "19920120 201402 1 003"}
                       className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-slate-900 font-mono text-[11px]"
                     />
                   </div>
@@ -1630,7 +1664,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     Dibuat & Diverifikasi Oleh:
                   </p>
                   <p className="font-bold text-slate-900 mt-1 leading-snug uppercase min-h-[2.5rem] flex items-center justify-center">
-                    {isDanru && adminRegu ? `KOMANDAN ${adminRegu.toUpperCase()}` : signConfig.signatory1Role}
+                    {signConfig.signatory1Role}
                   </p>
                 </div>
 
@@ -1658,13 +1692,15 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 {/* Baris 3: Nama Lengkap Penanda Tangan, Pangkat & NIP (100% SEJAJAR HORIZONTAL) */}
                 <div className="pt-0.5 px-2">
                   <p className="font-bold text-slate-900 underline underline-offset-4 text-xs tracking-wide">
-                    {isDanru && currentAdmin?.name ? currentAdmin.name : signConfig.signatory1Name}
+                    {signConfig.signatory1Name}
                   </p>
                   <p className="text-[10px] text-slate-600 font-medium mt-1">
-                    {isDanru ? 'Pengatur (II/c)' : signConfig.signatory1Rank}
+                    {signConfig.signatory1Rank}
                   </p>
                   <p className="text-[10px] text-slate-600 font-mono">
-                    {isDanru ? `ID: ${currentAdmin?.username?.toUpperCase() || 'DANRU'}` : `NIP. ${signConfig.signatory1Nip}`}
+                    {signConfig.signatory1Nip.toUpperCase().startsWith('NIP') || signConfig.signatory1Nip.toUpperCase().startsWith('ID')
+                      ? signConfig.signatory1Nip
+                      : `NIP. ${signConfig.signatory1Nip}`}
                   </p>
                 </div>
 
@@ -1676,7 +1712,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     {signConfig.signatory2Rank}
                   </p>
                   <p className="text-[10px] text-slate-600 font-mono">
-                    NIP. {signConfig.signatory2Nip}
+                    {signConfig.signatory2Nip.toUpperCase().startsWith('NIP')
+                      ? signConfig.signatory2Nip
+                      : `NIP. ${signConfig.signatory2Nip}`}
                   </p>
                 </div>
 
