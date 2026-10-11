@@ -164,7 +164,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       const val = match ? parseInt(match[0], 10) : 0;
       return val > max ? val : max;
     }, 0);
-    const nextNum = Math.max(employees.length + 1, maxIdNum + 1);
+    // If list is empty or reset, start from 1. Otherwise increment.
+    const nextNum = employees.length === 0 ? 1 : Math.max(employees.length + 1, maxIdNum + 1);
     const id = `POLPP-${String(nextNum).padStart(3, '0')}`;
     const regu: ReguType = isDanru && adminRegu ? adminRegu : (newEmployee.regu || 'Regu 1');
     const sched: ScheduleType = newEmployee.scheduleType || 'shift';
@@ -471,16 +472,22 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         
         {/* Mobile View (HP Card List) */}
         <div className="sm:hidden p-3 space-y-3">
-          {paginatedList.map((emp) => {
+          {paginatedList.map((emp, idx) => {
             const assignedLoc = locations.find(l => l.id === emp.locationSlotId);
+            const orderNum = (currentPage - 1) * pageSize + idx + 1;
 
             return (
               <div key={emp.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3 shadow-xs">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-slate-900 text-xs truncate">{emp.name}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">NIP: {emp.nip} · {emp.id}</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">{emp.role} · {emp.rank}</div>
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
+                    <span className="text-[10px] font-mono font-bold text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md shrink-0 mt-0.5">
+                      #{orderNum}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-slate-900 text-xs truncate">{emp.name}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">NIP: {emp.nip} · {emp.id}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{emp.role} · {emp.rank}</div>
+                    </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
                     emp.regu === 'Harian' 
@@ -603,6 +610,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
               <tr>
+                <th className="py-3 px-3 w-12 text-center">No.</th>
                 <th className="py-3 px-4">Personel</th>
                 <th className="py-3 px-4">Pangkat / Jabatan</th>
                 <th className="py-3 px-4">Penempatan Lokasi Kerja</th>
@@ -612,12 +620,18 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedList.map((emp) => {
+              {paginatedList.map((emp, idx) => {
                 const assignedLoc = locations.find(l => l.id === emp.locationSlotId);
+                const orderNum = (currentPage - 1) * pageSize + idx + 1;
 
                 return (
                   <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
                     
+                    {/* Nomor Urut */}
+                    <td className="py-3 px-3 text-center font-mono text-xs font-bold text-slate-500">
+                      {orderNum}
+                    </td>
+
                     {/* Personnel Info */}
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900 text-sm">{emp.name}</div>

@@ -22,7 +22,9 @@ import {
   ShieldCheck,
   HelpCircle,
   User,
-  FileText
+  FileText,
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 
 interface LoginPortalProps {
@@ -82,16 +84,42 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
 
   const currentDevice = getOrCreateDeviceId();
 
-  // Suggestions for quick auto-fill while typing name
-  const nameSuggestions = inputName.trim().length >= 2
-    ? employees.filter(e => {
-        const query = inputName.trim().toLowerCase();
-        return (
-          e.name.toLowerCase().includes(query) ||
-          e.nip.replace(/\D/g, '').includes(query.replace(/\D/g, ''))
-        );
-      })
-    : [];
+  // Smart normalized search helper
+  const normalize = (str: string) =>
+    str.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Smart suggestions for quick auto-fill while typing name or NIP
+  const nameSuggestions = React.useMemo(() => {
+    const q = inputName.trim();
+    if (!q) {
+      // If user hasn't typed anything yet, show all registered employees (sorted nicely)
+      return employees;
+    }
+    const cleanQ = q.toLowerCase();
+    const cleanDigits = q.replace(/\D/g, '');
+    const tokens = cleanQ.split(/\s+/).filter(Boolean);
+
+    return employees.filter(emp => {
+      const empName = emp.name.toLowerCase();
+      const empNameNorm = normalize(emp.name);
+      const empNipDigits = emp.nip.replace(/\D/g, '');
+      const empRegu = (emp.regu || '').toLowerCase();
+      const empRole = (emp.role || '').toLowerCase();
+
+      // Check if all typed tokens match anywhere in name, role, or regu
+      const allTokensMatch = tokens.every(token => 
+        empName.includes(token) || 
+        empNameNorm.includes(token) ||
+        empRegu.includes(token) ||
+        empRole.includes(token)
+      );
+
+      // Check NIP match if query contains digits
+      const nipMatches = cleanDigits.length > 0 && empNipDigits.includes(cleanDigits);
+
+      return allTokensMatch || nipMatches;
+    });
+  }, [inputName, employees]);
 
   const handleEmployeeLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,36 +145,60 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
       return;
     }
 
-    // Match employee by both NIP and Name
+    // Match employee by both NIP and Name, with smart fuzzy/token support
     const matchedEmployee = employees.find(emp => {
       const empNipDigits = emp.nip.replace(/\D/g, '');
-      const nipMatches = empNipDigits === cleanInputNip || emp.nip.toLowerCase().includes(inputNip.trim().toLowerCase());
+      const nipMatches = cleanInputNip.length > 0 
+        ? (empNipDigits === cleanInputNip || emp.nip.toLowerCase().includes(inputNip.trim().toLowerCase()))
+        : false;
 
       const empNameClean = emp.name.toLowerCase();
+      const empNorm = normalize(emp.name);
+      const inputNorm = normalize(cleanInputName);
+
       const nameWithoutTitles = empNameClean.replace(/,\s*[a-z.\s]+/gi, '').trim();
       const inputWithoutTitles = cleanInputName.replace(/,\s*[a-z.\s]+/gi, '').trim();
+
+      const inputTokens = cleanInputName.split(/\s+/).filter(Boolean);
+      const allTokensMatch = inputTokens.length > 0 && inputTokens.every(t => 
+        empNameClean.includes(t) || empNorm.includes(normalize(t))
+      );
 
       const nameMatches = 
         empNameClean.includes(cleanInputName) || 
         cleanInputName.includes(nameWithoutTitles) || 
-        nameWithoutTitles.includes(inputWithoutTitles);
+        nameWithoutTitles.includes(inputWithoutTitles) ||
+        empNorm === inputNorm ||
+        allTokensMatch;
 
       return nipMatches && nameMatches;
     });
 
     if (!matchedEmployee) {
-      const nipFound = employees.find(e => e.nip.replace(/\D/g, '') === cleanInputNip);
-      const nameFound = employees.find(e => 
-        e.name.toLowerCase().includes(cleanInputName) || 
-        cleanInputName.includes(e.name.toLowerCase().replace(/,\s*[a-z.\s]+/gi, '').trim())
-      );
+      const nipFound = employees.find(e => {
+        const empNipDigits = e.nip.replace(/\D/g, '');
+        return cleanInputNip.length > 0 && (empNipDigits === cleanInputNip || e.nip.toLowerCase().includes(inputNip.trim().toLowerCase()));
+      });
+
+      const nameFound = employees.find(e => {
+        const empNameClean = e.name.toLowerCase();
+        const empNorm = normalize(e.name);
+        const inputNorm = normalize(cleanInputName);
+        const inputTokens = cleanInputName.split(/\s+/).filter(Boolean);
+        return (
+          empNameClean.includes(cleanInputName) || 
+          cleanInputName.includes(empNameClean.replace(/,\s*[a-z.\s]+/gi, '').trim()) ||
+          empNorm === inputNorm ||
+          (inputTokens.length > 0 && inputTokens.every(t => empNameClean.includes(t)))
+        );
+      });
 
       if (nipFound && !nameFound) {
-        setEmployeeError(`NIP terdaftar atas nama personel "${nipFound.name}", tetapi Nama yang Anda masukkan tidak sesuai. Periksa kembali nama lengkap Anda.`);
+        setEmployeeError(`NIP terdaftar atas nama personel "${nipFound.name}", tetapi Nama yang Anda masukkan tidak sesuai. Klik tombol "Daftar" atau pilih dari saran nama untuk pengisian instan.`);
       } else if (!nipFound && nameFound) {
-        setEmployeeError(`Nama "${nameFound.name}" ditemukan, tetapi NIP yang Anda masukkan tidak sesuai.`);
+        setEmployeeError(`Personel "${nameFound.name}" ditemukan, tetapi NIP yang Anda masukkan tidak sesuai. Klik nama pada pilihan untuk mengisi NIP (${nameFound.nip}) secara otomatis.`);
       } else {
-        setEmployeeError('Data tidak ditemukan! Pastikan Nama Lengkap dan NIP sesuai data personel resmi Satpol PP.');
+        setEmployeeError('Data tidak ditemukan! Pastikan Nama Lengkap dan NIP sesuai data personel resmi Satpol PP. Anda juga dapat memilih langsung dari tombol "Daftar".');
       }
       return;
     }
@@ -367,10 +419,10 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                 <span className="text-[10px] text-slate-400 font-normal">Sesuai Data Personel</span>
               </label>
 
-              <div className="relative">
+              <div className="relative flex items-center">
                 <input
                   type="text"
-                  placeholder="Ketik nama personel..."
+                  placeholder="Ketik nama personel atau NIP..."
                   value={inputName}
                   onChange={(e) => {
                     setInputName(e.target.value);
@@ -378,29 +430,60 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     setIsNameSuggestionsOpen(true);
                   }}
                   onFocus={() => setIsNameSuggestionsOpen(true)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors font-medium"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3.5 pr-20 py-2.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors font-medium"
                 />
-              </div>
-
-              {/* Suggestions Dropdown for easy autofill without memorizing 18 digits NIP */}
-              {isNameSuggestionsOpen && inputName.trim().length >= 2 && (
-                <div className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-30 divide-y divide-slate-800/80">
-                  <div className="px-3 py-1.5 text-[10px] text-amber-400 font-semibold bg-slate-950 flex justify-between items-center">
-                    <span>Pilih Personel untuk Isi Otomatis NIP</span>
+                <div className="absolute right-1.5 flex items-center gap-1">
+                  {inputName && (
                     <button
                       type="button"
-                      onClick={() => setIsNameSuggestionsOpen(false)}
-                      className="text-slate-400 hover:text-white text-xs px-1"
+                      onClick={() => {
+                        setInputName('');
+                        setInputNip('');
+                        setEmployeeError('');
+                      }}
+                      className="text-slate-400 hover:text-white p-1 text-xs"
+                      title="Bersihkan input"
                     >
                       ✕
                     </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsNameSuggestionsOpen(!isNameSuggestionsOpen)}
+                    className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-[10px] font-bold border border-amber-500/30 transition-colors flex items-center gap-1"
+                    title="Buka daftar seluruh personel terdaftar"
+                  >
+                    <span>Daftar</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${isNameSuggestionsOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Suggestions Dropdown for easy autofill without memorizing 18 digits NIP */}
+              {isNameSuggestionsOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1 max-h-64 overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-30 divide-y divide-slate-800/80 scrollbar-thin">
+                  <div className="px-3.5 py-2 text-[10.5px] text-amber-400 font-bold bg-slate-950 flex justify-between items-center sticky top-0 z-10 border-b border-slate-800">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      {inputName.trim()
+                        ? `Ditemukan ${nameSuggestions.length} Personel Cocok`
+                        : `Daftar Semua Personel (${employees.length} Pegawai)`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsNameSuggestionsOpen(false)}
+                      className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700"
+                    >
+                      Tutup ✕
+                    </button>
                   </div>
                   {nameSuggestions.length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-slate-400">
-                      Tidak ada personel yang cocok
+                    <div className="px-3.5 py-4 text-xs text-slate-400 text-center">
+                      <p className="font-semibold text-slate-300">Tidak ada personel yang cocok dengan "{inputName}"</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Pastikan ejaan nama atau digit NIP sudah benar.</p>
                     </div>
                   ) : (
-                    nameSuggestions.slice(0, 6).map((emp) => (
+                    nameSuggestions.map((emp, idx) => (
                       <div
                         key={emp.id}
                         onClick={() => {
@@ -409,18 +492,23 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                           setIsNameSuggestionsOpen(false);
                           setEmployeeError('');
                         }}
-                        className="px-3 py-2 hover:bg-slate-800 cursor-pointer text-xs transition-colors flex justify-between items-center group"
+                        className="px-3 py-2.5 hover:bg-slate-800/90 cursor-pointer text-xs transition-colors flex justify-between items-center group"
                       >
-                        <div className="truncate pr-2">
-                          <span className="font-semibold text-white group-hover:text-amber-300 transition-colors">
-                            {emp.name}
+                        <div className="truncate pr-2 flex items-center gap-2.5">
+                          <span className="text-[10px] font-mono font-bold text-amber-500/80 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
+                            #{idx + 1}
                           </span>
-                          <span className="text-[10px] text-slate-400 block truncate font-mono">
-                            NIP: {emp.nip} · {emp.regu}
-                          </span>
+                          <div className="truncate">
+                            <span className="font-semibold text-white group-hover:text-amber-300 transition-colors block truncate">
+                              {emp.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block truncate font-mono mt-0.5">
+                              NIP: {emp.nip} · <strong className="text-amber-400/90">{emp.regu}</strong> · {emp.role}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0 font-semibold">
-                          Pilih
+                        <span className="text-[9px] px-2 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0 font-bold group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                          Pilih & Isi NIP
                         </span>
                       </div>
                     ))
