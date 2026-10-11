@@ -160,6 +160,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
     }
   }, [isOpen, defaultMenu]);
 
+  // Manage print-modal-active class on body for multi-page print stylesheet
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('print-modal-active');
+      return () => {
+        document.body.classList.remove('print-modal-active');
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const todayStr = currentDate.toISOString().split('T')[0];
@@ -334,10 +344,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div 
+      id="print-report-modal-root"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print-modal-overlay print:static print:inset-auto print:block print:p-0 print:m-0 print:w-full print:h-auto print:bg-transparent print:overflow-visible"
+    >
       
       {/* Modal Container */}
-      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden print:m-0 print:p-0 print:border-none print:shadow-none print:w-full print:h-auto print:bg-white print:text-black">
+      <div 
+        id="print-report-modal-container"
+        className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden print-modal-container print:m-0 print:p-0 print:border-none print:shadow-none print:w-full print:h-auto print:max-h-none print:bg-white print:text-black print:overflow-visible print:block"
+      >
         
         {/* Modal Top Header (Screen Only) */}
         <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white print:hidden shrink-0">
@@ -642,22 +658,20 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           )}
 
           <div className="flex items-center gap-2 ml-auto">
-            {(activeMenu === 'monthly' || activeMenu === 'top_five') && (
-              <button
-                type="button"
-                onClick={() => setIsEditingSignConfig(!isEditingSignConfig)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-xs ${
-                  isEditingSignConfig
-                    ? 'bg-amber-600 text-white border-amber-600'
-                    : 'bg-white text-amber-800 hover:text-amber-900 border-amber-300 hover:bg-amber-50'
-                }`}
-                title="Buka menu edit tanggal, alamat dan penanda tangan"
-              >
-                <PenTool className="w-3.5 h-3.5 text-amber-600" />
-                <span>{isEditingSignConfig ? 'Tutup Edit Pengesahan' : 'Edit Tanggal, Alamat & Penanda Tangan'}</span>
-                {isEditingSignConfig ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setIsEditingSignConfig(!isEditingSignConfig)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-xs ${
+                isEditingSignConfig
+                  ? 'bg-amber-600 text-white border-amber-600'
+                  : 'bg-white text-amber-800 hover:text-amber-900 border-amber-300 hover:bg-amber-50'
+              }`}
+              title="Buka menu edit tanggal, alamat dan penanda tangan"
+            >
+              <PenTool className="w-3.5 h-3.5 text-amber-600" />
+              <span>{isEditingSignConfig ? 'Tutup Edit Pengesahan' : 'Edit Tanggal, Alamat & Penanda Tangan'}</span>
+              {isEditingSignConfig ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
+            </button>
 
             <span className="text-[11px] text-slate-600 hidden sm:inline font-medium">
               Total: <strong className="text-slate-900">{scopedEmployees.length} Pegawai</strong> {isDanru ? `(${adminRegu})` : '(Seluruh Pegawai)'}
@@ -665,28 +679,29 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
         </div>
 
-        {/* Menu Edit Tanggal, Alamat & Penanda Tangan (Khusus Laporan Bulanan & Cetak) */}
+        {/* Menu Edit Tanggal, Alamat & Penanda Tangan (Bisa Digulir Responsif Ke Atas & Ke Bawah) */}
         {isEditingSignConfig && (
-          <div className="bg-amber-50/50 border-b border-amber-200 p-4 sm:p-5 print:hidden space-y-4 animate-in slide-in-from-top-2 duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-amber-200/80 gap-3">
+          <div className="bg-amber-50/80 border-b-2 border-amber-300 p-3 sm:p-5 print:hidden space-y-4 animate-in slide-in-from-top-2 duration-200 max-h-[55vh] sm:max-h-[65vh] overflow-y-auto overscroll-contain shadow-inner scrollbar-thin">
+            {/* Sticky Header inside Scrollable Container */}
+            <div className="sticky -top-3 sm:-top-5 -mt-3 sm:-mt-5 pt-3 sm:pt-4 pb-3 px-1 bg-amber-50/95 backdrop-blur-xs border-b border-amber-200 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-800">
+                <div className="p-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-800 shrink-0">
                   <PenTool className="w-4 h-4" />
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
-                    Menu Edit Tanggal, Alamat & Penanda Tangan Laporan Bulanan
+                    Menu Edit Tanggal, Alamat & Penanda Tangan Laporan
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold">
                       Live Preview & Disimpan
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    Kop Surat resmi: SATPOL PP KABUPATEN BANGKA BARAT · Alamat dan nomor surat telah ditiadakan sesuai format baku
+                    Kop Surat resmi: SATPOL PP KABUPATEN BANGKA BARAT · Gulir ke bawah untuk mengisi pejabat pengesah & Kasatpol PP
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={handleResetSignConfig}
@@ -708,7 +723,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             </div>
 
             {/* Form Inputs Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs pt-1">
               
               {/* Kolom 1: Alamat (Kota) & Tanggal */}
               <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2.5 shadow-xs">
@@ -889,17 +904,45 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
 
             </div>
+
+            {/* Tombol Simpan & Tutup di Bawah Form Agar Mudah Tanpa Harus Scroll Balik Ke Atas */}
+            <div className="pt-3 border-t border-amber-200/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+              <span className="text-[11px] text-amber-900/80 italic text-center sm:text-left">
+                * Data langsung disimpan secara otomatis dan diperbarui pada pratinjau dokumen di bawah. Layar ini dapat digeser ke atas & ke bawah.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetSignConfig}
+                  className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                >
+                  <RotateCcw className="w-3 h-3 text-rose-500" />
+                  <span>Reset Bawaan</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingSignConfig(false)}
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Tutup & Terapkan</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Scrollable Printable Paper Container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 print:p-0 print:overflow-visible print:bg-white">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 print-modal-scrollable print:p-0 print:m-0 print:overflow-visible print:bg-white print:block">
           
           {/* Printable White Paper Sheet */}
-          <div className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl p-8 sm:p-10 shadow-xl border border-slate-200 print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full relative overflow-hidden">
+          <div 
+            id="printable-paper-sheet" 
+            className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl p-8 sm:p-10 shadow-xl border border-slate-200 printable-paper-sheet print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full relative overflow-hidden print:overflow-visible print:block"
+          >
             
             {/* Authentic Document Watermark Background (Satpol PP Praja Wibawa Emblem) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden opacity-[0.08] print:opacity-[0.06] z-0">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden opacity-[0.08] z-0 print-watermark-bg print:hidden">
               <div className="w-[360px] sm:w-[480px] aspect-square">
                 <img
                   src="/satpol_pp_logo.png"
@@ -911,10 +954,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             </div>
 
             {/* Document Content */}
-            <div className="relative z-10">
+            <div className="relative z-10 print:z-auto">
 
             {/* 1. KOP SURAT RESMI: SATPOL PP KABUPATEN BANGKA BARAT (Alamat & Kontak Dihapus) */}
-            <div className="border-b-4 border-double border-slate-900 pb-4 mb-6">
+            <div className="border-b-4 border-double border-slate-900 pb-4 mb-6 print-kop-surat">
               <div className="flex items-center justify-between gap-4">
                 
                 {/* Logo Perisai Satpol PP */}
@@ -946,7 +989,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             </div>
 
             {/* 2. JUDUL DOKUMEN BERDASARKAN MENU */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-6 print-document-title">
               {activeMenu === 'daily' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
@@ -1060,8 +1103,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   </div>
                 </div>
 
-                <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                  <thead>
+                <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                  <thead className="print-table-header">
                     <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase">
                       <th className="p-1.5 border border-slate-300 text-center w-8">No</th>
                       <th className="p-1.5 border border-slate-300">Nama Personel & NIP</th>
@@ -1179,8 +1222,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Menu 2: Laporan Bulanan (Dengan Sistem Pintar Perhitungan Otomatis: H, S, I, TK, P) */}
             {activeMenu === 'monthly' && (
               <div className="space-y-4">
-                <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                  <thead>
+                <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                  <thead className="print-table-header">
                     <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
                       <th className="p-1.5 border border-slate-300 text-center w-7">No</th>
                       <th className="p-1.5 border border-slate-300 min-w-[130px]">Nama Personel & NIP</th>
@@ -1292,8 +1335,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Menu 3: Penempatan 8 Slot Pos Lokasi */}
             {activeMenu === 'locations' && (
               <div className="space-y-4">
-                <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                  <thead>
+                <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                  <thead className="print-table-header">
                     <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase">
                       <th className="p-1.5 border border-slate-300 text-center w-8">Slot</th>
                       <th className="p-1.5 border border-slate-300">Nama Pos & Kode</th>
@@ -1340,8 +1383,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Menu 4: Daftar Regu Patroli 1-4 & Harian */}
             {activeMenu === 'regu' && (
               <div className="space-y-4">
-                <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                  <thead>
+                <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                  <thead className="print-table-header">
                     <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase">
                       <th className="p-1.5 border border-slate-300 text-center w-8">No</th>
                       <th className="p-1.5 border border-slate-300">Nama Personel & NIP</th>
@@ -1398,8 +1441,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Menu 5: Log Keamanan Perangkat */}
             {activeMenu === 'security' && (
               <div className="space-y-4">
-                <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                  <thead>
+                <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                  <thead className="print-table-header">
                     <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase">
                       <th className="p-1.5 border border-slate-300 text-center w-8">No</th>
                       <th className="p-1.5 border border-slate-300">Waktu & Tanggal</th>
@@ -1460,8 +1503,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <span>1. TOP 5 PERSONEL PALING TEPAT WAKTU (TELADAN DISIPLIN)</span>
                       <span className="text-[9px] font-normal">Kriteria: Akumulasi Hadir Tepat Waktu Terbanyak</span>
                     </div>
-                    <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                      <thead>
+                    <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                      <thead className="print-table-header">
                         <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
                           <th className="p-1 border border-slate-300 text-center w-7">Rank</th>
                           <th className="p-1 border border-slate-300 min-w-[140px]">Nama Personel & NIP</th>
@@ -1499,8 +1542,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <span>2. TOP 5 PERSONEL PALING SERING TERLAMBAT (PEMBINAAN WAKTU)</span>
                       <span className="text-[9px] font-normal">Kriteria: Akumulasi Keterlambatan Masuk Jam Dinas</span>
                     </div>
-                    <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                      <thead>
+                    <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                      <thead className="print-table-header">
                         <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
                           <th className="p-1 border border-slate-300 text-center w-7">Rank</th>
                           <th className="p-1 border border-slate-300 min-w-[140px]">Nama Personel & NIP</th>
@@ -1538,8 +1581,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <span>3. TOP 5 PERSONEL PALING SERING TANPA KETERANGAN (TK / ALPHA)</span>
                       <span className="text-[9px] font-normal">Kriteria: Hari Kerja Wajib Terlewati Tanpa Absen / Izin Sah</span>
                     </div>
-                    <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                      <thead>
+                    <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
+                      <thead className="print-table-header">
                         <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
                           <th className="p-1 border border-slate-300 text-center w-7">Rank</th>
                           <th className="p-1 border border-slate-300 min-w-[140px]">Nama Personel & NIP</th>
@@ -1575,7 +1618,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             })()}
 
             {/* 4. LEMBAR PENGESAHAN / TANDA TANGAN RESMI (SEJAJAR PRESISI KIRI & KANAN) */}
-            <div className="mt-10 pt-6 border-t border-slate-300 text-xs break-inside-avoid print:break-inside-avoid">
+            <div className="mt-10 pt-6 border-t border-slate-300 text-xs break-inside-avoid print:break-inside-avoid print-signature-section">
               <div className="grid grid-cols-2 gap-x-12 gap-y-0 text-center max-w-3xl mx-auto">
                 
                 {/* Baris 1: Header Jabatan Penanda Tangan (Flex ke bawah agar baseline jabatan presisi sejajar) */}

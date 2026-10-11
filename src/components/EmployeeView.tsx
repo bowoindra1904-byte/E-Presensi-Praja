@@ -521,36 +521,14 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
             </div>
           </div>
 
-          {/* Quick 1-Click GPS Refresh Button & Security Device Lock Status */}
+          {/* Security Device Lock Status */}
           <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={handleRequestRealGps}
-              disabled={isGpsRefreshing}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-black transition-all shadow-sm active:scale-95 cursor-pointer ${
-                isGpsRefreshing
-                  ? 'bg-slate-100 text-slate-500 border-slate-300 cursor-wait'
-                  : !hasGpsBeenRefreshed
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-amber-500 shadow-md ring-2 ring-amber-400/50 animate-bounce'
-                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
-              }`}
-              title="Segarkan koordinat satelit GPS"
-            >
-              <RotateCcw className={`w-4 h-4 ${isGpsRefreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">
-                {isGpsRefreshing ? 'Mencari Satelit...' : !hasGpsBeenRefreshed ? 'Segarkan GPS (Wajib)' : 'GPS Terkunci Sah'}
-              </span>
-              <span className="sm:hidden">
-                {isGpsRefreshing ? 'Mencari...' : !hasGpsBeenRefreshed ? 'Segarkan GPS (Wajib)' : 'GPS Aktif'}
-              </span>
-            </button>
-
             {/* Desktop Full Box */}
             <div className="hidden md:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-200 text-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <div className="text-left">
                 <span className="text-[9px] text-slate-500 block leading-none">Keamanan HP</span>
-                <span className="font-bold text-emerald-700 text-[11px]">GPS & Kunci Aktif</span>
+                <span className="font-bold text-emerald-700 text-[11px]">Kunci Perangkat Sah</span>
               </div>
             </div>
             {/* Mobile Pill Badge */}
@@ -562,37 +540,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
         </div>
       </div>
-
-      {/* Eye-catching Mandatory GPS Alert when not refreshed */}
-      {!hasGpsBeenRefreshed && (
-        <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-amber-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
-              <RotateCcw className={`w-5 h-5 text-white ${isGpsRefreshing ? 'animate-spin' : ''}`} />
-            </div>
-            <div>
-              <div className="font-black text-xs sm:text-sm tracking-wide flex items-center gap-2 uppercase">
-                <span>⚠️ WAJIB SEGARKAN GPS</span>
-                <span className="text-[10px] bg-white text-amber-950 font-black px-2 py-0.5 rounded-full shadow-2xs">
-                  LANGKAH 1
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-amber-50 leading-snug mt-0.5">
-                Sebelum Tap Masuk atau Tap Pulang, Anda wajib menekan tombol <strong>"Segarkan GPS"</strong> untuk mendeteksi koordinat satelit terkini di <strong>{location.name}</strong>.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleRequestRealGps}
-            disabled={isGpsRefreshing}
-            className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 bg-white hover:bg-amber-50 text-amber-950 font-black text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-sm transition-all active:scale-95 shrink-0 flex items-center justify-center gap-2 cursor-pointer border border-white/50"
-          >
-            <RotateCcw className={`w-4 h-4 ${isGpsRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isGpsRefreshing ? 'Mendeteksi Satelit...' : 'SEGARKAN GPS SEKARANG (WAJIB)'}</span>
-          </button>
-        </div>
-      )}
 
       {/* Mobile Personel Menu Tab Bar (Compact & fits 100% phone width seamlessly) */}
       <div className="lg:hidden grid grid-cols-4 gap-1 p-1 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xs">
@@ -986,8 +933,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                       <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
                         {todayRecord?.checkInTime 
                           ? "Sudah Masuk" 
-                          : !hasGpsBeenRefreshed 
-                          ? "KUNCI GPS DAHULU" 
                           : "TAP MASUK"}
                       </span>
                     </div>
@@ -995,7 +940,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                       {todayRecord?.checkInTime 
                         ? `${todayRecord.checkInTime} WIB` 
                         : !hasGpsBeenRefreshed
-                        ? "Klik untuk Segarkan GPS (Wajib)"
+                        ? "Wajib Segarkan GPS Dulu"
                         : timeEval.canCheckIn 
                         ? "Waktu Masuk Aktif" 
                         : "Buka -30 Menit"}
@@ -1021,15 +966,13 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       {!hasGpsBeenRefreshed && todayRecord?.checkInTime && !todayRecord?.checkOutTime ? (
-                        <Lock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-amber-700 animate-pulse" />
+                        <Lock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-amber-700" />
                       ) : (
                         <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                       )}
                       <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
                         {todayRecord?.checkOutTime 
                           ? "Sudah Pulang" 
-                          : !hasGpsBeenRefreshed && todayRecord?.checkInTime
-                          ? "KUNCI GPS DAHULU"
                           : "TAP PULANG"}
                       </span>
                     </div>
@@ -1037,7 +980,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                       {todayRecord?.checkOutTime 
                         ? `${todayRecord.checkOutTime} WIB` 
                         : !hasGpsBeenRefreshed
-                        ? "Klik untuk Segarkan GPS (Wajib)"
+                        ? "Wajib Segarkan GPS Dulu"
                         : timeEval.canCheckOut 
                         ? "Jam Pulang Aktif" 
                         : "Tepat Jam Pulang"}

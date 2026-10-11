@@ -81,4 +81,193 @@ html, body {
   -webkit-backdrop-filter: blur(8px);
 }
 
+/* ==========================================================================
+   OFFICIAL GOVERNMENT PRINT & MULTI-PAGE PDF EXPORT ENGINE (SATPOL PP)
+   Ensures seamless multi-page pagination without header/footer overlapping
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 15mm 10mm;
+  }
+
+  /* Reset document root to allow natural multi-page flow */
+  html, body {
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #root {
+    overflow: visible !important;
+    overflow-x: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+  }
+
+  /* When the print report modal is open, suppress everything outside the modal */
+  body.print-modal-active header,
+  body.print-modal-active main,
+  body.print-modal-active footer,
+  body.print-modal-active .print-hide-element {
+    display: none !important;
+  }
+
+  /* Modal Overlay: Must NOT be fixed or flex-centered during print */
+  #print-report-modal-root,
+  .print-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+
+  /* Modal Container: Fill document width, remove borders/shadows/radius */
+  #print-report-modal-container,
+  .print-modal-container {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Scrollable Paper Container: Fully expanded, no scroll clipping */
+  .print-modal-scrollable {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* Printable White Paper Sheet */
+  #printable-paper-sheet,
+  .printable-paper-sheet {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Suppress the absolute watermark background during print to prevent multi-page layout distortion */
+  .print-watermark-bg {
+    display: none !important;
+  }
+
+  /* Official Letterhead (KOP SURAT) */
+  .print-kop-surat {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    margin-bottom: 1.25rem !important;
+    display: block !important;
+  }
+
+  /* Document Title & Subtitle */
+  .print-document-title {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Official Data Tables: Clean pagination across 150 employees */
+  table,
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Repeat table headers at top of each printed page */
+  thead,
+  .print-table-header {
+    display: table-header-group !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  tbody {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* Signatory Block (LEMBAR PENGESAHAN): Never split and never overlap with header */
+  .print-signature-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: 2.5rem !important;
+    padding-top: 1rem !important;
+    display: block !important;
+    width: 100% !important;
+    clear: both !important;
+    position: relative !important;
+  }
+}
+
 
