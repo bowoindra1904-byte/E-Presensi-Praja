@@ -99,10 +99,11 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
         leaveRequests,
         locations,
         undefined,
-        customHolidays
+        customHolidays,
+        employees
       );
     });
-  }, [scopedEmployees, selectedMonth, attendanceRecords, leaveRequests, locations, customHolidays]);
+  }, [scopedEmployees, employees, selectedMonth, attendanceRecords, leaveRequests, locations, customHolidays]);
 
   // Filter based on controls
   const filteredReports = useMemo(() => {

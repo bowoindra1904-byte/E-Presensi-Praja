@@ -31,12 +31,14 @@ import {
   Lock
 } from 'lucide-react';
 import { ArchiveCleanupModal } from './ArchiveCleanupModal';
+import { ShiftCalibrationModal } from './ShiftCalibrationModal';
 import { 
   calculateSmartMonthlyReport, 
   getStatusCodeBadge, 
   INDONESIAN_DAY_NAMES,
   INDONESIAN_MONTH_NAMES,
-  DayAttendanceStatus
+  DayAttendanceStatus,
+  getAllReguMonthlyShiftCalibrations
 } from '../../utils/smartAttendanceCalculator';
 
 interface MonthlyReportViewProps {
@@ -98,6 +100,13 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   const [selectedEmpForCalendar, setSelectedEmpForCalendar] = useState<MonthlyEmployeeReport | null>(null);
 
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState<boolean>(false);
+  const [isCalibrationModalOpen, setIsCalibrationModalOpen] = useState<boolean>(false);
+  const [calibrationVersion, setCalibrationVersion] = useState<number>(0);
+
+  // Live calibrations for all regus in selected month
+  const allCalibrations = useMemo(() => {
+    return getAllReguMonthlyShiftCalibrations(selectedMonth, attendanceRecords, employees);
+  }, [selectedMonth, attendanceRecords, employees, calibrationVersion]);
 
   // Reset Monthly Attendance Modal State
   const [isResetMonthlyModalOpen, setIsResetMonthlyModalOpen] = useState<boolean>(false);
@@ -123,6 +132,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
 
   // Compute monthly report metrics for each employee with Smart Attendance Calculator
   // Dynamically reacts if admin changes employee schedule (shift <-> harian or regu)
+  // Menyesuaikan siklus shift tiap regu secara pintar dari pertama kali absen di awal bulan
   const monthlyReports: MonthlyEmployeeReport[] = useMemo(() => {
     return scopedEmployees.map((emp) => {
       // Calculate smart monthly report automatically
@@ -133,7 +143,8 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         leaveRequests,
         locations,
         undefined,
-        customHolidays
+        customHolidays,
+        employees
       );
 
       const empRecords = attendanceRecords.filter(
@@ -173,9 +184,10 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         totalHadirSah: smart.totalHadirSah,
         attendanceRate: smart.attendanceRate,
         dailyBreakdown: smart.dailyBreakdown,
+        shiftCalibration: smart.shiftCalibration,
       };
     });
-  }, [employees, locations, attendanceRecords, selectedMonth, leaveRequests]);
+  }, [scopedEmployees, employees, locations, attendanceRecords, selectedMonth, leaveRequests, customHolidays, calibrationVersion]);
 
   // Filtered reports
   const filteredReports = useMemo(() => {
@@ -424,6 +436,87 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
             <Printer className="w-3.5 h-3.5" />
             Cetak Rekap Resmi
           </button>
+        </div>
+      </div>
+
+      {/* Panel Kalkulasi Pintar Shift Otomatis (Penyesuaian Awal Bulan Tiap Regu) */}
+      <div className="bg-white border border-amber-300/80 rounded-3xl p-5 shadow-xs space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 border border-amber-300">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-slate-900">
+                  Kalkulasi Pintar Rotasi Shift (Awal Bulan Tiap Regu)
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 font-mono">
+                  Otomatis Aktif
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                Karena tidak ada jadwal baku kalender statis, sistem menyesuaikan titik awal rotasi 4-hari (Pagi-Malam-Libur-Libur) dari <strong>absen pertama di awal bulan</strong>. Hari sebelum absen pertama otomatis diakui Libur Shift (tidak dikenai Alpa).
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsCalibrationModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors shadow-2xs self-start sm:self-center shrink-0"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+            <span>Kalibrasi / Pantau Shift Awal Bulan</span>
+          </button>
+        </div>
+
+        {/* 4 Regu Shift Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {(['Regu 1', 'Regu 2', 'Regu 3', 'Regu 4'] as ReguType[]).map((regu) => {
+            const cal = allCalibrations[regu];
+            const isMyRegu = isDanru && adminRegu === regu;
+            return (
+              <div 
+                key={regu}
+                className={`p-3 rounded-2xl border transition-all ${
+                  isMyRegu 
+                    ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/30' 
+                    : 'bg-slate-50/70 border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <span className="font-black text-xs text-slate-900 flex items-center gap-1.5">
+                    <span>{regu}</span>
+                    {isMyRegu && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-200 text-amber-900">
+                        Regu Anda
+                      </span>
+                    )}
+                  </span>
+                  {cal?.isAutoDetected ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Otomatis
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      Manual
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-xs font-bold text-slate-800">
+                  {cal?.anchorDate ? `Mulai ${cal.anchorDate.slice(8)} ${selectedMonthLabel.slice(0, 3)}` : 'Awal Bulan'} · <span className={cal?.anchorCycle === 'Malam' ? 'text-indigo-700 font-extrabold' : 'text-amber-700 font-extrabold'}>Shift {cal?.anchorCycle || 'Pagi'}</span>
+                </div>
+
+                <p className="text-[10px] text-slate-500 mt-1 line-clamp-1" title={cal?.notes}>
+                  {cal?.detectedEmployeeName 
+                    ? `Perdana: ${cal.detectedEmployeeName}` 
+                    : (cal?.notes || 'Baseline Awal Bulan')}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -1474,6 +1567,18 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Shift Calibration Modal */}
+      <ShiftCalibrationModal
+        isOpen={isCalibrationModalOpen}
+        onClose={() => setIsCalibrationModalOpen(false)}
+        selectedMonth={selectedMonth}
+        onMonthChange={(newM) => setSelectedMonth(newM)}
+        currentAdmin={currentAdmin}
+        employees={employees}
+        attendanceRecords={attendanceRecords}
+        onCalibrationsUpdated={() => setCalibrationVersion(v => v + 1)}
+      />
 
     </div>
   );

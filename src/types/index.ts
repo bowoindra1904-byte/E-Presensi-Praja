@@ -190,6 +190,7 @@ export interface MonthlyEmployeeReport {
     record?: AttendanceRecord;
     leaveRequest?: LeaveRequest;
   }>;
+  shiftCalibration?: MonthlyShiftCalibration;
 }
 
 export interface CustomHoliday {
@@ -215,5 +216,22 @@ export interface AdminAccount {
   phone?: string;
   lastLogin?: string;
   updatedAt?: string;
+}
+
+export interface MonthlyShiftCalibration {
+  id?: string;
+  month: string; // YYYY-MM
+  regu: ReguType;
+  anchorDate: string; // YYYY-MM-DD
+  anchorCycle: 'Pagi' | 'Malam';
+  isAutoDetected: boolean;
+  firstAttendanceDate?: string;
+  firstShiftCycle?: 'Pagi' | 'Malam';
+  detectedEmployeeName?: string;
+  detectedEmployeeId?: string;
+  detectedCheckInTime?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  notes?: string;
 }
 

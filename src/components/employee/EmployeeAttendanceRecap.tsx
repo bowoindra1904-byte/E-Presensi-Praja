@@ -31,6 +31,7 @@ interface EmployeeAttendanceRecapProps {
   currentDate: Date;
   leaveRequests?: LeaveRequest[];
   customHolidays?: CustomHoliday[];
+  allEmployees?: Employee[];
 }
 
 export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = ({
@@ -40,6 +41,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
   currentDate,
   leaveRequests = [],
   customHolidays = [],
+  allEmployees = [],
 }) => {
   // Current month default: YYYY-MM
   const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -49,6 +51,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
 
   // Smart Attendance Calculation for this officer
   // Automatically recalculates when admin changes employee.scheduleType (shift <-> harian)
+  // Menyesuaikan siklus shift dari absen perdana di awal bulan
   const smartReport = useMemo(() => {
     return calculateSmartMonthlyReport(
       employee,
@@ -57,9 +60,10 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
       leaveRequests,
       locations,
       undefined,
-      customHolidays
+      customHolidays,
+      allEmployees
     );
-  }, [employee, selectedMonth, attendanceRecords, leaveRequests, locations, customHolidays]);
+  }, [employee, selectedMonth, attendanceRecords, leaveRequests, locations, customHolidays, allEmployees]);
 
   // Filter records for this employee and selected month (for logs view)
   const monthlyRecords = useMemo(() => {
@@ -198,7 +202,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
             <p className="text-slate-600 leading-relaxed text-[11px]">
               {employee.scheduleType === 'shift' ? (
                 <span>
-                  Siklus 4 hari dinamis: <strong>Shift Pagi (08.00-20.00) ➔ Shift Malam (20.00-08.00) ➔ Libur ➔ Libur</strong>. Target hari kerja otomatis menghitung hari giliran piket Anda.
+                  Siklus 4 hari dinamis: <strong>Shift Pagi (08.00-20.00) ➔ Shift Malam (20.00-08.00) ➔ Libur ➔ Libur</strong>. Disesuaikan pintar dari absen pertama awal bulan {smartReport.shiftCalibration?.anchorDate ? `(Mulai ${smartReport.shiftCalibration.anchorDate} · Shift ${smartReport.shiftCalibration.anchorCycle})` : ''}. Hari sebelum absen perdana otomatis diakui Libur Shift.
                 </span>
               ) : (
                 <span>

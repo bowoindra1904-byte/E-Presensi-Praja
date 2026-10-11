@@ -1566,6 +1566,7 @@ export default function App() {
             attendanceRecords={attendanceRecords}
             leaveRequests={leaveRequests}
             customHolidays={customHolidays}
+            allEmployees={employees}
             onSubmitLeaveRequest={handleSubmitLeaveRequest}
             onAddAttendance={handleAddAttendance}
             onUpdateAttendance={handleUpdateAttendance}
@@ -1586,6 +1587,7 @@ export default function App() {
                 securityLogs={securityLogs}
                 currentDate={effectiveCurrentDate}
                 leaveRequests={leaveRequests}
+                customHolidays={customHolidays}
                 onOpenPrintMenu={handleOpenPrintMenu}
                 onResetDailyAttendance={(recordIds, label) => handleResetAttendance('daily', label, recordIds)}
                 onNavigateToPemutihan={() => setActiveAdminTab('leaves')}

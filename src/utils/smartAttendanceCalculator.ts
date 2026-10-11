@@ -1,4 +1,4 @@
-import { Employee, AttendanceRecord, LeaveRequest, WorkLocation, ReguType, ScheduleType, CustomHoliday } from '../types';
+import { Employee, AttendanceRecord, LeaveRequest, WorkLocation, ReguType, ScheduleType, CustomHoliday, MonthlyShiftCalibration } from '../types';
 
 // ============================================================================
 // DAFTAR HARI LIBUR NASIONAL RESMI INDONESIA (HARI BESAR LAINNYA) TAHUN 2026
@@ -99,29 +99,260 @@ export interface DayAttendanceStatus extends DayScheduleInfo {
   workHours?: number;
 }
 
+// ============================================================================
+// KALKULASI PINTAR ROTASI SHIFT DINAMIS (PENYESUAIAN AWAL BULAN TIAP REGU)
+// ============================================================================
+export const SHIFT_CALIBRATION_STORAGE_KEY = 'satpol_pp_monthly_shift_calibrations';
+
+export function getStoredShiftCalibrations(): MonthlyShiftCalibration[] {
+  try {
+    const raw = localStorage.getItem(SHIFT_CALIBRATION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveStoredShiftCalibration(calibration: MonthlyShiftCalibration): void {
+  try {
+    const existing = getStoredShiftCalibrations();
+    const filtered = existing.filter(c => !(c.month === calibration.month && c.regu === calibration.regu));
+    filtered.push(calibration);
+    localStorage.setItem(SHIFT_CALIBRATION_STORAGE_KEY, JSON.stringify(filtered));
+  } catch (err) {
+    console.error('Failed to save calibration:', err);
+  }
+}
+
+export function removeStoredShiftCalibration(month: string, regu: ReguType | string): void {
+  try {
+    const existing = getStoredShiftCalibrations();
+    const filtered = existing.filter(c => !(c.month === month && c.regu === regu));
+    localStorage.setItem(SHIFT_CALIBRATION_STORAGE_KEY, JSON.stringify(filtered));
+  } catch (err) {
+    console.error('Failed to remove calibration:', err);
+  }
+}
+
+/**
+ * Deteksi pintar awal shift tiap regu dari presensi perdana di awal bulan.
+ * Karena untuk shift tidak ada jadwal baku kalender kaku, sistem kalkulasi pintar
+ * aplikasi menyesuaikan siklus tiap regu dari pertama kali absen di awal tiap bulan.
+ */
+export function detectReguMonthlyShiftCalibration(
+  regu: ReguType | string,
+  monthStr: string, // YYYY-MM
+  records: AttendanceRecord[],
+  employees?: Employee[],
+  specificEmployeeId?: string
+): MonthlyShiftCalibration {
+  // 1. Cek apakah ada penyesuaian manual yang tersimpan di sistem oleh Admin / Danru
+  const storedList = getStoredShiftCalibrations();
+  const manualConfig = storedList.find(c => c.month === monthStr && c.regu === regu && !c.isAutoDetected);
+  if (manualConfig) {
+    return manualConfig;
+  }
+
+  // 2. Evaluasi presensi di bulan ini
+  const validRecordsInMonth = records.filter(r => 
+    r.date.startsWith(monthStr) && 
+    (r.checkInTime || r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat')
+  );
+
+  // Jika spesifik untuk 1 personel, cek apakah personel ini sudah memiliki absen perdana di bulan ini
+  if (specificEmployeeId) {
+    const personalRecords = validRecordsInMonth.filter(r => r.employeeId === specificEmployeeId);
+    if (personalRecords.length > 0) {
+      personalRecords.sort((a, b) => a.date.localeCompare(b.date) || (a.checkInTime || '').localeCompare(b.checkInTime || ''));
+      const first = personalRecords[0];
+      const hour = first.checkInTime ? parseInt(first.checkInTime.split(':')[0], 10) : 8;
+      const cycle: 'Pagi' | 'Malam' = (hour >= 6 && hour < 17) ? 'Pagi' : 'Malam';
+
+      return {
+        month: monthStr,
+        regu: (regu as ReguType) || 'Regu 1',
+        anchorDate: first.date,
+        anchorCycle: cycle,
+        isAutoDetected: true,
+        firstAttendanceDate: first.date,
+        firstShiftCycle: cycle,
+        detectedEmployeeName: first.employeeName,
+        detectedEmployeeId: first.employeeId,
+        detectedCheckInTime: first.checkInTime,
+        notes: `Menyesuaikan presensi perdana ${first.employeeName} (${first.date} - ${first.checkInTime || '-'} WIB)`
+      };
+    }
+  }
+
+  // Cek apakah ada rekan satu regu yang sudah absen di bulan ini
+  const reguEmpIds = employees 
+    ? new Set(employees.filter(e => e.regu === regu).map(e => e.id))
+    : null;
+
+  const reguRecords = validRecordsInMonth.filter(r => 
+    r.regu === regu || (reguEmpIds && reguEmpIds.has(r.employeeId))
+  );
+
+  if (reguRecords.length > 0) {
+    reguRecords.sort((a, b) => a.date.localeCompare(b.date) || (a.checkInTime || '').localeCompare(b.checkInTime || ''));
+    const first = reguRecords[0];
+    const hour = first.checkInTime ? parseInt(first.checkInTime.split(':')[0], 10) : 8;
+    const cycle: 'Pagi' | 'Malam' = (hour >= 6 && hour < 17) ? 'Pagi' : 'Malam';
+
+    return {
+      month: monthStr,
+      regu: (regu as ReguType) || 'Regu 1',
+      anchorDate: first.date,
+      anchorCycle: cycle,
+      isAutoDetected: true,
+      firstAttendanceDate: first.date,
+      firstShiftCycle: cycle,
+      detectedEmployeeName: first.employeeName,
+      detectedEmployeeId: first.employeeId,
+      detectedCheckInTime: first.checkInTime,
+      notes: `Menyesuaikan presensi perdana regu oleh ${first.employeeName} (${first.date} - ${first.checkInTime || '-'} WIB)`
+    };
+  }
+
+  // 3. Jika belum ada yang absen di bulan ini, gunakan baseline staggered default awal bulan
+  const defaultDay1 = `${monthStr}-01`;
+  if (regu === 'Regu 1') {
+    return {
+      month: monthStr,
+      regu: 'Regu 1',
+      anchorDate: defaultDay1,
+      anchorCycle: 'Pagi',
+      isAutoDetected: false,
+      notes: 'Proyeksi baseline awal bulan: Regu 1 (Mulai Pagi Tgl 01)'
+    };
+  } else if (regu === 'Regu 2') {
+    return {
+      month: monthStr,
+      regu: 'Regu 2',
+      anchorDate: defaultDay1,
+      anchorCycle: 'Malam',
+      isAutoDetected: false,
+      notes: 'Proyeksi baseline awal bulan: Regu 2 (Mulai Malam Tgl 01)'
+    };
+  } else if (regu === 'Regu 3') {
+    return {
+      month: monthStr,
+      regu: 'Regu 3',
+      anchorDate: `${monthStr}-03`,
+      anchorCycle: 'Pagi',
+      isAutoDetected: false,
+      notes: 'Proyeksi baseline awal bulan: Regu 3 (Libur Tgl 01-02, Mulai Pagi Tgl 03)'
+    };
+  } else if (regu === 'Regu 4') {
+    return {
+      month: monthStr,
+      regu: 'Regu 4',
+      anchorDate: `${monthStr}-04`,
+      anchorCycle: 'Pagi',
+      isAutoDetected: false,
+      notes: 'Proyeksi baseline awal bulan: Regu 4 (Libur Tgl 01-03, Mulai Pagi Tgl 04)'
+    };
+  } else {
+    return {
+      month: monthStr,
+      regu: 'Harian',
+      anchorDate: defaultDay1,
+      anchorCycle: 'Pagi',
+      isAutoDetected: false,
+      notes: 'Jadwal Harian Reguler Mako'
+    };
+  }
+}
+
+/**
+ * Mendapatkan kalibrasi shift awal bulan untuk seluruh regu
+ */
+export function getAllReguMonthlyShiftCalibrations(
+  monthStr: string,
+  records: AttendanceRecord[],
+  employees?: Employee[]
+): Record<ReguType, MonthlyShiftCalibration> {
+  const regus: ReguType[] = ['Regu 1', 'Regu 2', 'Regu 3', 'Regu 4', 'Harian'];
+  const result = {} as Record<ReguType, MonthlyShiftCalibration>;
+  for (const regu of regus) {
+    result[regu] = detectReguMonthlyShiftCalibration(regu, monthStr, records, employees);
+  }
+  return result;
+}
+
 /**
  * Menghitung posisi siklus 4 hari untuk Jadwal Shift 12 Jam:
  * Siklus: Pagi (08.00-20.00) -> Malam (20.00-08.00) -> Libur -> Libur
  * 
- * Untuk 4 Regu Satpol PP, rotasi di-offset agar setiap hari selalu ada regu pagi, regu malam, dan regu cadangan/libur.
+ * Menggunakan sistem kalibrasi pintar aplikasi yang menyesuaikan personil tiap regu
+ * dari pertama absen diawal tiap bulan.
  */
 export function getShiftCycleForDate(
   regu: ReguType | string,
-  dateStr: string
+  dateStr: string,
+  calibration?: MonthlyShiftCalibration | null
 ): { shiftCycle: 'Pagi' | 'Malam' | 'Libur'; isWorkDay: boolean; label: string } {
-  // Anchor date: 2026-01-01
-  const anchor = new Date(2026, 0, 1);
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const targetDate = new Date(y, m - 1, d);
-  const diffDays = Math.round((targetDate.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24));
+  if (calibration && calibration.anchorDate) {
+    const anchorDate = calibration.anchorDate;
+    const anchorCycle = calibration.anchorCycle || 'Pagi';
 
-  // Offset per regu (0=Regu 1, 1=Regu 2, 2=Regu 3, 3=Regu 4)
+    // Tanggal sebelum absen perdana di awal bulan:
+    // Personil dinyatakan Lepas Dinas / Libur Shift (Menunggu Giliran Piket Awal Bulan)
+    // dan TIDAK dihitung sebagai Alpa / TK.
+    if (dateStr < anchorDate) {
+      return {
+        shiftCycle: 'Libur',
+        isWorkDay: false,
+        label: 'Libur Shift (Menunggu Giliran Dinas Awal Bulan)'
+      };
+    }
+
+    // Tanggal pada atau setelah absen perdana
+    const [y1, m1, d1] = anchorDate.split('-').map(Number);
+    const [y2, m2, d2] = dateStr.split('-').map(Number);
+    const t1 = new Date(y1, m1 - 1, d1).getTime();
+    const t2 = new Date(y2, m2 - 1, d2).getTime();
+    const diffDays = Math.round((t2 - t1) / (1000 * 60 * 60 * 24));
+
+    const baseIndex = anchorCycle === 'Malam' ? 1 : 0;
+    const cycleIndex = ((diffDays + baseIndex) % 4 + 4) % 4;
+
+    if (cycleIndex === 0) {
+      return {
+        shiftCycle: 'Pagi',
+        isWorkDay: true,
+        label: 'Shift Pagi (08.00 - 20.00 WIB)'
+      };
+    } else if (cycleIndex === 1) {
+      return {
+        shiftCycle: 'Malam',
+        isWorkDay: true,
+        label: 'Shift Malam (20.00 - 08.00 WIB)'
+      };
+    } else if (cycleIndex === 2) {
+      return {
+        shiftCycle: 'Libur',
+        isWorkDay: false,
+        label: 'Libur Shift (Lepas Piket Malam)'
+      };
+    } else {
+      return {
+        shiftCycle: 'Libur',
+        isWorkDay: false,
+        label: 'Libur Shift (Cadangan / Istirahat)'
+      };
+    }
+  }
+
+  // Fallback jika tidak ada calibration (default distribution 4 Regu awal bulan)
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const diffDays = d - 1;
+
   let offset = 0;
   if (regu === 'Regu 2') offset = 1;
   else if (regu === 'Regu 3') offset = 2;
   else if (regu === 'Regu 4') offset = 3;
 
-  // Siklus 4 hari: [0: Pagi, 1: Malam, 2: Libur, 3: Libur]
   const cycleIndex = ((diffDays + offset) % 4 + 4) % 4;
 
   if (cycleIndex === 0) {
@@ -158,7 +389,8 @@ export function getEmployeeDaySchedule(
   scheduleType: ScheduleType,
   regu: ReguType,
   dateStr: string,
-  customHolidays?: CustomHoliday[]
+  customHolidays?: CustomHoliday[],
+  calibration?: MonthlyShiftCalibration | null
 ): DayScheduleInfo {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dateObj = new Date(y, m - 1, d);
@@ -206,8 +438,8 @@ export function getEmployeeDaySchedule(
       isHoliday: false
     };
   } else {
-    // SHIFT 12 JAM: Pagi - Malam - Libur - Libur dinamis
-    const shiftInfo = getShiftCycleForDate(regu, dateStr);
+    // SHIFT 12 JAM: Disesuaikan pintar dari absen perdana di awal bulan
+    const shiftInfo = getShiftCycleForDate(regu, dateStr, calibration);
     return {
       date: dateStr,
       dayNumber: d,
@@ -231,9 +463,10 @@ export function evaluateEmployeeDayAttendance(
   records: AttendanceRecord[],
   leaveRequests: LeaveRequest[],
   todayStr: string,
-  customHolidays?: CustomHoliday[]
+  customHolidays?: CustomHoliday[],
+  calibration?: MonthlyShiftCalibration | null
 ): DayAttendanceStatus {
-  const schedule = getEmployeeDaySchedule(employee.scheduleType, employee.regu, dateStr, customHolidays);
+  const schedule = getEmployeeDaySchedule(employee.scheduleType, employee.regu, dateStr, customHolidays, calibration);
 
   // 1. Cari record presensi di tanggal ini
   const record = records.find(r => r.employeeId === employee.id && r.date === dateStr);
@@ -383,12 +616,16 @@ export interface SmartMonthlyReportResult {
 
   // Rincian Lengkap Seluruh Hari di Bulan Berjalan (1 s/d 28/30/31)
   dailyBreakdown: DayAttendanceStatus[];
+
+  // Kalibrasi Shift Pintar Awal Bulan (Berdasarkan absen pertama tiap regu)
+  shiftCalibration?: MonthlyShiftCalibration;
 }
 
 /**
  * Menghitung Laporan Rekapan Bulanan Pegawai Secara Pintar & Otomatis
  * Menghitung dari awal bulan pegawai melakukan absensi.
  * Menghitung secara dinamis saat admin mengubah jadwal harian <-> shift 12 jam.
+ * Mengadaptasi siklus shift 12 jam dari absen pertama di awal bulan untuk tiap regu.
  */
 export function calculateSmartMonthlyReport(
   employee: Employee,
@@ -397,7 +634,9 @@ export function calculateSmartMonthlyReport(
   allLeaveRequests: LeaveRequest[],
   locations: WorkLocation[],
   currentDateOverride?: string, // opsional tanggal acuan
-  customHolidays?: CustomHoliday[]
+  customHolidays?: CustomHoliday[],
+  allEmployees?: Employee[],
+  customCalibration?: MonthlyShiftCalibration | null
 ): SmartMonthlyReportResult {
   const [yearStr, monthStr] = selectedMonth.split('-');
   const year = parseInt(yearStr, 10);
@@ -411,6 +650,13 @@ export function calculateSmartMonthlyReport(
   const todayStr = currentDateOverride || (
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   );
+
+  // Menentukan kalibrasi shift rotasi untuk pegawai / regu ini di bulan ini
+  const calibration = customCalibration !== undefined 
+    ? customCalibration 
+    : (employee.scheduleType === 'shift' 
+        ? detectReguMonthlyShiftCalibration(employee.regu, selectedMonth, allAttendanceRecords, allEmployees, employee.id)
+        : null);
 
   // Filter records & leaves untuk pegawai ini
   const empRecords = allAttendanceRecords.filter(
@@ -445,7 +691,15 @@ export function calculateSmartMonthlyReport(
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dayStr = `${selectedMonth}-${String(day).padStart(2, '0')}`;
-    const status = evaluateEmployeeDayAttendance(employee, dayStr, empRecords, empLeaves, todayStr, customHolidays);
+    const status = evaluateEmployeeDayAttendance(
+      employee, 
+      dayStr, 
+      empRecords, 
+      empLeaves, 
+      todayStr, 
+      customHolidays,
+      calibration
+    );
     dailyBreakdown.push(status);
 
     if (status.isWorkDay) {
@@ -537,6 +791,7 @@ export function calculateSmartMonthlyReport(
     totalWorkHours: Math.round(totalWorkHours * 10) / 10,
     attendancePattern,
     dailyBreakdown,
+    shiftCalibration: calibration || undefined,
   };
 }
 

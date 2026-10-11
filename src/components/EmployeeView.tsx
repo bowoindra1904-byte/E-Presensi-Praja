@@ -37,7 +37,9 @@ import {
   Fingerprint,
   RotateCcw,
   Stethoscope,
-  FileText
+  FileText,
+  Radio,
+  Lock
 } from 'lucide-react';
 
 interface EmployeeViewProps {
@@ -47,6 +49,7 @@ interface EmployeeViewProps {
   attendanceRecords: AttendanceRecord[];
   leaveRequests?: LeaveRequest[];
   customHolidays?: CustomHoliday[];
+  allEmployees?: Employee[];
   onSubmitLeaveRequest?: (request: LeaveRequest) => void;
   onAddAttendance: (record: AttendanceRecord) => void;
   onUpdateAttendance: (record: AttendanceRecord) => void;
@@ -63,6 +66,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
   attendanceRecords,
   leaveRequests = [],
   customHolidays = [],
+  allEmployees = [],
   onSubmitLeaveRequest = () => {},
   onAddAttendance,
   onUpdateAttendance,
@@ -101,6 +105,11 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
     accuracy: 12,
     isRealGps: false,
   });
+
+  // GPS Refresh Verification State (Mudah diakses & Wajib dilakukan sebelum absensi)
+  const [hasGpsBeenRefreshed, setHasGpsBeenRefreshed] = useState<boolean>(false);
+  const [isGpsRefreshing, setIsGpsRefreshing] = useState<boolean>(false);
+  const [lastGpsRefreshedAt, setLastGpsRefreshedAt] = useState<string | null>(null);
 
   const [alertMessage, setAlertMessage] = useState<{
     type: 'success' | 'warning' | 'error';
@@ -148,19 +157,29 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
   // Count my pending leaves
   const myPendingLeaves = leaveRequests.filter(r => r.employeeId === employee.id && r.status === 'pending').length;
 
-  // GPS Refresh via real device GPS
+  // GPS Refresh via real device GPS (Mudah & Wajib dilakukan sebelum absensi)
   const handleRequestRealGps = () => {
+    setIsGpsRefreshing(true);
+
     if (!navigator.geolocation) {
+      setIsGpsRefreshing(false);
+      setHasGpsBeenRefreshed(true);
+      const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setLastGpsRefreshedAt(timeNow);
       setAlertMessage({
-        type: 'error',
-        title: 'GPS Tidak Didukung',
-        description: 'Browser tidak mendukung sensor Geolocation.'
+        type: 'warning',
+        title: 'Sensor Mandiri Aktif',
+        description: `Browser tidak mendukung Geolocation fisik. Sinyal presisi pos ${location.name} diaktifkan pada ${timeNow} WIB.`
       });
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setIsGpsRefreshing(false);
+        setHasGpsBeenRefreshed(true);
+        const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setLastGpsRefreshedAt(timeNow);
         setUserCoords({
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
@@ -169,15 +188,19 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
         });
         setAlertMessage({
           type: 'success',
-          title: 'Koordinat GPS Terhubung',
-          description: `Akurasi sinyal satelit: ±${Math.round(pos.coords.accuracy || 15)} meter.`
+          title: 'Koordinat GPS Berhasil Terkunci',
+          description: `Sinyal satelit GPS aktif: akurasi ±${Math.round(pos.coords.accuracy || 15)} meter pada ${timeNow} WIB. Anda siap melakukan presensi.`
         });
       },
       (err) => {
+        setIsGpsRefreshing(false);
+        setHasGpsBeenRefreshed(true);
+        const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setLastGpsRefreshedAt(timeNow);
         setAlertMessage({
           type: 'warning',
-          title: 'Sinyal GPS Mandiri',
-          description: `Menggunakan koordinat pos terintegrasi (${err.message}).`
+          title: 'Sinyal GPS Mandiri Terhubung',
+          description: `Menggunakan koordinat pos terintegrasi (${err.message}) pada ${timeNow} WIB. Presensi siap dilanjutkan.`
         });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -186,6 +209,17 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
   // Perform Clock-In
   const handleCheckIn = () => {
+    // WAJIB: Petugas wajib menyegarkan GPS terlebih dahulu sebelum absen
+    if (!hasGpsBeenRefreshed) {
+      setAlertMessage({
+        type: 'warning',
+        title: 'Wajib Segarkan GPS!',
+        description: 'Sesuai SOP Presensi Lapangan Satpol PP, Anda wajib menekan tombol "Segarkan GPS" terlebih dahulu untuk mengunci koordinat satelit terkini sebelum tap masuk.'
+      });
+      handleRequestRealGps();
+      return;
+    }
+
     if (!isDeviceMatched) {
       const errTitle = 'Absensi Ditolak: Perangkat Berbeda!';
       const errDesc = `Sistem Kunci Perangkat menolak absensi. Akun Anda terdaftar pada perangkat dinas lain. Segera lapor ke Petugas Provost / Admin Komando Satpol PP.`;
@@ -354,6 +388,17 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
       return;
     }
 
+    // WAJIB: Petugas wajib menyegarkan GPS terlebih dahulu sebelum absen pulang
+    if (!hasGpsBeenRefreshed) {
+      setAlertMessage({
+        type: 'warning',
+        title: 'Wajib Segarkan GPS!',
+        description: 'Sesuai SOP Presensi Lapangan Satpol PP, Anda wajib menekan tombol "Segarkan GPS" terlebih dahulu untuk mengunci koordinat satelit terkini sebelum tap pulang.'
+      });
+      handleRequestRealGps();
+      return;
+    }
+
     if (!isDeviceMatched) {
       setAlertMessage({
         type: 'error',
@@ -476,8 +521,30 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
             </div>
           </div>
 
-          {/* Security Device Lock Status */}
-          <div className="shrink-0 flex items-center">
+          {/* Quick 1-Click GPS Refresh Button & Security Device Lock Status */}
+          <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={handleRequestRealGps}
+              disabled={isGpsRefreshing}
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-black transition-all shadow-sm active:scale-95 cursor-pointer ${
+                isGpsRefreshing
+                  ? 'bg-slate-100 text-slate-500 border-slate-300 cursor-wait'
+                  : !hasGpsBeenRefreshed
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-amber-500 shadow-md ring-2 ring-amber-400/50 animate-bounce'
+                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+              }`}
+              title="Segarkan koordinat satelit GPS"
+            >
+              <RotateCcw className={`w-4 h-4 ${isGpsRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">
+                {isGpsRefreshing ? 'Mencari Satelit...' : !hasGpsBeenRefreshed ? 'Segarkan GPS (Wajib)' : 'GPS Terkunci Sah'}
+              </span>
+              <span className="sm:hidden">
+                {isGpsRefreshing ? 'Mencari...' : !hasGpsBeenRefreshed ? 'Segarkan GPS (Wajib)' : 'GPS Aktif'}
+              </span>
+            </button>
+
             {/* Desktop Full Box */}
             <div className="hidden md:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-200 text-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -489,12 +556,43 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
             {/* Mobile Pill Badge */}
             <div className="md:hidden flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-xl border border-emerald-200 text-[10px] font-bold">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Kunci HP Aktif</span>
+              <span>Kunci HP</span>
             </div>
           </div>
 
         </div>
       </div>
+
+      {/* Eye-catching Mandatory GPS Alert when not refreshed */}
+      {!hasGpsBeenRefreshed && (
+        <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-amber-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30">
+              <RotateCcw className={`w-5 h-5 text-white ${isGpsRefreshing ? 'animate-spin' : ''}`} />
+            </div>
+            <div>
+              <div className="font-black text-xs sm:text-sm tracking-wide flex items-center gap-2 uppercase">
+                <span>⚠️ WAJIB SEGARKAN GPS</span>
+                <span className="text-[10px] bg-white text-amber-950 font-black px-2 py-0.5 rounded-full shadow-2xs">
+                  LANGKAH 1
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-amber-50 leading-snug mt-0.5">
+                Sebelum Tap Masuk atau Tap Pulang, Anda wajib menekan tombol <strong>"Segarkan GPS"</strong> untuk mendeteksi koordinat satelit terkini di <strong>{location.name}</strong>.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleRequestRealGps}
+            disabled={isGpsRefreshing}
+            className="w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 bg-white hover:bg-amber-50 text-amber-950 font-black text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-sm transition-all active:scale-95 shrink-0 flex items-center justify-center gap-2 cursor-pointer border border-white/50"
+          >
+            <RotateCcw className={`w-4 h-4 ${isGpsRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isGpsRefreshing ? 'Mendeteksi Satelit...' : 'SEGARKAN GPS SEKARANG (WAJIB)'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Mobile Personel Menu Tab Bar (Compact & fits 100% phone width seamlessly) */}
       <div className="lg:hidden grid grid-cols-4 gap-1 p-1 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-2xs">
@@ -774,28 +872,91 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                   </span>
                 </div>
 
-                {/* Live GPS Distance Radar Banner */}
-                <div className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border flex items-center justify-between text-xs font-semibold gap-2 ${
-                  isWithinGeofence
-                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
-                    : 'bg-rose-50/70 border-rose-200 text-rose-900'
+                {/* STEP 1: TOMBOL SEGARKAN KOORDINAT GPS (MUDAH DIAKSES & WAJIB DILAKUKAN) */}
+                <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-300 ${
+                  !hasGpsBeenRefreshed
+                    ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border-amber-400 shadow-sm ring-2 ring-amber-400/20'
+                    : isWithinGeofence
+                    ? 'bg-emerald-500/10 border-emerald-400/80 text-emerald-950'
+                    : 'bg-rose-500/10 border-rose-400/80 text-rose-950'
                 }`}>
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-3 h-3 rounded-full shrink-0 ${isWithinGeofence ? 'bg-emerald-500 animate-ping' : 'bg-rose-500'}`} />
-                    <span className="truncate text-xs">
-                      {isWithinGeofence
-                        ? `Posisi GPS Sesuai: ${currentDistance}m dari ${location.name} (Radius toleransi: ${location.radiusMeters}m)`
-                        : `Di Luar Pos: ${currentDistance}m dari ${location.name} (Maksimal: ${location.radiusMeters}m)`}
-                    </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                        isGpsRefreshing
+                          ? 'bg-amber-100 text-amber-800'
+                          : !hasGpsBeenRefreshed
+                          ? 'bg-amber-500 text-white shadow-xs animate-bounce'
+                          : isWithinGeofence
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-rose-600 text-white shadow-xs'
+                      }`}>
+                        {isGpsRefreshing ? (
+                          <RotateCcw className="w-5 h-5 animate-spin" />
+                        ) : !hasGpsBeenRefreshed ? (
+                          <Radio className="w-5 h-5" />
+                        ) : isWithinGeofence ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          <MapPin className="w-5 h-5" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            !hasGpsBeenRefreshed
+                              ? 'bg-amber-500 text-white animate-pulse'
+                              : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          }`}>
+                            {!hasGpsBeenRefreshed ? 'Langkah 1: Wajib Dilakukan' : 'Langkah 1: Selesai'}
+                          </span>
+                          {lastGpsRefreshedAt && (
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              Diperbarui: {lastGpsRefreshedAt} WIB
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="text-xs sm:text-sm font-black text-slate-900 mt-1">
+                          {!hasGpsBeenRefreshed
+                            ? 'Wajib Segarkan Koordinat GPS Sebelum Absen'
+                            : isWithinGeofence
+                            ? `GPS Terkunci: Posisi Sesuai Pos (${currentDistance}m dari ${location.name})`
+                            : `GPS Terkunci: Di Luar Pos (${currentDistance}m dari ${location.name})`}
+                        </h4>
+                        
+                        <p className="text-[11px] text-slate-600 leading-snug mt-0.5">
+                          {!hasGpsBeenRefreshed
+                            ? `Klik tombol di samping/bawah untuk mendeteksi posisi satelit asli Anda di ${location.name}.`
+                            : `Akurasi satelit: ±${Math.round(userCoords.accuracy || 10)}m · Batas toleransi radius pos: ${location.radiusMeters}m.`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Tombol Utama Segarkan GPS (Besar & Jelas) */}
+                    <button
+                      type="button"
+                      onClick={handleRequestRealGps}
+                      disabled={isGpsRefreshing}
+                      className={`w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-97 shrink-0 cursor-pointer ${
+                        isGpsRefreshing
+                          ? 'bg-slate-200 text-slate-500 cursor-wait'
+                          : !hasGpsBeenRefreshed
+                          ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white ring-2 ring-amber-400/40 shadow-md animate-pulse'
+                          : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      <RotateCcw className={`w-4 h-4 ${isGpsRefreshing ? 'animate-spin' : ''}`} />
+                      <span>
+                        {isGpsRefreshing
+                          ? 'Mendeteksi Satelit...'
+                          : !hasGpsBeenRefreshed
+                          ? 'SEGARKAN GPS SEKARANG (WAJIB)'
+                          : 'Segarkan Ulang GPS'}
+                      </span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRequestRealGps}
-                    className="text-xs font-bold underline hover:text-amber-800 shrink-0 text-amber-700 flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Segarkan GPS</span>
-                  </button>
                 </div>
 
                 {/* Big Action Tap Buttons (Side-by-side on mobile for compact viewport) */}
@@ -806,23 +967,35 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                     type="button"
                     onClick={handleCheckIn}
                     disabled={!!todayRecord?.checkInTime}
-                    className={`py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center ${
+                    className={`py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center cursor-pointer ${
                       todayRecord?.checkInTime
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                        : !hasGpsBeenRefreshed
+                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-2 border-dashed border-amber-400 font-bold active:scale-98 shadow-2xs'
                         : timeEval.canCheckIn && isWithinGeofence
                         ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold ring-2 ring-emerald-500/20 active:scale-98'
                         : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      {!hasGpsBeenRefreshed && !todayRecord?.checkInTime ? (
+                        <Lock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-amber-700 animate-pulse" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      )}
                       <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
-                        {todayRecord?.checkInTime ? "Sudah Masuk" : "TAP MASUK"}
+                        {todayRecord?.checkInTime 
+                          ? "Sudah Masuk" 
+                          : !hasGpsBeenRefreshed 
+                          ? "KUNCI GPS DAHULU" 
+                          : "TAP MASUK"}
                       </span>
                     </div>
-                    <span className="text-[10px] sm:text-[11px] opacity-80 truncate max-w-full">
+                    <span className="text-[10px] sm:text-[11px] opacity-90 truncate max-w-full font-medium">
                       {todayRecord?.checkInTime 
                         ? `${todayRecord.checkInTime} WIB` 
+                        : !hasGpsBeenRefreshed
+                        ? "Klik untuk Segarkan GPS (Wajib)"
                         : timeEval.canCheckIn 
                         ? "Waktu Masuk Aktif" 
                         : "Buka -30 Menit"}
@@ -834,25 +1007,37 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                     type="button"
                     onClick={handleCheckOut}
                     disabled={!todayRecord?.checkInTime || !!todayRecord?.checkOutTime}
-                    className={`py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center ${
+                    className={`py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center cursor-pointer ${
                       !todayRecord?.checkInTime
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                         : todayRecord?.checkOutTime
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                        : !hasGpsBeenRefreshed
+                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-2 border-dashed border-amber-400 font-bold active:scale-98 shadow-2xs'
                         : timeEval.canCheckOut && isWithinGeofence
                         ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold ring-2 ring-amber-500/20 active:scale-98'
                         : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      {!hasGpsBeenRefreshed && todayRecord?.checkInTime && !todayRecord?.checkOutTime ? (
+                        <Lock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-amber-700 animate-pulse" />
+                      ) : (
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                      )}
                       <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
-                        {todayRecord?.checkOutTime ? "Sudah Pulang" : "TAP PULANG"}
+                        {todayRecord?.checkOutTime 
+                          ? "Sudah Pulang" 
+                          : !hasGpsBeenRefreshed && todayRecord?.checkInTime
+                          ? "KUNCI GPS DAHULU"
+                          : "TAP PULANG"}
                       </span>
                     </div>
-                    <span className="text-[10px] sm:text-[11px] opacity-80 truncate max-w-full">
+                    <span className="text-[10px] sm:text-[11px] opacity-90 truncate max-w-full font-medium">
                       {todayRecord?.checkOutTime 
                         ? `${todayRecord.checkOutTime} WIB` 
+                        : !hasGpsBeenRefreshed
+                        ? "Klik untuk Segarkan GPS (Wajib)"
                         : timeEval.canCheckOut 
                         ? "Jam Pulang Aktif" 
                         : "Tepat Jam Pulang"}
@@ -989,6 +1174,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
               currentDate={currentDate}
               leaveRequests={leaveRequests}
               customHolidays={customHolidays}
+              allEmployees={allEmployees}
             />
           )}
 

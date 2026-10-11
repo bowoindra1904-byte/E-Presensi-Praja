@@ -6,9 +6,14 @@ import {
   SecurityLog,
   LeaveRequest,
   AdminAccount,
-  ReguType
+  ReguType,
+  CustomHoliday
 } from '../../types';
 import { MapComponent } from '../MapComponent';
+import { 
+  getEmployeeDaySchedule, 
+  detectReguMonthlyShiftCalibration 
+} from '../../utils/smartAttendanceCalculator';
 import { 
   Users, 
   CheckCircle2, 
@@ -43,6 +48,7 @@ interface AdminDashboardProps {
   securityLogs: SecurityLog[];
   currentDate: Date;
   leaveRequests?: LeaveRequest[];
+  customHolidays?: CustomHoliday[];
   onOpenPrintMenu?: (menu: 'daily') => void;
   onResetDailyAttendance?: (recordIds: string[], dateLabel: string) => Promise<void>;
   onNavigateToPemutihan?: () => void;
@@ -56,6 +62,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   securityLogs,
   currentDate,
   leaveRequests = [],
+  customHolidays = [],
   onOpenPrintMenu,
   onResetDailyAttendance,
   onNavigateToPemutihan,
@@ -177,6 +184,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return records;
   }, [cleanAttendanceRecords, selectedDateFilter, approvedLeavesForDate, registeredEmployeeMap, locations]);
 
+  // Schedule evaluation per employee for the selected date based on dynamic first-attendance calibration
+  const employeeScheduleMap = useMemo(() => {
+    const map = new Map<string, { isWorkDay: boolean; scheduleLabel: string; shiftCycleName?: string }>();
+    if (selectedDateFilter === 'all') return map;
+    const monthStr = selectedDateFilter.slice(0, 7);
+
+    scopedEmployees.forEach(emp => {
+      const cal = detectReguMonthlyShiftCalibration(emp.regu, monthStr, cleanAttendanceRecords, employees, emp.id);
+      const schedule = getEmployeeDaySchedule(emp.scheduleType, emp.regu, selectedDateFilter, customHolidays, cal);
+      map.set(emp.id, {
+        isWorkDay: schedule.isWorkDay,
+        scheduleLabel: schedule.scheduleLabel,
+        shiftCycleName: schedule.shiftCycleName
+      });
+    });
+    return map;
+  }, [scopedEmployees, selectedDateFilter, cleanAttendanceRecords, employees, customHolidays]);
+
   // Metric Computations for the selected date
   const totalEmployees = scopedEmployees.length;
   const hadirCount = activeDateRecords.filter(r => r.checkInStatus === 'tepat_waktu').length;
@@ -186,7 +211,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const sakitCount = activeDateRecords.filter(r => r.checkInStatus === 'sakit').length;
   const dispensasiCount = activeDateRecords.filter(r => r.checkInStatus === 'dispensasi_kantor').length;
   const totalIzinSakit = izinCount + sakitCount + dispensasiCount;
-  const belumAbsenCount = Math.max(0, totalEmployees - totalHadir - totalIzinSakit);
+
+  // Personel yang sedang lepas piket / libur shift di tanggal ini
+  const liburShiftCount = useMemo(() => {
+    if (selectedDateFilter === 'all') return 0;
+    const recordedIds = new Set(activeDateRecords.map(r => r.employeeId));
+    return scopedEmployees.filter(emp => {
+      if (recordedIds.has(emp.id)) return false;
+      const sch = employeeScheduleMap.get(emp.id);
+      return sch ? !sch.isWorkDay : false;
+    }).length;
+  }, [selectedDateFilter, activeDateRecords, scopedEmployees, employeeScheduleMap]);
+
+  // Personel yang WAJIB DINAS hari ini tapi belum absen
+  const belumAbsenCount = useMemo(() => {
+    if (selectedDateFilter === 'all') {
+      return Math.max(0, totalEmployees - totalHadir - totalIzinSakit);
+    }
+    const recordedIds = new Set(activeDateRecords.map(r => r.employeeId));
+    return scopedEmployees.filter(emp => {
+      if (recordedIds.has(emp.id)) return false;
+      const sch = employeeScheduleMap.get(emp.id);
+      return sch ? sch.isWorkDay : true;
+    }).length;
+  }, [selectedDateFilter, totalEmployees, totalHadir, totalIzinSakit, activeDateRecords, scopedEmployees, employeeScheduleMap]);
+
   const securityIncidentCount = securityLogs.length;
 
   // Selected date human label
@@ -236,16 +285,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return scopedEmployees.map(emp => {
       const record = recordByEmpId.get(emp.id);
       const loc = locations.find(l => l.id === emp.locationSlotId) || locations[0];
+      const sch = employeeScheduleMap.get(emp.id);
+      const isOffDay = sch ? !sch.isWorkDay : false;
+
+      let status = 'belum_absen';
+      if (record) {
+        status = record.checkInStatus || 'hadir';
+      } else if (isOffDay) {
+        status = 'libur_shift';
+      }
 
       return {
         employee: emp,
         record,
         hasRecord: !!record,
-        status: record ? record.checkInStatus || 'hadir' : 'belum_absen',
+        status,
+        scheduleLabel: sch?.scheduleLabel || (emp.scheduleType === 'shift' ? 'Shift Operasional' : 'Harian Dinas'),
         locationName: loc?.name || `Slot ${emp.locationSlotId}`,
       };
     });
-  }, [scopedEmployees, activeDateRecords, locations]);
+  }, [scopedEmployees, activeDateRecords, locations, employeeScheduleMap]);
 
   // Filtered log records (Guaranteed date-scoped so previous days are NEVER mixed in)
   const filteredRecords = useMemo(() => {
@@ -267,12 +326,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   }, [activeDateRecords, selectedSlotFilter, selectedScheduleFilter, attendanceViewTab, searchQuery]);
 
-  // Unattended employees list for selected date
+  // Unattended employees list for selected date (hanya menampilkan personel yang WAJIB DINAS hari ini dan belum absen)
   const unattendedEmployees = useMemo(() => {
     if (selectedDateFilter === 'all') return [];
     const recordedIds = new Set(activeDateRecords.map(r => r.employeeId));
     return scopedEmployees.filter(emp => {
       if (recordedIds.has(emp.id)) return false;
+      const sch = employeeScheduleMap.get(emp.id);
+      if (sch && !sch.isWorkDay) return false; // Lepas piket / libur shift tidak dihitung alpa
+
       const matchSlot = selectedSlotFilter === 'all' || emp.locationSlotId === Number(selectedSlotFilter);
       const matchSchedule = selectedScheduleFilter === 'all' || emp.scheduleType === selectedScheduleFilter;
       const matchSearch = 
@@ -280,7 +342,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         emp.nip.includes(searchQuery);
       return matchSlot && matchSchedule && matchSearch;
     });
-  }, [scopedEmployees, activeDateRecords, selectedDateFilter, selectedSlotFilter, selectedScheduleFilter, searchQuery]);
+  }, [scopedEmployees, activeDateRecords, selectedDateFilter, selectedSlotFilter, selectedScheduleFilter, searchQuery, employeeScheduleMap]);
 
   // Export CSV
   const handleExportCSV = () => {
@@ -548,12 +610,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between cursor-pointer hover:border-rose-400 transition-colors"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Belum Hadir</span>
+            <span className="text-xs font-semibold text-slate-500">Belum Hadir (Wajib Masuk)</span>
             <XCircle className="w-4 h-4 text-slate-400" />
           </div>
           <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-slate-700 font-mono">{belumAbsenCount}</span>
-            <span className="text-[11px] text-slate-500 block mt-0.5">Klik untuk lihat nama</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black text-slate-700 font-mono">{belumAbsenCount}</span>
+              {liburShiftCount > 0 && (
+                <span className="text-[10px] font-bold text-slate-500">
+                  ({liburShiftCount} Lepas Piket)
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] text-slate-500 block mt-0.5">
+              {liburShiftCount > 0 
+                ? `${liburShiftCount} Personel Libur Shift Sesuai Rotasi` 
+                : 'Klik untuk lihat nama'}
+            </span>
           </div>
         </div>
 

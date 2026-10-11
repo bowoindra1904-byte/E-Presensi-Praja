@@ -31,7 +31,9 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
-  Trophy
+  Trophy,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 
 export type PrintMenuType = 'daily' | 'monthly' | 'locations' | 'regu' | 'security' | 'top_five';
@@ -92,6 +94,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   const isDanru = Boolean(currentAdmin && currentAdmin.role !== 'komando_pusat' && currentAdmin.reguScope !== 'all');
   const adminRegu = isDanru ? (currentAdmin?.reguScope as ReguType) : null;
 
+  // STRICT ACCESS RESTRICTION:
+  // Danru can ONLY view and print reports for their own regu (e.g. Regu 1, 2, 3, or 4).
+  // Only Admin Komando Pusat has full authority to view/print all regus / all employees.
+  const scopedEmployees = useMemo(() => {
+    if (isDanru && adminRegu) {
+      return employees.filter(emp => emp.regu === adminRegu);
+    }
+    return employees;
+  }, [employees, isDanru, adminRegu]);
+
   const [activeMenu, setActiveMenu] = useState<PrintMenuType>(defaultMenu);
   
   // Signature & Document Header Config
@@ -128,8 +140,18 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   });
   const [filterMonth, setFilterMonth] = useState<string>('2026-09');
   const [filterSlot, setFilterSlot] = useState<string>('all');
-  const [filterRegu, setFilterRegu] = useState<string>(isDanru && adminRegu ? adminRegu : 'all');
+  const [filterRegu, setFilterRegu] = useState<string>(() => {
+    if (isDanru && adminRegu) return adminRegu;
+    return 'all';
+  });
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Enforce filterRegu locking whenever modal is open or isDanru changes
+  React.useEffect(() => {
+    if (isDanru && adminRegu) {
+      setFilterRegu(adminRegu);
+    }
+  }, [isDanru, adminRegu, isOpen]);
 
   // Sync defaultMenu when opened
   React.useEffect(() => {
@@ -177,12 +199,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
     let filename = `Laporan_Satpol_PP.csv`;
 
     if (activeMenu === 'daily') {
-      filename = `Rekap_Presensi_Harian_${filterDate}.csv`;
+      filename = isDanru && adminRegu 
+        ? `Rekap_Presensi_Harian_${adminRegu.replace(/\s+/g, '_')}_${filterDate}.csv`
+        : `Rekap_Presensi_Harian_${filterDate}.csv`;
       headers = ["No", "NIP", "Nama Personel", "Pangkat", "Jabatan", "Regu", "Pos Penugasan", "Jam Masuk", "Status Masuk", "Jarak GPS (m)", "Jam Pulang", "Status Pulang", "ID Perangkat"];
       const records = attendanceRecords.filter(r => r.date === filterDate);
-      rows = employees
+      rows = scopedEmployees
         .filter(emp => {
-          const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+          const matchRegu = isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu);
           const matchSlot = filterSlot === 'all' || String(emp.locationSlotId) === String(filterSlot) || Number(emp.locationSlotId) === Number(filterSlot);
           return matchRegu && matchSlot;
         })
@@ -206,11 +230,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           ];
         });
     } else if (activeMenu === 'monthly') {
-      filename = `Laporan_Bulanan_Satpol_PP_${filterMonth}.csv`;
+      filename = isDanru && adminRegu
+        ? `Laporan_Bulanan_${adminRegu.replace(/\s+/g, '_')}_${filterMonth}.csv`
+        : `Laporan_Bulanan_Satpol_PP_${filterMonth}.csv`;
       headers = ["No", "NIP", "Nama Personel", "Pangkat", "Jabatan", "Regu", "Pos Penugasan", "Hari Hadir", "Total Jam Kerja", "Terlambat", "Tingkat Disiplin", "Pola Absensi"];
-      rows = employees
+      rows = scopedEmployees
         .filter(emp => {
-          const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+          const matchRegu = isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu);
           const matchSlot = filterSlot === 'all' || String(emp.locationSlotId) === String(filterSlot) || Number(emp.locationSlotId) === Number(filterSlot);
           return matchRegu && matchSlot;
         })
@@ -237,10 +263,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           ];
         });
     } else if (activeMenu === 'locations') {
-      filename = `Daftar_8_Pos_Lokasi_Kerja_Satpol_PP.csv`;
-      headers = ["Slot", "Kode", "Nama Pos", "Kategori", "Alamat", "Latitude", "Longitude", "Radius Geofence (m)", "Jumlah Personel Terploting"];
+      filename = isDanru && adminRegu
+        ? `Daftar_Pos_Lokasi_${adminRegu.replace(/\s+/g, '_')}.csv`
+        : `Daftar_8_Pos_Lokasi_Kerja_Satpol_PP.csv`;
+      headers = ["Slot", "Kode", "Nama Pos", "Kategori", "Alamat", "Latitude", "Longitude", "Radius Geofence (m)", `Jumlah Personel ${isDanru ? adminRegu : 'Terploting'}`];
       rows = locations.map(loc => {
-        const count = employees.filter(e => String(e.locationSlotId) === String(loc.id) || Number(e.locationSlotId) === Number(loc.slotNumber)).length;
+        const count = scopedEmployees.filter(e => String(e.locationSlotId) === String(loc.id) || Number(e.locationSlotId) === Number(loc.slotNumber)).length;
         return [
           String(loc.slotNumber),
           loc.code,
@@ -254,10 +282,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         ];
       });
     } else if (activeMenu === 'regu') {
-      filename = `Daftar_Regu_Patroli_Satpol_PP.csv`;
+      filename = isDanru && adminRegu
+        ? `Daftar_Personel_${adminRegu.replace(/\s+/g, '_')}.csv`
+        : `Daftar_Regu_Patroli_Satpol_PP.csv`;
       headers = ["No", "ID", "NIP", "Nama Personel", "Regu", "Tipe Kerja", "Pangkat", "Jabatan", "Pos Penugasan", "Status Kunci HP", "No. Telepon / HT"];
-      rows = employees
-        .filter(emp => filterRegu === 'all' || emp.regu === filterRegu)
+      rows = scopedEmployees
+        .filter(emp => isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu))
         .map((emp, idx) => {
           const posText = getPosPenugasanLabel(emp);
           return [
@@ -275,9 +305,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           ];
         });
     } else if (activeMenu === 'security') {
-      filename = `Log_Audit_Keamanan_Perangkat_${todayStr}.csv`;
+      filename = isDanru && adminRegu
+        ? `Log_Audit_Keamanan_${adminRegu.replace(/\s+/g, '_')}_${todayStr}.csv`
+        : `Log_Audit_Keamanan_Perangkat_${todayStr}.csv`;
       headers = ["No", "Timestamp", "Nama Personel", "ID Pegawai", "Tipe Insiden", "ID Perangkat", "Rincian Investigasi"];
-      rows = securityLogs.map((log, idx) => [
+      const logsToExport = isDanru
+        ? securityLogs.filter(log => scopedEmployees.some(e => e.id === log.employeeId || e.name === log.employeeName))
+        : securityLogs;
+      rows = logsToExport.map((log, idx) => [
         String(idx + 1),
         `"${log.timestamp}"`,
         `"${log.employeeName}"`,
@@ -356,6 +391,34 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
         </div>
 
+        {/* Authority Notification Banner (Danru vs Komando Pusat) */}
+        {isDanru ? (
+          <div className="bg-amber-500/10 border-b border-amber-300/70 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 text-xs text-amber-950 print:hidden shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Shield className="w-4 h-4 text-amber-700 shrink-0" />
+              <div className="truncate">
+                <span className="font-bold">Otoritas Cetak Danru {adminRegu}:</span> Terkunci khusus personel <strong>{adminRegu} ({scopedEmployees.length} Personel)</strong>. Menu cetak seluruh pegawai/semua regu dibatasi khusus untuk <strong>Admin Komando Pusat</strong>.
+              </div>
+            </div>
+            <span className="text-[10px] font-bold bg-amber-200/90 text-amber-900 px-2.5 py-0.5 rounded-full shrink-0 flex items-center gap-1 border border-amber-300">
+              <Lock className="w-3 h-3 text-amber-800" />
+              Khusus {adminRegu}
+            </span>
+          </div>
+        ) : (
+          <div className="bg-blue-500/10 border-b border-blue-200 px-4 sm:px-6 py-2 flex items-center justify-between gap-3 text-xs text-blue-950 print:hidden shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0" />
+              <div className="truncate">
+                <span className="font-bold">Otoritas Admin Komando Pusat:</span> Akses penuh membuka & mencetak seluruh regu (150 Pegawai).
+              </div>
+            </div>
+            <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full shrink-0 border border-blue-300">
+              Hak Penuh Komando
+            </span>
+          </div>
+        )}
+
         {/* Menu Tabs Bar (Screen Only - Touch Scrollable on HP) */}
         <div className="bg-slate-50/90 border-b border-slate-200 px-3 sm:px-6 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none print:hidden shrink-0">
           <span className="text-xs font-semibold text-slate-500 mr-2 flex items-center gap-1">
@@ -408,7 +471,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>4. Daftar Regu 1, 2, 3, 4 & Harian</span>
+            <span>{isDanru ? `4. Daftar Personel ${adminRegu}` : '4. Daftar Regu 1, 2, 3, 4 & Harian'}</span>
           </button>
 
           <button
@@ -432,7 +495,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             }`}
           >
             <Trophy className="w-3.5 h-3.5" />
-            <span>6. TOP FIVE Disiplin (TK, Terlambat & Tepat Waktu)</span>
+            <span>{isDanru ? `6. TOP FIVE Disiplin (${adminRegu})` : '6. TOP FIVE Disiplin (TK, Terlambat & Tepat Waktu)'}</span>
           </button>
         </div>
 
@@ -450,21 +513,31 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 />
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-600 font-medium">Filter Regu:</span>
-                <select
-                  value={filterRegu}
-                  onChange={(e) => setFilterRegu(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
-                >
-                  <option value="all">Semua Regu & Harian</option>
-                  <option value="Regu 1">Regu 1</option>
-                  <option value="Regu 2">Regu 2</option>
-                  <option value="Regu 3">Regu 3</option>
-                  <option value="Regu 4">Regu 4</option>
-                  <option value="Harian">Harian</option>
-                </select>
-              </div>
+              {isDanru ? (
+                <div className="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/40 px-2.5 py-1 rounded-lg text-amber-950 font-semibold shadow-xs">
+                  <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span>Regu: <strong>{adminRegu}</strong></span>
+                  <span className="text-[10px] text-amber-800/80 font-normal hidden lg:inline">
+                    (Terkunci otoritas Danru)
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-600 font-medium">Filter Regu:</span>
+                  <select
+                    value={filterRegu}
+                    onChange={(e) => setFilterRegu(e.target.value)}
+                    className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
+                  >
+                    <option value="all">Semua Regu & Harian</option>
+                    <option value="Regu 1">Regu 1</option>
+                    <option value="Regu 2">Regu 2</option>
+                    <option value="Regu 3">Regu 3</option>
+                    <option value="Regu 4">Regu 4</option>
+                    <option value="Harian">Harian</option>
+                  </select>
+                </div>
+              )}
 
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-600 font-medium">Filter Pos:</span>
@@ -498,21 +571,31 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 </select>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-600 font-medium">Filter Regu:</span>
-                <select
-                  value={filterRegu}
-                  onChange={(e) => setFilterRegu(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
-                >
-                  <option value="all">Semua Regu</option>
-                  <option value="Regu 1">Regu 1</option>
-                  <option value="Regu 2">Regu 2</option>
-                  <option value="Regu 3">Regu 3</option>
-                  <option value="Regu 4">Regu 4</option>
-                  <option value="Harian">Harian</option>
-                </select>
-              </div>
+              {isDanru ? (
+                <div className="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/40 px-2.5 py-1 rounded-lg text-amber-950 font-semibold shadow-xs">
+                  <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span>Regu: <strong>{adminRegu}</strong></span>
+                  <span className="text-[10px] text-amber-800/80 font-normal hidden lg:inline">
+                    (Terkunci otoritas Danru)
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-600 font-medium">Filter Regu:</span>
+                  <select
+                    value={filterRegu}
+                    onChange={(e) => setFilterRegu(e.target.value)}
+                    className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
+                  >
+                    <option value="all">Semua Regu</option>
+                    <option value="Regu 1">Regu 1</option>
+                    <option value="Regu 2">Regu 2</option>
+                    <option value="Regu 3">Regu 3</option>
+                    <option value="Regu 4">Regu 4</option>
+                    <option value="Harian">Harian</option>
+                  </select>
+                </div>
+              )}
 
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-600 font-medium">Filter Pos:</span>
@@ -531,21 +614,31 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           )}
 
           {activeMenu === 'regu' && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-600 font-medium">Pilihan Tampilan Regu:</span>
-              <select
-                value={filterRegu}
-                onChange={(e) => setFilterRegu(e.target.value)}
-                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
-              >
-                <option value="all">Seluruh Personel (Regu 1 - 4 & Harian)</option>
-                <option value="Regu 1">Hanya Regu 1 (Shift 12 Jam)</option>
-                <option value="Regu 2">Hanya Regu 2 (Shift 12 Jam)</option>
-                <option value="Regu 3">Hanya Regu 3 (Shift 12 Jam)</option>
-                <option value="Regu 4">Hanya Regu 4 (Shift 12 Jam)</option>
-                <option value="Harian">Hanya Staf Harian</option>
-              </select>
-            </div>
+            isDanru ? (
+              <div className="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/40 px-2.5 py-1 rounded-lg text-amber-950 font-semibold shadow-xs">
+                <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                <span>Pilihan Tampilan: <strong>Hanya {adminRegu}</strong></span>
+                <span className="text-[10px] text-amber-800/80 font-normal hidden lg:inline">
+                  (Otoritas Danru terbatas pada regunya sendiri)
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-600 font-medium">Pilihan Tampilan Regu:</span>
+                <select
+                  value={filterRegu}
+                  onChange={(e) => setFilterRegu(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
+                >
+                  <option value="all">Seluruh Personel (Regu 1 - 4 & Harian)</option>
+                  <option value="Regu 1">Hanya Regu 1 (Shift 12 Jam)</option>
+                  <option value="Regu 2">Hanya Regu 2 (Shift 12 Jam)</option>
+                  <option value="Regu 3">Hanya Regu 3 (Shift 12 Jam)</option>
+                  <option value="Regu 4">Hanya Regu 4 (Shift 12 Jam)</option>
+                  <option value="Harian">Hanya Staf Harian</option>
+                </select>
+              </div>
+            )
           )}
 
           <div className="flex items-center gap-2 ml-auto">
@@ -566,8 +659,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </button>
             )}
 
-            <span className="text-[11px] text-slate-500 hidden sm:inline">
-              Total: <strong className="text-slate-900">{employees.length} Pegawai</strong>
+            <span className="text-[11px] text-slate-600 hidden sm:inline font-medium">
+              Total: <strong className="text-slate-900">{scopedEmployees.length} Pegawai</strong> {isDanru ? `(${adminRegu})` : '(Seluruh Pegawai)'}
             </span>
           </div>
         </div>
@@ -857,7 +950,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'daily' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    BERITA ACARA REKAPITULASI PRESENSI HARIAN PERSONEL
+                    BERITA ACARA REKAPITULASI PRESENSI HARIAN PERSONEL {isDanru && adminRegu ? adminRegu.toUpperCase() : (filterRegu !== 'all' ? filterRegu.toUpperCase() : '')}
                   </h3>
                   <p className="text-[11px] text-slate-600 mt-1">
                     Hari / Tanggal Dinas: <strong>{new Date(filterDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong>
@@ -868,11 +961,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'monthly' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    LAPORAN EVALUASI BULANAN REKAPITULASI JAM KERJA & DISIPLIN
+                    LAPORAN EVALUASI BULANAN REKAPITULASI JAM KERJA & DISIPLIN {isDanru && adminRegu ? `(${adminRegu.toUpperCase()})` : ''}
                   </h3>
-                  {/* Nomor surat dihapus saja sesuai instruksi user */}
                   <p className="text-[11px] text-slate-600 mt-1">
-                    Periode: <strong>{filterMonth === '2026-09' ? 'September 2026' : filterMonth}</strong> · Total Formasi: 150 Personel
+                    Periode: <strong>{filterMonth === '2026-09' ? 'September 2026' : filterMonth}</strong> · Total Formasi: <strong>{scopedEmployees.length} Personel {isDanru && adminRegu ? `(${adminRegu})` : ''}</strong>
                   </p>
                 </>
               )}
@@ -880,7 +972,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'top_five' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    LAPORAN EKSEKUTIF TOP FIVE DISIPLIN & PELANGGARAN PRESENSI PERSONEL
+                    LAPORAN EKSEKUTIF TOP FIVE DISIPLIN & PELANGGARAN PRESENSI PERSONEL {isDanru && adminRegu ? `(${adminRegu.toUpperCase()})` : ''}
                   </h3>
                   <p className="text-[11px] text-slate-600 mt-1">
                     Periode: <strong>{filterMonth}</strong> · Evaluasi Personel Teladan Tepat Waktu, Sering Terlambat & Tanpa Keterangan (TK)
@@ -891,10 +983,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'locations' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    DAFTAR DISTRIBUSI PENUGASAN {locations.length} SLOT POS LOKASI KERJA GEOFENCE
+                    DAFTAR DISTRIBUSI PENUGASAN {locations.length} SLOT POS LOKASI KERJA GEOFENCE {isDanru && adminRegu ? `(${adminRegu.toUpperCase()})` : ''}
                   </h3>
                   <p className="text-[11px] text-slate-600 mt-1">
-                    Sistem Pelacak Koordinat Google Maps Presisi Tinggi & Radius Geofence Sedekat Mungkin
+                    {isDanru && adminRegu ? `Penempatan Anggota Personel Khusus ${adminRegu}` : 'Sistem Pelacak Koordinat Google Maps Presisi Tinggi & Radius Geofence Sedekat Mungkin'}
                   </p>
                 </>
               )}
@@ -902,10 +994,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'regu' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    SURAT PERINTAH TUGAS & DAFTAR SUSUNAN REGU OPERASIONAL
+                    SURAT PERINTAH TUGAS & DAFTAR SUSUNAN {isDanru && adminRegu ? adminRegu.toUpperCase() : 'REGU OPERASIONAL'}
                   </h3>
                   <p className="text-[11px] text-slate-600 mt-1">
-                    Pembagian 150 Personel Satpol PP Berdasarkan Regu 1, Regu 2, Regu 3, Regu 4, dan Harian
+                    {isDanru && adminRegu 
+                      ? `Daftar ${scopedEmployees.length} Personel Satpol PP Penugasan Khusus ${adminRegu}`
+                      : 'Pembagian 150 Personel Satpol PP Berdasarkan Regu 1, Regu 2, Regu 3, Regu 4, dan Harian'}
                   </p>
                 </>
               )}
@@ -913,10 +1007,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'security' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    BERITA ACARA AUDIT INTEGRITAS KUNCI PERANGKAT & ANTI-FAKE GPS
+                    BERITA ACARA AUDIT INTEGRITAS KUNCI PERANGKAT & ANTI-FAKE GPS {isDanru && adminRegu ? `(${adminRegu.toUpperCase()})` : ''}
                   </h3>
                   <p className="text-[11px] text-slate-600 mt-1">
-                    Laporan Pengikatan Perangkat (Device Binding) & Deteksi Pelanggaran Koordinat
+                    {isDanru && adminRegu ? `Laporan Audit Pengikatan Perangkat Anggota ${adminRegu}` : 'Laporan Pengikatan Perangkat (Device Binding) & Deteksi Pelanggaran Koordinat'}
                   </p>
                 </>
               )}
@@ -930,24 +1024,24 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] p-3 rounded-lg bg-slate-100 border border-slate-200">
                   <div>
                     <span className="text-slate-500 block">Total Personel:</span>
-                    <strong className="text-slate-900">{employees.length} Pegawai</strong>
+                    <strong className="text-slate-900">{scopedEmployees.length} Pegawai {isDanru ? `(${adminRegu})` : ''}</strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Hadir Tepat Waktu:</span>
                     <strong className="text-emerald-700">
-                      {attendanceRecords.filter(r => r.date === filterDate && r.checkInStatus === 'tepat_waktu').length} Personel
+                      {attendanceRecords.filter(r => r.date === filterDate && r.checkInStatus === 'tepat_waktu' && scopedEmployees.some(e => e.id === r.employeeId)).length} Personel
                     </strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Terlambat:</span>
                     <strong className="text-amber-700">
-                      {attendanceRecords.filter(r => r.date === filterDate && r.checkInStatus === 'terlambat').length} Personel
+                      {attendanceRecords.filter(r => r.date === filterDate && r.checkInStatus === 'terlambat' && scopedEmployees.some(e => e.id === r.employeeId)).length} Personel
                     </strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Dispensasi Kantor (HP Rusak):</span>
                     <strong className="text-blue-700">
-                      {employees.filter(emp => {
+                      {scopedEmployees.filter(emp => {
                         const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
                         const hasLeave = leaveRequests.some(lr => lr.employeeId === emp.id && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'dispensasi_kantor' || lr.isOfficeDispensation));
                         return rec?.checkInStatus === 'dispensasi_kantor' || rec?.isOfficeDispensation || hasLeave;
@@ -957,7 +1051,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   <div>
                     <span className="text-slate-500 block">Izin & Sakit Disetujui:</span>
                     <strong className="text-purple-700">
-                      {employees.filter(emp => {
+                      {scopedEmployees.filter(emp => {
                         const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
                         const hasLeave = leaveRequests.some(lr => lr.employeeId === emp.id && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'izin' || lr.type === 'sakit'));
                         return rec?.checkInStatus === 'izin' || rec?.checkInStatus === 'sakit' || hasLeave;
@@ -980,9 +1074,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {employees
+                    {scopedEmployees
                       .filter(emp => {
-                        const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+                        const matchRegu = isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu);
                         const matchSlot = filterSlot === 'all' || emp.locationSlotId === Number(filterSlot);
                         return matchRegu && matchSlot;
                       })
@@ -1105,9 +1199,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {employees
+                    {scopedEmployees
                       .filter(emp => {
-                        const matchRegu = filterRegu === 'all' || emp.regu === filterRegu;
+                        const matchRegu = isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu);
                         const matchSlot = filterSlot === 'all' || String(emp.locationSlotId) === String(filterSlot) || Number(emp.locationSlotId) === Number(filterSlot);
                         return matchRegu && matchSlot;
                       })
@@ -1117,7 +1211,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                           filterMonth,
                           attendanceRecords,
                           leaveRequests,
-                          locations
+                          locations,
+                          undefined,
+                          undefined,
+                          employees
                         );
 
                         return (
@@ -1203,12 +1300,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <th className="p-1.5 border border-slate-300">Kategori & Alamat</th>
                       <th className="p-1.5 border border-slate-300 font-mono">Koordinat Google Maps</th>
                       <th className="p-1.5 border border-slate-300 text-center font-mono">Radius Ketat</th>
-                      <th className="p-1.5 border border-slate-300 text-center font-bold">Personel</th>
+                      <th className="p-1.5 border border-slate-300 text-center font-bold">Personel {isDanru ? `(${adminRegu})` : ''}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {locations.map((loc) => {
-                      const count = employees.filter(e => e.locationSlotId === loc.id).length;
+                      const count = scopedEmployees.filter(e => String(e.locationSlotId) === String(loc.id) || Number(e.locationSlotId) === Number(loc.slotNumber)).length;
                       return (
                         <tr key={loc.id} className={loc.id % 2 === 0 ? 'bg-slate-50' : 'bg-white'}>
                           <td className="p-2 border border-slate-300 text-center font-bold font-mono">
@@ -1256,8 +1353,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {employees
-                      .filter(emp => filterRegu === 'all' || emp.regu === filterRegu)
+                    {scopedEmployees
+                      .filter(emp => isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu))
                       .map((emp, idx) => {
                         const loc = locations.find(l => l.id === emp.locationSlotId);
                         return (
@@ -1313,7 +1410,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {securityLogs.map((log, idx) => (
+                    {(isDanru
+                      ? securityLogs.filter(log => scopedEmployees.some(e => e.id === log.employeeId || e.name === log.employeeName))
+                      : securityLogs
+                    ).map((log, idx) => (
                       <tr key={log.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                         <td className="p-1.5 border border-slate-300 text-center font-mono">{idx + 1}</td>
                         <td className="p-1.5 border border-slate-300 font-mono text-[9px] text-slate-600">
@@ -1344,9 +1444,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
 
             {/* Menu 6: TOP FIVE Disiplin & Pelanggaran */}
             {activeMenu === 'top_five' && (() => {
-              const reports = employees
-                .filter(emp => filterRegu === 'all' || emp.regu === filterRegu)
-                .map(emp => calculateSmartMonthlyReport(emp, filterMonth, attendanceRecords, leaveRequests, locations));
+              const reports = scopedEmployees
+                .filter(emp => isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu))
+                .map(emp => calculateSmartMonthlyReport(emp, filterMonth, attendanceRecords, leaveRequests, locations, undefined, undefined, employees));
 
               const topTepatWaktu = [...reports].sort((a, b) => b.onTimeCount - a.onTimeCount || b.disciplineRate - a.disciplineRate).slice(0, 5);
               const topTerlambat = [...reports].sort((a, b) => b.lateCount - a.lateCount).slice(0, 5);
@@ -1487,7 +1587,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     Dibuat & Diverifikasi Oleh:
                   </p>
                   <p className="font-bold text-slate-900 mt-1 leading-snug uppercase min-h-[2.5rem] flex items-center justify-center">
-                    {signConfig.signatory1Role}
+                    {isDanru && adminRegu ? `KOMANDAN ${adminRegu.toUpperCase()}` : signConfig.signatory1Role}
                   </p>
                 </div>
 
@@ -1515,13 +1615,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 {/* Baris 3: Nama Lengkap Penanda Tangan, Pangkat & NIP (100% SEJAJAR HORIZONTAL) */}
                 <div className="pt-0.5 px-2">
                   <p className="font-bold text-slate-900 underline underline-offset-4 text-xs tracking-wide">
-                    {signConfig.signatory1Name}
+                    {isDanru && currentAdmin?.name ? currentAdmin.name : signConfig.signatory1Name}
                   </p>
                   <p className="text-[10px] text-slate-600 font-medium mt-1">
-                    {signConfig.signatory1Rank}
+                    {isDanru ? 'Pengatur (II/c)' : signConfig.signatory1Rank}
                   </p>
                   <p className="text-[10px] text-slate-600 font-mono">
-                    NIP. {signConfig.signatory1Nip}
+                    {isDanru ? `ID: ${currentAdmin?.username?.toUpperCase() || 'DANRU'}` : `NIP. ${signConfig.signatory1Nip}`}
                   </p>
                 </div>
 
