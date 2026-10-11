@@ -33,7 +33,11 @@ import {
   ChevronUp,
   Trophy,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 
 export type PrintMenuType = 'daily' | 'monthly' | 'locations' | 'regu' | 'security' | 'top_five';
@@ -49,6 +53,13 @@ export interface PrintSignatureConfig {
   signatory2Name: string;
   signatory2Rank: string;
   signatory2Nip: string;
+  // Kop Surat Customization
+  kopType?: 'standard' | 'custom_image';
+  customKopImage?: string; // Data URL of uploaded image
+  customKopHeight?: number; // Height in px (e.g. 90, 120, 150, 180)
+  kopHeaderTop?: string; // Teks Baris Atas (Instansi)
+  kopHeaderTitle?: string; // Teks Baris Utama (Nama Satuan)
+  kopHeaderSubtitle?: string; // Semboyan
 }
 
 export const DEFAULT_SIGNATURE_CONFIG: PrintSignatureConfig = {
@@ -62,6 +73,12 @@ export const DEFAULT_SIGNATURE_CONFIG: PrintSignatureConfig = {
   signatory2Name: "SIDARTA GAUTAMA, S.STP",
   signatory2Rank: "Pembina Utama Muda (IV/c)",
   signatory2Nip: "19740512 199903 1 002",
+  kopType: 'standard',
+  customKopImage: '',
+  customKopHeight: 120,
+  kopHeaderTop: "PEMERINTAH KABUPATEN BANGKA BARAT",
+  kopHeaderTitle: "SATPOL PP KABUPATEN BANGKA BARAT",
+  kopHeaderSubtitle: "PRAJA WIBAWA",
 };
 
 interface PrintReportModalProps {
@@ -120,6 +137,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         signatory2Name: "SIDARTA GAUTAMA, S.STP",
         signatory2Rank: "Pembina Utama Muda (IV/c)",
         signatory2Nip: "19740512 199903 1 002",
+        kopType: 'standard',
+        customKopImage: '',
+        customKopHeight: 120,
+        kopHeaderTop: "PEMERINTAH KABUPATEN BANGKA BARAT",
+        kopHeaderTitle: "SATPOL PP KABUPATEN BANGKA BARAT",
+        kopHeaderSubtitle: "PRAJA WIBAWA",
       };
     }
     return DEFAULT_SIGNATURE_CONFIG;
@@ -166,6 +189,61 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
     try {
       localStorage.setItem(storageKey, JSON.stringify(defaultDanruConfig));
     } catch {}
+  };
+
+  // Upload Custom Kop Surat Image Handler
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleUploadKopImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Harap pilih file gambar resmi (PNG, JPG, JPEG, atau WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvt) => {
+      const dataUrl = loadEvt.target?.result as string;
+      if (!dataUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const maxWidth = 1800;
+        if (img.width > maxWidth) {
+          const canvas = document.createElement('canvas');
+          const scale = maxWidth / img.width;
+          canvas.width = maxWidth;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const compressedUrl = canvas.toDataURL('image/png', 0.95);
+            handleUpdateSignConfig({
+              kopType: 'custom_image',
+              customKopImage: compressedUrl,
+            });
+            return;
+          }
+        }
+
+        handleUpdateSignConfig({
+          kopType: 'custom_image',
+          customKopImage: dataUrl,
+        });
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemoveCustomKop = () => {
+    handleUpdateSignConfig({
+      kopType: 'standard',
+      customKopImage: '',
+    });
   };
 
   // Filters
@@ -700,10 +778,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   ? 'bg-amber-600 text-white border-amber-600'
                   : 'bg-white text-amber-800 hover:text-amber-900 border-amber-300 hover:bg-amber-50'
               }`}
-              title="Buka menu edit tanggal, alamat dan penanda tangan"
+              title="Buka menu edit kop surat, tanggal, alamat dan penanda tangan"
             >
               <PenTool className="w-3.5 h-3.5 text-amber-600" />
-              <span>{isEditingSignConfig ? 'Tutup Edit Pengesahan' : 'Edit Tanggal, Alamat & Penanda Tangan'}</span>
+              <span>{isEditingSignConfig ? 'Tutup Edit Pengesahan' : 'Edit Kop, Tanggal & Penanda Tangan'}</span>
               {isEditingSignConfig ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
             </button>
 
@@ -724,13 +802,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2">
-                    Menu Edit Tanggal, Alamat & Penanda Tangan Laporan
+                    Menu Edit Kop Surat, Tanggal & Penanda Tangan
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold">
                       Live Preview & Disimpan
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    Kop Surat resmi: SATPOL PP KABUPATEN BANGKA BARAT · Gulir ke bawah untuk mengisi pejabat pengesah & Kasatpol PP
+                    Bisa ganti kop memakai file gambar yang diupload atau teks resmi · Gulir ke bawah untuk mengisi tanggal & penanda tangan
                   </p>
                 </div>
               </div>
@@ -754,6 +832,183 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   <span>Tutup & Terapkan</span>
                 </button>
               </div>
+            </div>
+
+            {/* Bagian Khusus: Pengaturan Kop Surat (Unggah Gambar File / Teks Resmi) */}
+            <div className="p-4 rounded-xl bg-white border border-amber-300 space-y-3 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-100 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0">
+                    <ImageIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-amber-900 text-xs sm:text-sm block">
+                      Kop Surat Dokumen Cetak (Ganti Memakai File Gambar / Teks Resmi)
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Anda dapat mengunggah file gambar kop surat resmi (JPG, PNG, WebP) atau menggunakan format teks standar.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Switch Mode Kop */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateSignConfig({ kopType: 'standard' })}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      signConfig.kopType !== 'custom_image'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Kop Standar Teks
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (signConfig.customKopImage) {
+                        handleUpdateSignConfig({ kopType: 'custom_image' });
+                      } else {
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                      signConfig.kopType === 'custom_image'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Kop Gambar (File Upload)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Tampilan Pengaturan Berdasarkan Mode */}
+              {signConfig.kopType === 'custom_image' ? (
+                <div className="space-y-3 pt-1">
+                  {signConfig.customKopImage ? (
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
+                      {/* Pratinjau Gambar Kop */}
+                      <div className="bg-white p-2 rounded-lg border border-slate-200 shrink-0 max-w-full lg:max-w-md overflow-hidden flex items-center justify-center">
+                        <img
+                          src={signConfig.customKopImage}
+                          alt="Preview Kop Surat"
+                          className="max-h-24 w-auto object-contain mx-auto"
+                        />
+                      </div>
+
+                      {/* Kontrol & Ukuran Kop */}
+                      <div className="space-y-2.5 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] font-semibold text-slate-700">Tinggi Gambar Kop Saat Dicetak:</span>
+                          <div className="flex items-center gap-1">
+                            {[90, 120, 150, 180].map((h) => (
+                              <button
+                                key={h}
+                                type="button"
+                                onClick={() => handleUpdateSignConfig({ customKopHeight: h })}
+                                className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition-all ${
+                                  (signConfig.customKopHeight || 120) === h
+                                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                {h === 90 ? 'Kecil (90px)' : h === 120 ? 'Standar (120px)' : h === 150 ? 'Besar (150px)' : 'Ekstra (180px)'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 flex items-center gap-1.5 shadow-xs"
+                          >
+                            <Upload className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Ganti File Gambar Kop...</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveCustomKop}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Hapus & Kembali ke Kop Teks Standar</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Area Upload File Jika Belum Ada Gambar */
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 hover:bg-amber-50/80 rounded-xl p-5 text-center cursor-pointer transition-all group"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-amber-100 group-hover:bg-amber-200 text-amber-700 flex items-center justify-center mx-auto mb-2 transition-all">
+                        <Upload className="w-6 h-6" />
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-slate-800">
+                        Klik Disini Untuk Memilih File Kop Surat Anda (PNG, JPG, JPEG, WebP)
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-1 max-w-lg mx-auto">
+                        Pilih gambar kop surat resmi dari penyimpanan komputer atau HP. Gambar akan langsung diterapkan di bagian atas dokumen cetak dan PDF.
+                      </p>
+                    </div>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/jpg"
+                    onChange={handleUploadKopImage}
+                    className="hidden"
+                  />
+                </div>
+              ) : (
+                /* Mode Standar Teks */
+                <div className="space-y-2 pt-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-slate-600 font-semibold block mb-1">
+                        Teks Baris Atas (Pemerintah / Instansi):
+                      </label>
+                      <input
+                        type="text"
+                        value={signConfig.kopHeaderTop || "PEMERINTAH KABUPATEN BANGKA BARAT"}
+                        onChange={(e) => handleUpdateSignConfig({ kopHeaderTop: e.target.value })}
+                        placeholder="PEMERINTAH KABUPATEN BANGKA BARAT"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs focus:outline-none focus:border-amber-500 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-600 font-semibold block mb-1">
+                        Teks Baris Utama (Nama Satuan):
+                      </label>
+                      <input
+                        type="text"
+                        value={signConfig.kopHeaderTitle || "SATPOL PP KABUPATEN BANGKA BARAT"}
+                        onChange={(e) => handleUpdateSignConfig({ kopHeaderTitle: e.target.value })}
+                        placeholder="SATPOL PP KABUPATEN BANGKA BARAT"
+                        className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs focus:outline-none focus:border-amber-500 font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500">
+                    <span>* Menggunakan lambang resmi Satpol PP Praja Wibawa di sisi kiri & slogan di sisi kanan.</span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-amber-700 hover:text-amber-800 font-semibold flex items-center gap-1"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>Ingin ganti pakai file gambar kop? Klik untuk upload</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Form Inputs Grid */}
@@ -990,37 +1245,50 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Document Content */}
             <div className="relative z-10 print:z-auto">
 
-            {/* 1. KOP SURAT RESMI: SATPOL PP KABUPATEN BANGKA BARAT (Alamat & Kontak Dihapus) */}
-            <div className="border-b-4 border-double border-slate-900 pb-4 mb-6 print-kop-surat">
-              <div className="flex items-center justify-between gap-4">
-                
-                {/* Logo Perisai Satpol PP */}
-                <div className="w-16 h-16 shrink-0 flex items-center justify-center">
-                  <SatpolPPLogo className="w-16 h-16 object-contain" />
+            {/* 1. KOP SURAT RESMI: DUKUNGAN FILE GAMBAR KUSTOM ATAU KOP RESMI STANDAR */}
+            {signConfig.kopType === 'custom_image' && signConfig.customKopImage ? (
+              <div className="border-b-4 border-double border-slate-900 pb-3 mb-6 print-kop-surat">
+                <div className="w-full flex justify-center items-center overflow-hidden">
+                  <img
+                    src={signConfig.customKopImage}
+                    alt="Kop Surat Resmi"
+                    style={{ maxHeight: `${signConfig.customKopHeight || 120}px` }}
+                    className="w-full object-contain mx-auto print:w-full print:block"
+                  />
                 </div>
-
-                {/* Kop Text: SATPOL PP KABUPATEN BANGKA BARAT (Alamat Dihapus Sesuai Instruksi) */}
-                <div className="text-center flex-1">
-                  <h4 className="text-xs sm:text-sm font-bold tracking-widest uppercase text-slate-700">
-                    PEMERINTAH KABUPATEN BANGKA BARAT
-                  </h4>
-                  <h2 className="text-base sm:text-2xl font-black uppercase text-slate-900 tracking-tight leading-tight mt-0.5">
-                    SATPOL PP KABUPATEN BANGKA BARAT
-                  </h2>
-                </div>
-
-                {/* Semboyan Logo */}
-                <div className="w-16 h-16 shrink-0 hidden sm:flex flex-col items-center justify-center text-center">
-                  <div className="text-[10px] font-black tracking-widest text-slate-800 uppercase">
-                    PRAJA
-                  </div>
-                  <div className="text-[9px] font-bold text-slate-600 uppercase">
-                    WIBAWA
-                  </div>
-                </div>
-
               </div>
-            </div>
+            ) : (
+              <div className="border-b-4 border-double border-slate-900 pb-4 mb-6 print-kop-surat">
+                <div className="flex items-center justify-between gap-4">
+                  
+                  {/* Logo Perisai Satpol PP */}
+                  <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+                    <SatpolPPLogo className="w-16 h-16 object-contain" />
+                  </div>
+
+                  {/* Kop Text: SATPOL PP KABUPATEN BANGKA BARAT */}
+                  <div className="text-center flex-1">
+                    <h4 className="text-xs sm:text-sm font-bold tracking-widest uppercase text-slate-700">
+                      {signConfig.kopHeaderTop || "PEMERINTAH KABUPATEN BANGKA BARAT"}
+                    </h4>
+                    <h2 className="text-base sm:text-2xl font-black uppercase text-slate-900 tracking-tight leading-tight mt-0.5">
+                      {signConfig.kopHeaderTitle || "SATPOL PP KABUPATEN BANGKA BARAT"}
+                    </h2>
+                  </div>
+
+                  {/* Semboyan Logo */}
+                  <div className="w-16 h-16 shrink-0 hidden sm:flex flex-col items-center justify-center text-center">
+                    <div className="text-[10px] font-black tracking-widest text-slate-800 uppercase">
+                      {signConfig.kopHeaderSubtitle || "PRAJA"}
+                    </div>
+                    <div className="text-[9px] font-bold text-slate-600 uppercase">
+                      WIBAWA
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
 
             {/* 2. JUDUL DOKUMEN BERDASARKAN MENU */}
             <div className="text-center mb-6 print-document-title">

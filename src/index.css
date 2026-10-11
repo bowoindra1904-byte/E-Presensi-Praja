@@ -219,6 +219,15 @@ html, body {
     display: block !important;
   }
 
+  .print-kop-surat img {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    object-fit: contain !important;
+  }
+
   /* Document Title & Subtitle */
   .print-document-title {
     page-break-inside: avoid !important;
