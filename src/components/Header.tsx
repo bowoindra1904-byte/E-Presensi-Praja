@@ -41,6 +41,7 @@ interface HeaderProps {
   notifications: NotificationItem[];
   onMarkNotificationAsRead: (id: string) => void;
   onMarkAllNotificationsAsRead: () => void;
+  onClearAllNotifications?: () => void;
   onOpenAdminPinModal?: () => void;
   onOpenPrintModal?: () => void;
   onOpenGuideModal?: () => void;
@@ -63,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   notifications,
   onMarkNotificationAsRead,
   onMarkAllNotificationsAsRead,
+  onClearAllNotifications,
   onOpenAdminPinModal,
   onOpenPrintModal,
   onOpenGuideModal,
@@ -328,6 +330,7 @@ export const Header: React.FC<HeaderProps> = ({
               currentEmployeeId={currentEmployee?.id}
               onMarkAsRead={onMarkNotificationAsRead}
               onMarkAllAsRead={onMarkAllNotificationsAsRead}
+              onClearAll={onClearAllNotifications}
             />
 
             {/* Real-time Clock Display */}

@@ -15,7 +15,7 @@ import {
   AdminAccount
 } from './types';
 import { INITIAL_WORK_LOCATIONS } from './data/initialLocations';
-import { INITIAL_EMPLOYEES } from './data/initialEmployees';
+import { INITIAL_EMPLOYEES, isLegacyDummyEmployee, generateDemo150Employees } from './data/initialEmployees';
 import { INITIAL_ADMIN_ACCOUNTS } from './data/initialAdmins';
 import { 
   generateInitialAttendanceRecords, 
@@ -67,7 +67,9 @@ import {
   seedInitialLeaveRequests,
   syncClearAllEmployees,
   syncClearLeaveRequests,
-  syncArchiveAndCleanupAttendance
+  syncArchiveAndCleanupAttendance,
+  syncRenumberEmployeeIds,
+  syncBatchSaveEmployees
 } from './services/firestoreSync';
 
 const STORAGE_KEYS = {
@@ -87,18 +89,23 @@ const STORAGE_KEYS = {
 };
 
 export default function App() {
-  // 1. State: 150 Employees (Dinamis penuh sesuai kelolaan admin & dapat dikosongkan total)
+  // 1. State: Employees (Hanya memuat pegawai riil & otomatis menyaring data bawaan dummy)
   const [employees, setEmployees] = useState<Employee[]>(() => {
     try {
       if (localStorage.getItem('sipraja_employees_cleared') === 'true') {
         return [];
       }
       const saved = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Employee[];
+        if (Array.isArray(parsed)) {
+          return parsed.filter(e => !isLegacyDummyEmployee(e));
+        }
+      }
     } catch {
       // ignore
     }
-    return INITIAL_EMPLOYEES;
+    return [];
   });
 
   // 2. State: Work Location Slots (Dinamis sesuai inputan/kelolaan admin)
@@ -137,26 +144,49 @@ export default function App() {
     return [];
   });
 
-  // 4. State: Security Logs
+  // 4. State: Security Logs (Hanya memuat audit riil, membersihkan data simulasi bawaan)
   const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SECURITY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as SecurityLog[];
+        if (Array.isArray(parsed)) {
+          return parsed.filter(log => 
+            !['SEC-LOG-01', 'SEC-LOG-02', 'SEC-LOG-03'].includes(log.id) &&
+            !log.id.startsWith('SEC-SAMPLE-') &&
+            !log.details?.includes('Dedi Susanto') &&
+            !log.details?.includes('Untung Riyadi') &&
+            !log.employeeName?.includes('Dedi Susanto') &&
+            !log.employeeName?.includes('Untung Riyadi')
+          );
+        }
+      }
     } catch {
       // ignore
     }
-    return generateInitialSecurityLogs();
+    return [];
   });
 
-  // 5. State: Real-Time Notifications
+  // 5. State: Real-Time Notifications (Hanya memuat notifikasi operasional riil)
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as NotificationItem[];
+        if (Array.isArray(parsed)) {
+          return parsed.filter(n => 
+            !['NOTIF-01', 'NOTIF-02', 'NOTIF-03', 'NOTIF-04'].includes(n.id) &&
+            !n.id.startsWith('NOTIF-SAMPLE-') &&
+            !n.message?.includes('Farhan Mahendra') &&
+            !n.message?.includes('Dedi Susanto') &&
+            !n.message?.includes('Untung Riyadi')
+          );
+        }
+      }
     } catch {
       // ignore
     }
-    return generateInitialNotifications();
+    return [];
   });
 
   // 5b. State: Izin & Sakit (Leave Requests) (Only real requests, sample dummy data purged)
@@ -197,11 +227,11 @@ export default function App() {
   const [activeEmployeeId, setActiveEmployeeId] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_OFFICER);
-      if (saved && INITIAL_EMPLOYEES.some(e => e.id === saved)) return saved;
+      if (saved && saved !== 'POLPP-001') return saved;
     } catch {
       // ignore
     }
-    return 'POLPP-001';
+    return '';
   });
 
   // 7. Role: 'pegawai' or 'admin'
@@ -608,6 +638,16 @@ export default function App() {
     syncSaveEmployee(updated).catch(console.error);
   };
 
+  const handleBatchUpdateEmployees = async (updatedList: Employee[]) => {
+    const idMap = new Map(updatedList.map(e => [e.id, e]));
+    setEmployees(prev => prev.map(e => idMap.get(e.id) || e));
+    try {
+      const nextEmployees = employees.map(e => idMap.get(e.id) || e);
+      localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(nextEmployees));
+    } catch {}
+    await syncBatchSaveEmployees(updatedList);
+  };
+
   const handleAddEmployee = (newEmp: Employee) => {
     localStorage.removeItem('sipraja_employees_cleared');
     setEmployees(prev => {
@@ -652,9 +692,30 @@ export default function App() {
     });
   };
 
-  const handleResetOrClearEmployees = async (mode: 'reset_default' | 'clear_all' = 'reset_default') => {
+  const handleResetOrClearEmployees = async (mode: 'reset_default' | 'clear_all' | 'clear_dummy_only' = 'clear_dummy_only') => {
     try {
-      if (mode === 'clear_all') {
+      if (mode === 'clear_dummy_only') {
+        const dummyEmployees = employees.filter(e => isLegacyDummyEmployee(e));
+        const dummyIds = dummyEmployees.map(e => e.id);
+        const remaining = employees.filter(e => !isLegacyDummyEmployee(e));
+        setEmployees(remaining);
+        try {
+          localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(remaining));
+        } catch {}
+        if (dummyIds.length > 0) {
+          await syncClearAllEmployees(dummyIds);
+        }
+
+        handleAddNotification({
+          id: `NOTIF-CLEAR-DUMMY-${Date.now()}`,
+          targetRole: 'admin',
+          type: 'success',
+          title: 'Personel Bawaan Dibersihkan',
+          message: `${dummyIds.length} data personel bawaan/dummy berhasil dihapus. ${remaining.length} pegawai riil Anda tetap aman.`,
+          timestamp: `${currentTimeString} WIB`,
+          read: false
+        });
+      } else if (mode === 'clear_all') {
         const allIds = employees.map(e => e.id);
         setEmployees([]);
         try {
@@ -672,9 +733,10 @@ export default function App() {
           read: false
         });
       } else {
-        setEmployees(INITIAL_EMPLOYEES);
+        const demoEmps = generateDemo150Employees();
+        setEmployees(demoEmps);
         try {
-          localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(INITIAL_EMPLOYEES));
+          localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(demoEmps));
         } catch {}
         await seedInitialEmployees();
 
@@ -682,14 +744,42 @@ export default function App() {
           id: `NOTIF-RESET-ALL-EMP-${Date.now()}`,
           targetRole: 'admin',
           type: 'warning',
-          title: 'Reset Data Personel Berhasil',
-          message: 'Daftar personel berhasil dikembalikan ke data default anggota Satpol PP.',
+          title: 'Formasi Demo Dimuat',
+          message: 'Daftar personel contoh formasi Satpol PP berhasil dimuat.',
           timestamp: `${currentTimeString} WIB`,
           read: false
         });
       }
     } catch (err) {
       console.error('Error reset/clear employees:', err);
+    }
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+    try {
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
+    } catch {}
+  };
+
+  const handleRenumberEmployees = async () => {
+    try {
+      const updated = await syncRenumberEmployeeIds(employees);
+      setEmployees(updated);
+      try {
+        localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(updated));
+      } catch {}
+      handleAddNotification({
+        id: `NOTIF-RENUMBER-${Date.now()}`,
+        targetRole: 'admin',
+        type: 'success',
+        title: 'Nomor ID Pegawai Diurutkan',
+        message: `${updated.length} data pegawai berhasil diurutkan rapi mulai dari POLPP-001 secara berurutan.`,
+        timestamp: `${currentTimeString} WIB`,
+        read: false
+      });
+    } catch (err) {
+      console.error('Error renumbering employees:', err);
     }
   };
 
@@ -1514,6 +1604,7 @@ export default function App() {
         notifications={notifications}
         onMarkNotificationAsRead={handleMarkNotificationAsRead}
         onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
+        onClearAllNotifications={handleClearAllNotifications}
         onOpenAdminPinModal={() => setIsAdminPinModalOpen(true)}
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
         locationsCount={locations.length}
@@ -1615,6 +1706,8 @@ export default function App() {
                 onDeleteEmployee={handleDeleteEmployee}
                 onResetDeviceLock={handleResetDeviceLock}
                 onResetAllEmployees={handleResetOrClearEmployees}
+                onRenumberEmployees={handleRenumberEmployees}
+                onBatchUpdateEmployees={handleBatchUpdateEmployees}
                 onOpenPrintMenu={handleOpenPrintMenu}
               />
             )}

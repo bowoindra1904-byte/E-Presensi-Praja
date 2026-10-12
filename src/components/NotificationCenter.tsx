@@ -8,7 +8,8 @@ import {
   ShieldAlert, 
   X, 
   Check, 
-  Sparkles 
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 
 interface NotificationCenterProps {
@@ -17,6 +18,7 @@ interface NotificationCenterProps {
   currentEmployeeId?: string;
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
+  onClearAll?: () => void;
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({
@@ -25,6 +27,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   currentEmployeeId,
   onMarkAsRead,
   onMarkAllAsRead,
+  onClearAll,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -95,14 +98,26 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   </span>
                 )}
               </div>
-              {unreadCount > 0 && (
-                <button
-                  onClick={onMarkAllAsRead}
-                  className="text-[11px] font-semibold text-amber-700 hover:text-amber-800 transition-colors"
-                >
-                  Tandai Dibaca
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={onMarkAllAsRead}
+                    className="text-[11px] font-semibold text-amber-700 hover:text-amber-800 transition-colors"
+                  >
+                    Tandai Dibaca
+                  </button>
+                )}
+                {visibleNotifications.length > 0 && onClearAll && (
+                  <button
+                    onClick={onClearAll}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-1"
+                    title="Hapus riwayat notifikasi"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Hapus</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* List */}
@@ -138,8 +153,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-xs text-slate-500">
-                  Tidak ada notifikasi saat ini
+                <div className="p-6 text-center text-xs text-slate-500 space-y-1">
+                  <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-1.5">
+                    <Bell className="w-4.5 h-4.5 opacity-60" />
+                  </div>
+                  <p className="font-bold text-slate-700">Semua Notifikasi Bersih</p>
+                  <p className="text-[11px] text-slate-400">
+                    Aktivitas presensi real-time personel Satpol PP akan otomatis tercatat di sini.
+                  </p>
                 </div>
               )}
             </div>

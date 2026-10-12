@@ -12,40 +12,46 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Employee, WorkLocation, AttendanceRecord, SecurityLog, LeaveRequest, CustomHoliday, AdminAccount } from '../types';
-import { INITIAL_EMPLOYEES } from '../data/initialEmployees';
+import { INITIAL_EMPLOYEES, isLegacyDummyEmployee } from '../data/initialEmployees';
 import { INITIAL_WORK_LOCATIONS } from '../data/initialLocations';
 import { generateInitialLeaveRequests } from '../data/initialAttendance';
 import { INITIAL_ADMIN_ACCOUNTS } from '../data/initialAdmins';
 
-// 1. Subscribe to Employees with auto-seed of 150 personnel only if never cleared
+// 1. Subscribe to Employees (Hanya memuat pegawai riil & otomatis membersihkan data dummy bawaan)
 export function subscribeEmployees(onData: (employees: Employee[]) => void) {
   const employeesCol = collection(db, 'employees');
   
   return onSnapshot(employeesCol, async (snapshot) => {
     if (snapshot.empty) {
-      if (localStorage.getItem('sipraja_employees_cleared') === 'true') {
-        onData([]);
-        return;
-      }
-      try {
-        const seedStateSnap = await getDoc(doc(db, 'system_settings', 'seed_state'));
-        if (seedStateSnap.exists() && seedStateSnap.data()?.employeesCleared === true) {
-          localStorage.setItem('sipraja_employees_cleared', 'true');
-          onData([]);
-          return;
-        }
-      } catch (e) {
-        console.error('Error checking seed_state:', e);
-      }
-      console.log('Firestore employees empty and not marked cleared. Seeding initial 150 employees...');
-      await seedInitialEmployees();
+      // Database pegawai bersih (0 pegawai)
+      onData([]);
       return;
     }
 
     const items: Employee[] = [];
+    const dummyIdsToDelete: string[] = [];
+
     snapshot.forEach(docSnap => {
-      items.push(docSnap.data() as Employee);
+      const data = docSnap.data() as Employee;
+      if (isLegacyDummyEmployee(data)) {
+        dummyIdsToDelete.push(data.id);
+      } else {
+        items.push(data);
+      }
     });
+
+    // Otomatis hapus sisa data pegawai dummy/bawaan lama dari Firestore di background
+    if (dummyIdsToDelete.length > 0) {
+      const batchSize = 100;
+      for (let i = 0; i < dummyIdsToDelete.length; i += batchSize) {
+        const chunk = dummyIdsToDelete.slice(i, i + batchSize);
+        const batch = writeBatch(db);
+        chunk.forEach(id => {
+          batch.delete(doc(db, 'employees', id));
+        });
+        batch.commit().catch(console.error);
+      }
+    }
 
     // Sort by id or numeric order
     items.sort((a, b) => {
@@ -136,9 +142,33 @@ export function subscribeSecurityLogs(onData: (logs: SecurityLog[]) => void) {
   
   return onSnapshot(logsQuery, (snapshot) => {
     const items: SecurityLog[] = [];
+    const sampleIdsToDelete: string[] = [];
+
     snapshot.forEach(docSnap => {
-      items.push(docSnap.data() as SecurityLog);
+      const data = docSnap.data() as SecurityLog;
+      if (
+        data.id && (
+          ['SEC-LOG-01', 'SEC-LOG-02', 'SEC-LOG-03'].includes(data.id) ||
+          data.id.startsWith('SEC-SAMPLE-') ||
+          data.details?.includes('Dedi Susanto') ||
+          data.details?.includes('Untung Riyadi') ||
+          data.employeeName?.includes('Dedi Susanto') ||
+          data.employeeName?.includes('Untung Riyadi')
+        )
+      ) {
+        sampleIdsToDelete.push(data.id);
+      } else {
+        items.push(data);
+      }
     });
+
+    if (sampleIdsToDelete.length > 0) {
+      const batch = writeBatch(db);
+      sampleIdsToDelete.forEach(id => {
+        batch.delete(doc(db, 'security_logs', id));
+      });
+      batch.commit().catch(console.error);
+    }
 
     items.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
     onData(items);
@@ -421,3 +451,52 @@ export async function syncSaveAdminAccount(account: AdminAccount): Promise<void>
   const docRef = doc(db, 'admin_accounts', account.id);
   await setDoc(docRef, cleanFirestoreData(account), { merge: true });
 }
+
+// 9. Renumber Employee IDs starting from POLPP-001 sequentially
+export async function syncRenumberEmployeeIds(currentEmployees: Employee[]): Promise<Employee[]> {
+  const sorted = [...currentEmployees].sort((a, b) => {
+    const numA = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
+    return numA - numB;
+  });
+
+  const renumbered: Employee[] = [];
+  const oldIdsToDelete: string[] = [];
+
+  sorted.forEach((emp, index) => {
+    const newId = `POLPP-${String(index + 1).padStart(3, '0')}`;
+    if (emp.id !== newId) {
+      oldIdsToDelete.push(emp.id);
+    }
+    renumbered.push({
+      ...emp,
+      id: newId
+    });
+  });
+
+  const batch = writeBatch(db);
+  for (const oldId of oldIdsToDelete) {
+    batch.delete(doc(db, 'employees', oldId));
+  }
+  for (const emp of renumbered) {
+    batch.set(doc(db, 'employees', emp.id), cleanFirestoreData(emp));
+  }
+  await batch.commit();
+
+  return renumbered;
+}
+
+// 10. Batch Update multiple employees (e.g. switching entire regu to Siaga Mako/Harian)
+export async function syncBatchSaveEmployees(employees: Employee[]): Promise<void> {
+  const batchSize = 100;
+  for (let i = 0; i < employees.length; i += batchSize) {
+    const chunk = employees.slice(i, i + batchSize);
+    const batch = writeBatch(db);
+    for (const emp of chunk) {
+      batch.set(doc(db, 'employees', emp.id), cleanFirestoreData(emp), { merge: true });
+    }
+    await batch.commit();
+  }
+}
+
+

@@ -232,77 +232,13 @@ function _unusedLegacySampleRecords(): AttendanceRecord[] {
 }
 
 export function generateInitialSecurityLogs(): SecurityLog[] {
-  return [
-    {
-      id: "SEC-LOG-01",
-      timestamp: "Hari Ini, 07:15 WIB",
-      employeeId: "POLPP-012",
-      employeeName: "Dedi Susanto",
-      eventType: "device_mismatch",
-      details: "Percobaan absen dari HP tidak dikenal (DEV-UNKNOWN-8891). Akun terkunci ke DEV-POLPP-100444-A4. Titip absen dicegah.",
-      deviceId: "DEV-UNKNOWN-8891"
-    },
-    {
-      id: "SEC-LOG-02",
-      timestamp: "Hari Ini, 07:22 WIB",
-      employeeId: "POLPP-019",
-      employeeName: "Untung Riyadi",
-      eventType: "out_of_radius",
-      details: "Percobaan presensi di luar radius geofence (Jarak 480m dari Pos 5). Sistem menolak.",
-      deviceId: "DEV-POLPP-100703-A2"
-    },
-    {
-      id: "SEC-LOG-03",
-      timestamp: "Kemarin, 19:40 WIB",
-      employeeId: "POLPP-002",
-      employeeName: "Bambang Suryono, S.H.",
-      eventType: "device_paired",
-      details: "Perangkat dinas Samsung Galaxy A54 berhasil diverifikasi dan dikunci ke profil Komando.",
-      deviceId: "DEV-POLPP-KUNCI-SAMPLE-002"
-    }
-  ];
+  // Hanya memuat log audit keamanan riil dari aktivitas sistem
+  return [];
 }
 
 export function generateInitialNotifications(): NotificationItem[] {
-  return [
-    {
-      id: "NOTIF-01",
-      targetRole: "admin",
-      type: "late",
-      title: "Personel Terlambat Hadir",
-      message: "Farhan Mahendra (NIP: 19890514 201101 1 004) melakukan absen masuk pukul 08:14 WIB di Slot 2 (Terlambat 14 menit).",
-      timestamp: "Hari ini, 08:14 WIB",
-      read: false
-    },
-    {
-      id: "NOTIF-02",
-      targetRole: "admin",
-      type: "invalid_time",
-      title: "Percobaan Absensi di Luar Jam",
-      message: "Dedi Susanto mencoba absen pada 07:15 WIB di luar radius dan jam yang ditentukan.",
-      timestamp: "Hari ini, 07:15 WIB",
-      read: false
-    },
-    {
-      id: "NOTIF-03",
-      targetRole: "employee",
-      targetEmployeeId: "POLPP-001",
-      type: "success",
-      title: "Presensi Masuk Berhasil",
-      message: "Kehadiran Anda berhasil tercatat pada 07:42 WIB di Slot 1: Mako Utama. Selamat bertugas!",
-      timestamp: "Hari ini, 07:42 WIB",
-      read: false
-    },
-    {
-      id: "NOTIF-04",
-      targetRole: "employee",
-      type: "checkout_reminder",
-      title: "Pengingat Jam Pulang Dinas",
-      message: "Jam dinas berakhir tepat pukul 16.00 WIB (Harian) / 20.00 WIB (Shift). Pastikan berada di pos tugas untuk tap absen pulang.",
-      timestamp: "Hari ini, 07:00 WIB",
-      read: true
-    }
-  ];
+  // Hanya memuat notifikasi riil dari aktivitas operasional presensi
+  return [];
 }
 
 export function generateInitialLeaveRequests(): LeaveRequest[] {

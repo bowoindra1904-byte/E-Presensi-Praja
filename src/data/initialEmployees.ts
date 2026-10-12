@@ -26,10 +26,12 @@ const ROLES = [
   { role: "Penyidik Pegawai Negeri Sipil (PPNS)", rank: "Penata (III/c)" },
 ];
 
-export function generate150SatpolPPEmployees(): Employee[] {
+/**
+ * Generate 150 simulated Satpol PP employees for testing only.
+ */
+export function generateDemo150Employees(): Employee[] {
   const employees: Employee[] = [];
   
-  // Leadership & Officer 1 for seamless instant testing (no bound device yet -> will lock on first login!)
   employees.push({
     id: "POLPP-001",
     nip: "19880415 201001 1 002",
@@ -38,8 +40,8 @@ export function generate150SatpolPPEmployees(): Employee[] {
     rank: "Penata Muda (III/a)",
     regu: "Regu 1",
     scheduleType: "shift",
-    locationSlotId: 1, // Slot 1: Mako Utama
-    boundDeviceId: null, // Will automatically lock to user's device on first login!
+    locationSlotId: 1,
+    boundDeviceId: null,
     boundDeviceName: null,
     boundAt: null,
     phone: "0812-8829-1001",
@@ -54,7 +56,7 @@ export function generate150SatpolPPEmployees(): Employee[] {
     rank: "Penata Muda Tk.I (III/b)",
     regu: "Regu 2",
     scheduleType: "shift",
-    locationSlotId: 2, // Slot 2: Balai Kota
+    locationSlotId: 2,
     boundDeviceId: "DEV-POLPP-KUNCI-SAMPLE-002",
     boundDeviceName: "Samsung Galaxy A54 (Dinas)",
     boundAt: "2026-09-01 07:15:00",
@@ -69,8 +71,8 @@ export function generate150SatpolPPEmployees(): Employee[] {
     role: "Staf Administrasi & Logistik Regu 1",
     rank: "Pengatur Tk.I (II/d)",
     regu: "Regu 1",
-    scheduleType: "harian", // Regu 1 Personel Harian
-    locationSlotId: 1, // Slot 1: Mako
+    scheduleType: "harian",
+    locationSlotId: 1,
     boundDeviceId: "DEV-POLPP-KUNCI-SAMPLE-003",
     boundDeviceName: "Xiaomi Redmi Note 12",
     boundAt: "2026-09-05 06:45:00",
@@ -84,11 +86,7 @@ export function generate150SatpolPPEmployees(): Employee[] {
     const lIdx = (i * 13) % LAST_NAMES.length;
     const roleObj = ROLES[i % ROLES.length];
     
-    // Distribute evenly among 12 slots (1 to 12)
     const locationSlotId = ((i - 1) % 12) + 1;
-    
-    // Distribute regu: Regu 1, Regu 2, Regu 3, Regu 4, or Harian (Mako Komando)
-    // Most personnel belong to Regu 1..4 (each Danru's jurisdiction), with a portion in Mako / Komando
     const isMako = (i % 12 === 0);
     let regu: ReguType = 'Regu 1';
     let sched: ScheduleType = 'shift';
@@ -99,12 +97,10 @@ export function generate150SatpolPPEmployees(): Employee[] {
     } else {
       const reguNum = ((i % 4) + 1);
       regu = `Regu ${reguNum}` as ReguType;
-      // In each Regu 1..4: approx 28% are 'harian' (staf/logistik/administrasi regu), 72% are 'shift' (patroli/pos)
       sched = (i % 7 === 0 || i % 7 === 3) ? 'harian' : 'shift';
     }
 
-    // Bound device distribution
-    const isBound = i % 4 !== 0; // some bound, some null for first login testing
+    const isBound = i % 4 !== 0;
     const deviceId = isBound ? `DEV-POLPP-${String(100000 + i * 37).slice(-6)}-A${(i % 9) + 1}` : null;
     const deviceName = isBound 
       ? (i % 2 === 0 ? `Samsung Galaxy M${20 + (i % 30)}` : `Oppo Reno ${(i % 8) + 4} Dinas`)
@@ -135,4 +131,34 @@ export function generate150SatpolPPEmployees(): Employee[] {
   return employees;
 }
 
-export const INITIAL_EMPLOYEES: Employee[] = generate150SatpolPPEmployees();
+// Precalculated Set of legacy dummy employee signatures (name + nip)
+const _DEMO_EMPLOYEES = generateDemo150Employees();
+const LEGACY_DUMMY_SIGNATURES = new Set(
+  _DEMO_EMPLOYEES.map(d => `${d.name.trim().toLowerCase()}:::${d.nip.replace(/\s+/g, '')}`)
+);
+
+/**
+ * Checks whether a given employee matches one of the initial 150 simulated/demo profiles.
+ * Preserves genuine officers registered by the user.
+ */
+export function isLegacyDummyEmployee(emp: Partial<Employee>): boolean {
+  if (!emp || !emp.name || !emp.nip) return false;
+  const sig = `${emp.name.trim().toLowerCase()}:::${emp.nip.replace(/\s+/g, '')}`;
+  if (LEGACY_DUMMY_SIGNATURES.has(sig)) return true;
+
+  // Specific check for original default simulated leader profiles
+  if (emp.name === "Hendra Wijaya, S.STP" && emp.nip.includes("19880415")) return true;
+  if (emp.name === "Bambang Suryono, S.H." && emp.nip.includes("19850912")) return true;
+  if (emp.name === "Agus Prasetyo, A.Md." && emp.nip.includes("19920120")) return true;
+  
+  return false;
+}
+
+// Alias for backward compatibility
+export const generate150SatpolPPEmployees = generateDemo150Employees;
+
+/**
+ * PRODUCTION DEFAULT: Empty list.
+ * Only genuine personnel registered by admin will populate the roster.
+ */
+export const INITIAL_EMPLOYEES: Employee[] = [];
