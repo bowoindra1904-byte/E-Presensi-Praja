@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { LeaveRequest, Employee, WorkLocation, AdminAccount, ReguType } from '../../types';
+import { isLeaveForEmployee } from '../../utils/employeeMatcher';
 import { 
   HeartHandshake, 
   Stethoscope, 
@@ -132,7 +133,7 @@ export const AdminLeaveApprovals: React.FC<AdminLeaveApprovalsProps> = ({
         return false;
       }
       // 2. Only show requests for registered employees in current scope (Danru or Komando)
-      if (validEmpIds.size > 0 && !validEmpIds.has(r.employeeId)) {
+      if (scopedEmployees.length > 0 && !scopedEmployees.some(e => isLeaveForEmployee(r, e))) {
         return false;
       }
       return true;

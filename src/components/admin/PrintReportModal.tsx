@@ -9,6 +9,12 @@ import {
   AdminAccount
 } from '../../types';
 import { calculateSmartMonthlyReport } from '../../utils/smartAttendanceCalculator';
+import { 
+  findRecordForEmployeeAndDate, 
+  filterRecordsForEmployee, 
+  isRecordForEmployee, 
+  isLeaveForEmployee 
+} from '../../utils/employeeMatcher';
 import { SatpolPPLogo } from '../SatpolPPLogo';
 import { 
   Printer, 
@@ -333,7 +339,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           return matchRegu && matchSlot;
         })
         .map((emp, idx) => {
-          const rec = records.find(r => r.employeeId === emp.id);
+          const rec = records.find(r => isRecordForEmployee(r, emp));
           const posText = getPosPenugasanLabel(emp);
           return [
             String(idx + 1),
@@ -363,7 +369,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           return matchRegu && matchSlot;
         })
         .map((emp, idx) => {
-          const empRecords = attendanceRecords.filter(r => r.employeeId === emp.id && r.date.startsWith(filterMonth));
+          const empRecords = filterRecordsForEmployee(attendanceRecords, emp).filter(r => r.date.startsWith(filterMonth));
           const presentDays = empRecords.filter(r => !!r.checkInTime).length;
           const lateCount = empRecords.filter(r => r.checkInStatus === 'terlambat').length;
           const disciplineRate = presentDays > 0 ? Math.round(((presentDays - lateCount) / presentDays) * 100) : 100;
@@ -1387,8 +1393,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     <span className="text-slate-500 block">Dispensasi Kantor (HP Rusak):</span>
                     <strong className="text-blue-700">
                       {scopedEmployees.filter(emp => {
-                        const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
-                        const hasLeave = leaveRequests.some(lr => lr.employeeId === emp.id && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'dispensasi_kantor' || lr.isOfficeDispensation));
+                        const rec = findRecordForEmployeeAndDate(attendanceRecords, emp, filterDate);
+                        const hasLeave = leaveRequests.some(lr => isLeaveForEmployee(lr, emp) && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'dispensasi_kantor' || lr.isOfficeDispensation));
                         return rec?.checkInStatus === 'dispensasi_kantor' || rec?.isOfficeDispensation || hasLeave;
                       }).length} Personel
                     </strong>
@@ -1397,8 +1403,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     <span className="text-slate-500 block">Izin & Sakit Disetujui:</span>
                     <strong className="text-purple-700">
                       {scopedEmployees.filter(emp => {
-                        const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
-                        const hasLeave = leaveRequests.some(lr => lr.employeeId === emp.id && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'izin' || lr.type === 'sakit'));
+                        const rec = findRecordForEmployeeAndDate(attendanceRecords, emp, filterDate);
+                        const hasLeave = leaveRequests.some(lr => isLeaveForEmployee(lr, emp) && lr.status === 'approved' && filterDate >= lr.startDate && filterDate <= lr.endDate && (lr.type === 'izin' || lr.type === 'sakit'));
                         return rec?.checkInStatus === 'izin' || rec?.checkInStatus === 'sakit' || hasLeave;
                       }).length} Personel
                     </strong>
@@ -1426,9 +1432,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                         return matchRegu && matchSlot;
                       })
                       .map((emp, idx) => {
-                        const rec = attendanceRecords.find(r => r.employeeId === emp.id && r.date === filterDate);
+                        const rec = findRecordForEmployeeAndDate(attendanceRecords, emp, filterDate);
                         const activeLeave = leaveRequests.find(lr => 
-                          lr.employeeId === emp.id && 
+                          isLeaveForEmployee(lr, emp) && 
                           lr.status === 'approved' &&
                           !lr.id.startsWith('LEAVE-REQ-') &&
                           !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(lr.id) &&

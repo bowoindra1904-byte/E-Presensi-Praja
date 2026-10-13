@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Employee, LeaveRequest, LeaveType } from '../../types';
+import { isLeaveForEmployee } from '../../utils/employeeMatcher';
 import { 
   HeartHandshake, 
   Stethoscope, 
@@ -140,7 +141,7 @@ export const EmployeeLeaveView: React.FC<EmployeeLeaveViewProps> = ({
 
   // Filter requests for this officer
   const myRequests = leaveRequests
-    .filter(r => r.employeeId === employee.id)
+    .filter(r => isLeaveForEmployee(r, employee))
     .sort((a, b) => (b.appliedAt || '').localeCompare(a.appliedAt || ''));
 
   return (

@@ -19,6 +19,7 @@ import {
 } from '../utils/deviceLock';
 import { EmployeeAttendanceRecap } from './employee/EmployeeAttendanceRecap';
 import { EmployeeLeaveView } from './employee/EmployeeLeaveView';
+import { findRecordForEmployeeAndDate, isLeaveForEmployee } from '../utils/employeeMatcher';
 import { 
   MapPin, 
   CheckCircle2, 
@@ -150,12 +151,10 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
   // Today's record for this employee
   const todayDateStr = currentDate.toISOString().split('T')[0];
-  const todayRecord = attendanceRecords.find(
-    r => r.employeeId === employee.id && r.date === todayDateStr
-  );
+  const todayRecord = findRecordForEmployeeAndDate(attendanceRecords, employee, todayDateStr);
 
   // Count my pending leaves
-  const myPendingLeaves = leaveRequests.filter(r => r.employeeId === employee.id && r.status === 'pending').length;
+  const myPendingLeaves = leaveRequests.filter(r => isLeaveForEmployee(r, employee) && r.status === 'pending').length;
 
   // GPS Refresh via real device GPS (Mudah & Wajib dilakukan sebelum absensi)
   const handleRequestRealGps = () => {

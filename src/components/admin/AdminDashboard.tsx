@@ -14,6 +14,7 @@ import {
   getEmployeeDaySchedule, 
   detectReguMonthlyShiftCalibration 
 } from '../../utils/smartAttendanceCalculator';
+import { isRecordForEmployee, isLeaveForEmployee } from '../../utils/employeeMatcher';
 import { 
   Users, 
   CheckCircle2, 
@@ -113,25 +114,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // 1. Purge bawaan/sample records and ONLY keep records for registered employees
   const cleanAttendanceRecords = useMemo(() => {
     return attendanceRecords.filter(r => 
-      registeredEmployeeMap.has(r.employeeId) &&
+      scopedEmployees.some(e => isRecordForEmployee(r, e)) &&
       !r.id.startsWith('ATT-2026-') &&
       !r.id.startsWith('ATT-HIST-') &&
       !r.id.startsWith('ATT-SAMPLE-')
     );
-  }, [attendanceRecords, registeredEmployeeMap]);
+  }, [attendanceRecords, scopedEmployees]);
 
   // 2. Filter approved leaves covering the selected date for registered employees
   const approvedLeavesForDate = useMemo(() => {
     if (selectedDateFilter === 'all') return [];
     return leaveRequests.filter(lr => 
       lr.status === 'approved' &&
-      registeredEmployeeMap.has(lr.employeeId) &&
+      scopedEmployees.some(e => isLeaveForEmployee(lr, e)) &&
       !lr.id.startsWith('LEAVE-REQ-') &&
       !['LEAVE-REQ-001', 'LEAVE-REQ-002', 'LEAVE-REQ-003'].includes(lr.id) &&
       selectedDateFilter >= lr.startDate &&
       selectedDateFilter <= lr.endDate
     );
-  }, [leaveRequests, selectedDateFilter, registeredEmployeeMap]);
+  }, [leaveRequests, selectedDateFilter, scopedEmployees]);
 
   // 3. Active records for the selected date (Guaranteed clean & synchronized with approved leaves)
   const activeDateRecords = useMemo(() => {
@@ -142,13 +143,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // Merge any approved leave requests for this date that are not yet recorded
     if (selectedDateFilter !== 'all' && approvedLeavesForDate.length > 0) {
-      const existingEmpIds = new Set(records.map(r => r.employeeId));
       const syntheticRecords: AttendanceRecord[] = [];
 
       approvedLeavesForDate.forEach(lr => {
-        if (!existingEmpIds.has(lr.employeeId)) {
-          const emp = registeredEmployeeMap.get(lr.employeeId);
-          if (emp) {
+        const emp = scopedEmployees.find(e => isLeaveForEmployee(lr, e));
+        if (emp) {
+          const alreadyRecorded = records.some(r => isRecordForEmployee(r, emp));
+          if (!alreadyRecorded) {
             const locId = emp.locationSlotId || 1;
             const loc = locations.find(l => l.id === locId) || locations[0];
             syntheticRecords.push({
@@ -182,7 +183,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     return records;
-  }, [cleanAttendanceRecords, selectedDateFilter, approvedLeavesForDate, registeredEmployeeMap, locations]);
+  }, [cleanAttendanceRecords, selectedDateFilter, approvedLeavesForDate, scopedEmployees, locations]);
 
   // Schedule evaluation per employee for the selected date based on dynamic first-attendance calibration
   const employeeScheduleMap = useMemo(() => {
@@ -215,9 +216,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Personel yang sedang lepas piket / libur shift di tanggal ini
   const liburShiftCount = useMemo(() => {
     if (selectedDateFilter === 'all') return 0;
-    const recordedIds = new Set(activeDateRecords.map(r => r.employeeId));
     return scopedEmployees.filter(emp => {
-      if (recordedIds.has(emp.id)) return false;
+      if (activeDateRecords.some(r => isRecordForEmployee(r, emp))) return false;
       const sch = employeeScheduleMap.get(emp.id);
       return sch ? !sch.isWorkDay : false;
     }).length;
@@ -228,9 +228,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (selectedDateFilter === 'all') {
       return Math.max(0, totalEmployees - totalHadir - totalIzinSakit);
     }
-    const recordedIds = new Set(activeDateRecords.map(r => r.employeeId));
     return scopedEmployees.filter(emp => {
-      if (recordedIds.has(emp.id)) return false;
+      if (activeDateRecords.some(r => isRecordForEmployee(r, emp))) return false;
       const sch = employeeScheduleMap.get(emp.id);
       return sch ? sch.isWorkDay : true;
     }).length;
@@ -280,10 +279,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Full employee roster for selected date (combines attendance records with employees who have not checked in yet)
   const fullRoster = useMemo(() => {
-    const recordByEmpId = new Map(activeDateRecords.map(r => [r.employeeId, r]));
-
     return scopedEmployees.map(emp => {
-      const record = recordByEmpId.get(emp.id);
+      const record = activeDateRecords.find(r => isRecordForEmployee(r, emp));
       const loc = locations.find(l => l.id === emp.locationSlotId) || locations[0];
       const sch = employeeScheduleMap.get(emp.id);
       const isOffDay = sch ? !sch.isWorkDay : false;

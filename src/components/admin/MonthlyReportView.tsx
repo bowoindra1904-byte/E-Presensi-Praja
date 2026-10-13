@@ -40,6 +40,7 @@ import {
   DayAttendanceStatus,
   getAllReguMonthlyShiftCalibrations
 } from '../../utils/smartAttendanceCalculator';
+import { filterRecordsForEmployee } from '../../utils/employeeMatcher';
 
 interface MonthlyReportViewProps {
   employees: Employee[];
@@ -147,8 +148,8 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         employees
       );
 
-      const empRecords = attendanceRecords.filter(
-        r => r.employeeId === emp.id && r.date.startsWith(selectedMonth)
+      const empRecords = filterRecordsForEmployee(attendanceRecords, emp).filter(
+        r => r.date.startsWith(selectedMonth)
       );
 
       return {

@@ -43,6 +43,7 @@ import { SatpolPPWatermarkBackground } from './components/SatpolPPWatermarkBackg
 import { Shield, Sparkles, FileText, Printer, KeyRound, Cloud } from 'lucide-react';
 import { testFirestoreConnection } from './services/firebase';
 import { getOrCreateDeviceId } from './utils/deviceLock';
+import { isRecordForEmployee, isLeaveForEmployee } from './utils/employeeMatcher';
 import {
   subscribeEmployees,
   subscribeLocations,
@@ -769,12 +770,36 @@ export default function App() {
       try {
         localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(updated));
       } catch {}
+
+      // Update in-memory attendance and leaves immediately so UI instantly updates
+      setAttendanceRecords(prev => {
+        const next = prev.map(r => {
+          const matching = updated.find(u => isRecordForEmployee(r, u));
+          return matching ? { ...r, employeeId: matching.id, employeeName: matching.name, employeeNip: matching.nip } : r;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      setLeaveRequests(prev => {
+        const next = prev.map(l => {
+          const matching = updated.find(u => isLeaveForEmployee(l, u));
+          return matching ? { ...l, employeeId: matching.id, employeeName: matching.name, employeeNip: matching.nip } : l;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEYS.LEAVE_REQUESTS, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
       handleAddNotification({
         id: `NOTIF-RENUMBER-${Date.now()}`,
         targetRole: 'admin',
         type: 'success',
         title: 'Nomor ID Pegawai Diurutkan',
-        message: `${updated.length} data pegawai berhasil diurutkan rapi mulai dari POLPP-001 secara berurutan.`,
+        message: `${updated.length} data pegawai berhasil diurutkan rapi mulai dari POLPP-001 secara berurutan, dan seluruh rekapan presensi telah disinkronkan.`,
         timestamp: `${currentTimeString} WIB`,
         read: false
       });
@@ -1001,7 +1026,10 @@ export default function App() {
       };
 
       setAttendanceRecords(prev => {
-        const existingIdx = prev.findIndex(r => r.employeeId === req.employeeId && r.date === dateStr);
+        const existingIdx = prev.findIndex(r => 
+          (r.employeeId === req.employeeId || (r.employeeName && r.employeeName === req.employeeName)) && 
+          r.date === dateStr
+        );
         if (existingIdx >= 0) {
           const updated = [...prev];
           updated[existingIdx] = { ...updated[existingIdx], ...leaveRecord };
@@ -1241,7 +1269,10 @@ export default function App() {
       };
 
       setAttendanceRecords(prev => {
-        const existingIdx = prev.findIndex(r => r.employeeId === targetEmp.id && r.date === dateStr);
+        const existingIdx = prev.findIndex(r => 
+          (r.employeeId === targetEmp.id || (r.employeeName && r.employeeName === targetEmp.name)) && 
+          r.date === dateStr
+        );
         if (existingIdx >= 0) {
           const updated = [...prev];
           updated[existingIdx] = { 

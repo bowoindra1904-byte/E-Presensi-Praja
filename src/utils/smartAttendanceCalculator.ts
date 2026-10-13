@@ -1,4 +1,11 @@
 import { Employee, AttendanceRecord, LeaveRequest, WorkLocation, ReguType, ScheduleType, CustomHoliday, MonthlyShiftCalibration } from '../types';
+import { 
+  isRecordForEmployee, 
+  isLeaveForEmployee, 
+  filterRecordsForEmployee, 
+  filterLeavesForEmployee, 
+  findRecordForEmployeeAndDate 
+} from './employeeMatcher';
 
 // ============================================================================
 // DAFTAR HARI LIBUR NASIONAL RESMI INDONESIA (HARI BESAR LAINNYA) TAHUN 2026
@@ -161,7 +168,10 @@ export function detectReguMonthlyShiftCalibration(
 
   // Jika spesifik untuk 1 personel, cek apakah personel ini sudah memiliki absen perdana di bulan ini
   if (specificEmployeeId) {
-    const personalRecords = validRecordsInMonth.filter(r => r.employeeId === specificEmployeeId);
+    const targetEmp = employees?.find(e => e.id === specificEmployeeId);
+    const personalRecords = targetEmp 
+      ? filterRecordsForEmployee(validRecordsInMonth, targetEmp)
+      : validRecordsInMonth.filter(r => r.employeeId === specificEmployeeId);
     if (personalRecords.length > 0) {
       personalRecords.sort((a, b) => a.date.localeCompare(b.date) || (a.checkInTime || '').localeCompare(b.checkInTime || ''));
       const first = personalRecords[0];
@@ -468,12 +478,12 @@ export function evaluateEmployeeDayAttendance(
 ): DayAttendanceStatus {
   const schedule = getEmployeeDaySchedule(employee.scheduleType, employee.regu, dateStr, customHolidays, calibration);
 
-  // 1. Cari record presensi di tanggal ini
-  const record = records.find(r => r.employeeId === employee.id && r.date === dateStr);
+  // 1. Cari record presensi di tanggal ini secara aman & anti salah kamar
+  const record = findRecordForEmployeeAndDate(records, employee, dateStr);
 
   // 2. Cari izin / sakit / dispensasi kantor yang disetujui (approved) pada rentang tanggal ini
   const approvedLeave = leaveRequests.find(l => {
-    if (l.employeeId !== employee.id || l.status !== 'approved') return false;
+    if (!isLeaveForEmployee(l, employee) || l.status !== 'approved') return false;
     return dateStr >= l.startDate && dateStr <= l.endDate;
   });
 
@@ -658,14 +668,13 @@ export function calculateSmartMonthlyReport(
         ? detectReguMonthlyShiftCalibration(employee.regu, selectedMonth, allAttendanceRecords, allEmployees, employee.id)
         : null);
 
-  // Filter records & leaves untuk pegawai ini
-  const empRecords = allAttendanceRecords.filter(
-    r => r.employeeId === employee.id && r.date.startsWith(selectedMonth)
+  // Filter records & leaves untuk pegawai ini secara aman & anti salah kamar
+  const empRecords = filterRecordsForEmployee(allAttendanceRecords, employee).filter(
+    r => r.date.startsWith(selectedMonth)
   );
 
-  const empLeaves = allLeaveRequests.filter(
-    l => l.employeeId === employee.id && l.status === 'approved' &&
-      !l.id.startsWith('LEAVE-SAMPLE-')
+  const empLeaves = filterLeavesForEmployee(allLeaveRequests, employee).filter(
+    l => l.status === 'approved' && !l.id.startsWith('LEAVE-SAMPLE-')
   );
 
   // Ambil lokasi
@@ -734,13 +743,21 @@ export function calculateSmartMonthlyReport(
   // Pemutihan menyesuaikan sebagai kehadiran sah
   const totalHadirSah = hadirCount + pemutihanCount;
 
+  // Cek apakah bulan yang dipilih berada di masa depan
+  const currentMonthYear = todayStr.substring(0, 7);
+  const isFutureMonth = selectedMonth > currentMonthYear;
+
   // Persentase Kehadiran Pintar Otomatis
-  // Dihitung berdasarkan target hari kerja yang telah berlangsung dari awal bulan
-  const evaluatedTargetDays = targetWorkDays > 0 ? targetWorkDays : Math.max(1, totalMonthWorkDays);
-  const rawAttendanceRate = evaluatedTargetDays > 0 
-    ? Math.round((totalHadirSah / evaluatedTargetDays) * 100) 
-    : 100;
-  const attendanceRate = Math.min(100, Math.max(0, isNaN(rawAttendanceRate) ? 100 : rawAttendanceRate));
+  // Dihitung berdasarkan target hari kerja yang telah berlangsung dari awal bulan s.d hari ini
+  const evaluatedTargetDays = isFutureMonth 
+    ? 0 
+    : (targetWorkDays > 0 ? targetWorkDays : (selectedMonth === currentMonthYear ? targetWorkDays : totalMonthWorkDays));
+
+  let attendanceRate = 100;
+  if (!isFutureMonth && evaluatedTargetDays > 0) {
+    const rawAttendanceRate = Math.round((totalHadirSah / evaluatedTargetDays) * 100);
+    attendanceRate = Math.min(100, Math.max(0, isNaN(rawAttendanceRate) ? 100 : rawAttendanceRate));
+  }
 
   // Tingkat Disiplin Ketepatan Waktu (antara yang hadir)
   const rawDisciplineRate = hadirCount > 0 
@@ -750,7 +767,9 @@ export function calculateSmartMonthlyReport(
 
   // Pola Evaluasi
   let attendancePattern = "Disiplin Prima (100% Hadir Tepat Waktu)";
-  if (tanpaKeteranganCount > 0) {
+  if (isFutureMonth) {
+    attendancePattern = "Jadwal Penugasan Mendatang";
+  } else if (tanpaKeteranganCount > 0) {
     attendancePattern = `Tindakan Disiplin (${tanpaKeteranganCount} Hari TK/Alpha)`;
   } else if (attendanceRate === 100 && lateCount === 0) {
     attendancePattern = "Sempurna (100% Hadir Tepat Waktu)";

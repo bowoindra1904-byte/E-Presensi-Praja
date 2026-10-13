@@ -16,6 +16,7 @@ import { INITIAL_EMPLOYEES, isLegacyDummyEmployee } from '../data/initialEmploye
 import { INITIAL_WORK_LOCATIONS } from '../data/initialLocations';
 import { generateInitialLeaveRequests } from '../data/initialAttendance';
 import { INITIAL_ADMIN_ACCOUNTS } from '../data/initialAdmins';
+import { normalizeName, normalizeNip } from '../utils/employeeMatcher';
 
 // 1. Subscribe to Employees (Hanya memuat pegawai riil & otomatis membersihkan data dummy bawaan)
 export function subscribeEmployees(onData: (employees: Employee[]) => void) {
@@ -452,7 +453,7 @@ export async function syncSaveAdminAccount(account: AdminAccount): Promise<void>
   await setDoc(docRef, cleanFirestoreData(account), { merge: true });
 }
 
-// 9. Renumber Employee IDs starting from POLPP-001 sequentially
+// 9. Renumber Employee IDs starting from POLPP-001 sequentially with full cascade update to attendance & leaves
 export async function syncRenumberEmployeeIds(currentEmployees: Employee[]): Promise<Employee[]> {
   const sorted = [...currentEmployees].sort((a, b) => {
     const numA = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
@@ -462,9 +463,11 @@ export async function syncRenumberEmployeeIds(currentEmployees: Employee[]): Pro
 
   const renumbered: Employee[] = [];
   const oldIdsToDelete: string[] = [];
+  const idMap = new Map<string, string>(); // oldId -> newId
 
   sorted.forEach((emp, index) => {
     const newId = `POLPP-${String(index + 1).padStart(3, '0')}`;
+    idMap.set(emp.id, newId);
     if (emp.id !== newId) {
       oldIdsToDelete.push(emp.id);
     }
@@ -474,14 +477,128 @@ export async function syncRenumberEmployeeIds(currentEmployees: Employee[]): Pro
     });
   });
 
-  const batch = writeBatch(db);
+  // 1. Update Employee collection
+  const empBatch = writeBatch(db);
   for (const oldId of oldIdsToDelete) {
-    batch.delete(doc(db, 'employees', oldId));
+    empBatch.delete(doc(db, 'employees', oldId));
   }
   for (const emp of renumbered) {
-    batch.set(doc(db, 'employees', emp.id), cleanFirestoreData(emp));
+    empBatch.set(doc(db, 'employees', emp.id), cleanFirestoreData(emp));
   }
-  await batch.commit();
+  await empBatch.commit();
+
+  // Helper matching function for documents
+  const findMatchingRenumberedEmp = (docName?: string, docNip?: string, docOldId?: string): Employee | undefined => {
+    const cleanN = normalizeName(docName);
+    const cleanP = normalizeNip(docNip);
+
+    // Primary: match by valid NIP
+    if (cleanP && cleanP.length >= 6 && cleanP !== '123' && cleanP !== '123456') {
+      const byNip = renumbered.find(e => normalizeNip(e.nip) === cleanP);
+      if (byNip) return byNip;
+    }
+
+    // Secondary: match by Name
+    if (cleanN) {
+      const byName = renumbered.find(e => {
+        const en = normalizeName(e.name);
+        return en === cleanN || (cleanN.length >= 4 && en.startsWith(cleanN)) || (en.length >= 4 && cleanN.startsWith(en));
+      });
+      if (byName) return byName;
+    }
+
+    // Fallback: match by oldId mapping
+    if (docOldId && idMap.has(docOldId)) {
+      const targetId = idMap.get(docOldId);
+      return renumbered.find(e => e.id === targetId);
+    }
+
+    return undefined;
+  };
+
+  // 2. Cascade update to Attendance records
+  try {
+    const attSnap = await getDocs(collection(db, 'attendance'));
+    const attBatch = writeBatch(db);
+    let attUpdatedCount = 0;
+
+    attSnap.forEach(d => {
+      const data = d.data() as AttendanceRecord;
+      const matched = findMatchingRenumberedEmp(data.employeeName, data.employeeNip, data.employeeId);
+      if (matched) {
+        if (data.employeeId !== matched.id || data.employeeName !== matched.name || data.employeeNip !== matched.nip) {
+          attBatch.update(doc(db, 'attendance', d.id), {
+            employeeId: matched.id,
+            employeeName: matched.name,
+            employeeNip: matched.nip,
+            regu: matched.regu,
+            scheduleType: matched.scheduleType
+          });
+          attUpdatedCount++;
+        }
+      }
+    });
+
+    if (attUpdatedCount > 0) {
+      await attBatch.commit();
+    }
+  } catch (err) {
+    console.error('Error cascading renumber to attendance:', err);
+  }
+
+  // 3. Cascade update to Leave Requests
+  try {
+    const leaveSnap = await getDocs(collection(db, 'leave_requests'));
+    const leaveBatch = writeBatch(db);
+    let leaveUpdatedCount = 0;
+
+    leaveSnap.forEach(d => {
+      const data = d.data() as LeaveRequest;
+      const matched = findMatchingRenumberedEmp(data.employeeName, data.employeeNip, data.employeeId);
+      if (matched) {
+        if (data.employeeId !== matched.id || data.employeeName !== matched.name || data.employeeNip !== matched.nip) {
+          leaveBatch.update(doc(db, 'leave_requests', d.id), {
+            employeeId: matched.id,
+            employeeName: matched.name,
+            employeeNip: matched.nip,
+            regu: matched.regu
+          });
+          leaveUpdatedCount++;
+        }
+      }
+    });
+
+    if (leaveUpdatedCount > 0) {
+      await leaveBatch.commit();
+    }
+  } catch (err) {
+    console.error('Error cascading renumber to leave requests:', err);
+  }
+
+  // 4. Cascade update to Security Logs
+  try {
+    const secSnap = await getDocs(collection(db, 'security_logs'));
+    const secBatch = writeBatch(db);
+    let secUpdatedCount = 0;
+
+    secSnap.forEach(d => {
+      const data = d.data() as SecurityLog;
+      const matched = findMatchingRenumberedEmp(data.employeeName, undefined, data.employeeId);
+      if (matched && data.employeeId !== matched.id) {
+        secBatch.update(doc(db, 'security_logs', d.id), {
+          employeeId: matched.id,
+          employeeName: matched.name
+        });
+        secUpdatedCount++;
+      }
+    });
+
+    if (secUpdatedCount > 0) {
+      await secBatch.commit();
+    }
+  } catch (err) {
+    console.error('Error cascading renumber to security logs:', err);
+  }
 
   return renumbered;
 }

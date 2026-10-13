@@ -23,6 +23,7 @@ import {
   INDONESIAN_MONTH_NAMES,
   INDONESIAN_DAY_NAMES
 } from '../../utils/smartAttendanceCalculator';
+import { isRecordForEmployee } from '../../utils/employeeMatcher';
 
 interface EmployeeAttendanceRecapProps {
   employee: Employee;
@@ -68,7 +69,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
   // Filter records for this employee and selected month (for logs view)
   const monthlyRecords = useMemo(() => {
     return attendanceRecords.filter((r) => {
-      if (r.employeeId !== employee.id) return false;
+      if (!isRecordForEmployee(r, employee)) return false;
       const isSameMonth = r.date.startsWith(selectedMonth);
       if (!isSameMonth) return false;
 
