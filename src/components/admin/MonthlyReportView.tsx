@@ -186,6 +186,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         izinCount: smart.izinCount,
         tanpaKeteranganCount: smart.tanpaKeteranganCount,
         pemutihanCount: smart.pemutihanCount,
+        tidakTapPulangCount: smart.tidakTapPulangCount,
         liburCount: smart.liburCount,
         totalHadirSah: smart.totalHadirSah,
         attendanceRate: smart.attendanceRate,
