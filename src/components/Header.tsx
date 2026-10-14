@@ -37,7 +37,7 @@ interface HeaderProps {
   onLogout: () => void;
   simulatedTime: Date | null;
   onOpenTimeSimulator: () => void;
-  currentTimeString: string;
+  currentTimeString?: string;
   notifications: NotificationItem[];
   onMarkNotificationAsRead: (id: string) => void;
   onMarkAllNotificationsAsRead: () => void;
@@ -50,6 +50,43 @@ interface HeaderProps {
   pendingLeavesCount?: number;
   customHolidaysCount?: number;
 }
+
+const HeaderClock: React.FC<{
+  simulatedTime: Date | null;
+  fallbackTimeString?: string;
+}> = React.memo(({ simulatedTime, fallbackTimeString }) => {
+  const [timeStr, setTimeStr] = useState<string>(() => {
+    if (simulatedTime) return simulatedTime.toLocaleTimeString('id-ID', { hour12: false });
+    return fallbackTimeString || new Date().toLocaleTimeString('id-ID', { hour12: false });
+  });
+
+  React.useEffect(() => {
+    if (simulatedTime) {
+      setTimeStr(simulatedTime.toLocaleTimeString('id-ID', { hour12: false }));
+      return;
+    }
+    const updateTime = () => {
+      setTimeStr(new Date().toLocaleTimeString('id-ID', { hour12: false }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [simulatedTime]);
+
+  return (
+    <div
+      className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] sm:text-xs font-mono font-bold text-amber-700 shadow-2xs shrink-0"
+      title={simulatedTime ? "Mode Simulasi Waktu Absensi Aktif" : "Waktu Nyata Terverifikasi (WIB)"}
+    >
+      <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0 animate-pulse" />
+      <span className="tracking-tight">{timeStr}</span>
+      <span className="text-[9px] text-slate-500 font-sans hidden sm:inline">WIB</span>
+      {simulatedTime && (
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-ping" title="Simulasi Waktu" />
+      )}
+    </div>
+  );
+});
 
 export const Header: React.FC<HeaderProps> = ({
   currentRole,
@@ -333,18 +370,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClearAll={onClearAllNotifications}
             />
 
-            {/* Real-time Clock Display */}
-            <div
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] sm:text-xs font-mono font-bold text-amber-700 shadow-2xs shrink-0"
-              title={simulatedTime ? "Mode Simulasi Waktu Absensi Aktif" : "Waktu Nyata Terverifikasi (WIB)"}
-            >
-              <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0 animate-pulse" />
-              <span className="tracking-tight">{currentTimeString}</span>
-              <span className="text-[9px] text-slate-500 font-sans hidden sm:inline">WIB</span>
-              {simulatedTime && (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-ping" title="Simulasi Waktu" />
-              )}
-            </div>
+            {/* Real-time Isolated Clock Display */}
+            <HeaderClock simulatedTime={simulatedTime} fallbackTimeString={currentTimeString} />
 
             {/* Panduan Button (Desktop) */}
             {onOpenGuideModal && (

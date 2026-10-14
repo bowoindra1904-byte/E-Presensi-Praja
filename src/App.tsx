@@ -476,15 +476,16 @@ export default function App() {
     }
   }, [leaveRequests, employees, locations]);
 
-  // Clock Ticker (Runs every second)
+  // Clock Ticker (Runs every 30s in standard mode to prevent laggy whole-app re-render cycles, or 1s only when simulated time is active)
   useEffect(() => {
+    const intervalMs = simulatedTime ? 1000 : 30000;
     const timer = setInterval(() => {
       if (simulatedTime) {
         setSimulatedTime(prev => prev ? new Date(prev.getTime() + 1000) : null);
       } else {
         setCurrentDateTime(new Date());
       }
-    }, 1000);
+    }, intervalMs);
     return () => clearInterval(timer);
   }, [simulatedTime]);
 
@@ -586,9 +587,10 @@ export default function App() {
           localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'false');
         } catch {}
 
+        const evictTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
         const evictLog: SecurityLog = {
           id: `SEC-EVICT-${Date.now()}`,
-          timestamp: `Hari Ini, ${currentTimeString} WIB`,
+          timestamp: `Hari Ini, ${evictTimeStr} WIB`,
           employeeId: currentEmp.id,
           employeeName: currentEmp.name,
           eventType: 'device_mismatch',
@@ -604,12 +606,12 @@ export default function App() {
           type: 'security',
           title: `Akses HP Lain Diputus: ${currentEmp.name}`,
           message: `Sesi ${currentEmp.name} diputus paksa di perangkat [${currentDev.deviceName}] karena akun telah terkunci di perangkat dinas resmi lain.`,
-          timestamp: `${currentTimeString} WIB`,
+          timestamp: `${evictTimeStr} WIB`,
           read: false
         });
       }
     }
-  }, [isLoggedIn, currentRole, activeEmployeeId, employees, currentTimeString]);
+  }, [isLoggedIn, currentRole, activeEmployeeId, employees]);
 
   // Handlers
   const handleAddNotification = (notif: NotificationItem) => {
@@ -1836,42 +1838,50 @@ export default function App() {
       </footer>
 
       {/* Time Simulator Modal */}
-      <TimeSimulatorModal
-        isOpen={isTimeSimulatorOpen}
-        onClose={() => setIsTimeSimulatorOpen(false)}
-        currentSimulatedTime={simulatedTime}
-        onApplySimulatedTime={setSimulatedTime}
-      />
+      {isTimeSimulatorOpen && (
+        <TimeSimulatorModal
+          isOpen={isTimeSimulatorOpen}
+          onClose={() => setIsTimeSimulatorOpen(false)}
+          currentSimulatedTime={simulatedTime}
+          onApplySimulatedTime={setSimulatedTime}
+        />
+      )}
 
       {/* Multi-Admin Account & PIN Management Modal (Isolated self-management) */}
-      <AdminAccountModal
-        isOpen={isAdminPinModalOpen}
-        onClose={() => setIsAdminPinModalOpen(false)}
-        currentAdmin={currentAdmin}
-        allAdmins={adminAccounts}
-        onUpdateAdminAccount={handleUpdateAdminAccount}
-      />
+      {isAdminPinModalOpen && (
+        <AdminAccountModal
+          isOpen={isAdminPinModalOpen}
+          onClose={() => setIsAdminPinModalOpen(false)}
+          currentAdmin={currentAdmin}
+          allAdmins={adminAccounts}
+          onUpdateAdminAccount={handleUpdateAdminAccount}
+        />
+      )}
 
       {/* Official Satpol PP Document Print Center Modal */}
-      <PrintReportModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        defaultMenu={printDefaultMenu}
-        currentAdmin={currentAdmin}
-        employees={employees}
-        locations={locations}
-        attendanceRecords={attendanceRecords}
-        securityLogs={securityLogs}
-        currentDate={effectiveCurrentDate}
-        leaveRequests={leaveRequests}
-      />
+      {isPrintModalOpen && (
+        <PrintReportModal
+          isOpen={isPrintModalOpen}
+          onClose={() => setIsPrintModalOpen(false)}
+          defaultMenu={printDefaultMenu}
+          currentAdmin={currentAdmin}
+          employees={employees}
+          locations={locations}
+          attendanceRecords={attendanceRecords}
+          securityLogs={securityLogs}
+          currentDate={effectiveCurrentDate}
+          leaveRequests={leaveRequests}
+        />
+      )}
 
       {/* Petunjuk Operasional & SOP Dinas Modal */}
-      <OperationalGuideModal
-        isOpen={isGuideModalOpen}
-        onClose={() => setIsGuideModalOpen(false)}
-        currentRole={currentRole}
-      />
+      {isGuideModalOpen && (
+        <OperationalGuideModal
+          isOpen={isGuideModalOpen}
+          onClose={() => setIsGuideModalOpen(false)}
+          currentRole={currentRole}
+        />
+      )}
 
     </div>
   );

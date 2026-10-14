@@ -24,6 +24,7 @@ import {
   Grid,
   Info,
   ChevronRight,
+  ChevronLeft,
   Eye,
   Sparkles,
   CalendarDays,
@@ -96,6 +97,10 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   
   // View mode: 'summary' = Tabel Ringkasan & Persentase, 'matrix' = Matriks Harian (1-31)
   const [viewMode, setViewMode] = useState<'summary' | 'matrix'>('summary');
+
+  // Pagination for high-performance rendering (eliminating 2,400+ DOM nodes lag)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(30);
 
   // Selected Employee Modal for detailed day-by-day calendar
   const [selectedEmpForCalendar, setSelectedEmpForCalendar] = useState<MonthlyEmployeeReport | null>(null);
@@ -207,6 +212,19 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       return matchSlot && matchSchedule && matchRegu && matchSearch;
     });
   }, [monthlyReports, selectedSlot, selectedSchedule, selectedRegu, searchQuery]);
+
+  // Reset to page 1 on filter query change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSlot, selectedSchedule, selectedRegu, searchQuery, selectedMonth]);
+
+  // Paginated dataset for snappy rendering
+  const totalPages = pageSize === -1 ? 1 : Math.ceil(filteredReports.length / pageSize) || 1;
+  const paginatedReports = useMemo(() => {
+    if (pageSize === -1) return filteredReports;
+    const start = (currentPage - 1) * pageSize;
+    return filteredReports.slice(start, start + pageSize);
+  }, [filteredReports, currentPage, pageSize]);
 
   // Aggregate monthly stats
   const totalAccumulatedHours = filteredReports.reduce((acc, curr) => acc + (isNaN(curr.totalWorkHours) ? 0 : curr.totalWorkHours), 0);
@@ -875,7 +893,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
           <>
             {/* Mobile View: HP Card List */}
             <div className="sm:hidden p-3 space-y-3">
-              {filteredReports.map((item) => (
+              {paginatedReports.map((item) => (
                 <div key={item.employeeId} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 shadow-2xs">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">

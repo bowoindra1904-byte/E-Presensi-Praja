@@ -112,11 +112,24 @@ export interface DayAttendanceStatus extends DayScheduleInfo {
 // ============================================================================
 export const SHIFT_CALIBRATION_STORAGE_KEY = 'satpol_pp_monthly_shift_calibrations';
 
+let cachedStoredShiftCalibrations: MonthlyShiftCalibration[] | null = null;
+const reguMonthlyCalibrationCache = new Map<string, MonthlyShiftCalibration>();
+
+export function invalidateStoredShiftCalibrationsCache(): void {
+  cachedStoredShiftCalibrations = null;
+  reguMonthlyCalibrationCache.clear();
+}
+
 export function getStoredShiftCalibrations(): MonthlyShiftCalibration[] {
+  if (cachedStoredShiftCalibrations !== null) {
+    return cachedStoredShiftCalibrations;
+  }
   try {
     const raw = localStorage.getItem(SHIFT_CALIBRATION_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    cachedStoredShiftCalibrations = raw ? JSON.parse(raw) : [];
+    return cachedStoredShiftCalibrations || [];
   } catch {
+    cachedStoredShiftCalibrations = [];
     return [];
   }
 }
@@ -126,6 +139,8 @@ export function saveStoredShiftCalibration(calibration: MonthlyShiftCalibration)
     const existing = getStoredShiftCalibrations();
     const filtered = existing.filter(c => !(c.month === calibration.month && c.regu === calibration.regu));
     filtered.push(calibration);
+    cachedStoredShiftCalibrations = filtered;
+    reguMonthlyCalibrationCache.clear();
     localStorage.setItem(SHIFT_CALIBRATION_STORAGE_KEY, JSON.stringify(filtered));
   } catch (err) {
     console.error('Failed to save calibration:', err);
@@ -136,6 +151,8 @@ export function removeStoredShiftCalibration(month: string, regu: ReguType | str
   try {
     const existing = getStoredShiftCalibrations();
     const filtered = existing.filter(c => !(c.month === month && c.regu === regu));
+    cachedStoredShiftCalibrations = filtered;
+    reguMonthlyCalibrationCache.clear();
     localStorage.setItem(SHIFT_CALIBRATION_STORAGE_KEY, JSON.stringify(filtered));
   } catch (err) {
     console.error('Failed to remove calibration:', err);
@@ -154,10 +171,17 @@ export function detectReguMonthlyShiftCalibration(
   employees?: Employee[],
   specificEmployeeId?: string
 ): MonthlyShiftCalibration {
+  // Check memory cache for non-specific regu lookups
+  const cacheKey = !specificEmployeeId ? `${monthStr}:${regu}` : null;
+  if (cacheKey && reguMonthlyCalibrationCache.has(cacheKey)) {
+    return reguMonthlyCalibrationCache.get(cacheKey)!;
+  }
+
   // 1. Cek apakah ada penyesuaian manual yang tersimpan di sistem oleh Admin / Danru
   const storedList = getStoredShiftCalibrations();
   const manualConfig = storedList.find(c => c.month === monthStr && c.regu === regu && !c.isAutoDetected);
   if (manualConfig) {
+    if (cacheKey) reguMonthlyCalibrationCache.set(cacheKey, manualConfig);
     return manualConfig;
   }
 
@@ -466,27 +490,20 @@ export function getEmployeeDaySchedule(
 }
 
 /**
- * Evaluasi status presensi per hari untuk seorang pegawai
+ * Evaluasi status presensi per hari untuk seorang pegawai (Versi Teroptimasi O(1))
  */
-export function evaluateEmployeeDayAttendance(
+export function evaluateEmployeeDayAttendanceFast(
   employee: Employee,
   dateStr: string,
-  records: AttendanceRecord[],
-  leaveRequests: LeaveRequest[],
+  record: AttendanceRecord | undefined,
+  approvedLeave: LeaveRequest | undefined,
   todayStr: string,
   customHolidays?: CustomHoliday[],
-  calibration?: MonthlyShiftCalibration | null
+  calibration?: MonthlyShiftCalibration | null,
+  currentTotalMinutes?: number,
+  isFridayToday?: boolean
 ): DayAttendanceStatus {
   const schedule = getEmployeeDaySchedule(employee.scheduleType, employee.regu, dateStr, customHolidays, calibration);
-
-  // 1. Cari record presensi di tanggal ini secara aman & anti salah kamar
-  const record = findRecordForEmployeeAndDate(records, employee, dateStr);
-
-  // 2. Cari izin / sakit / dispensasi kantor yang disetujui (approved) pada rentang tanggal ini
-  const approvedLeave = leaveRequests.find(l => {
-    if (!isLeaveForEmployee(l, employee) || l.status !== 'approved') return false;
-    return dateStr >= l.startDate && dateStr <= l.endDate;
-  });
 
   // Apakah hari ini sudah berlangsung atau masih di masa depan
   const isPastOrToday = dateStr <= todayStr;
@@ -500,7 +517,6 @@ export function evaluateEmployeeDayAttendance(
 
   // Evaluasi Kode S, I, TK, P, H, T, L, -
   if (isDispensation) {
-    // PEMUTIHAN: Menyesuaikan sebagai kehadiran sah!
     return {
       ...schedule,
       code: 'P',
@@ -543,19 +559,17 @@ export function evaluateEmployeeDayAttendance(
     // Evaluasi Kedisiplinan Opsi A: Apakah dinas sudah selesai dan pegawai tidak absen pulang?
     let isDutyEnded = dateStr < todayStr;
     if (dateStr === todayStr) {
-      const now = new Date();
-      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-      const isFriday = now.getDay() === 5;
+      const totalM = currentTotalMinutes !== undefined ? currentTotalMinutes : (new Date().getHours() * 60 + new Date().getMinutes());
+      const isFri = isFridayToday !== undefined ? isFridayToday : (new Date().getDay() === 5);
       const endOfDayMinutes = employee.scheduleType === 'harian'
-        ? (isFriday ? 16 * 60 + 30 : 16 * 60)
+        ? (isFri ? 16 * 60 + 30 : 16 * 60)
         : 20 * 60; // Shift Pagi selesai 20:00 WIB
-      if (currentTotalMinutes >= endOfDayMinutes) {
+      if (totalM >= endOfDayMinutes) {
         isDutyEnded = true;
       }
     }
 
     const isMissingCheckOut = isDutyEnded && (!record.checkOutTime || record.checkOutTime === '-');
-    // Sanksi Opsi A: Jika tidak absen pulang saat dinas usai, jam kerja dipotong menjadi 4 jam
     const workHours = isMissingCheckOut 
       ? 4 
       : (employee.scheduleType === 'shift' ? 12 : 8.5);
@@ -580,7 +594,6 @@ export function evaluateEmployeeDayAttendance(
 
   // Jika TIDAK ADA absensi dan TIDAK ADA izin/sakit/pemutihan
   if (!schedule.isWorkDay) {
-    // Memang hari libur (Sabtu/Minggu/Tanggal Merah untuk Harian, atau Off Siklus untuk Shift)
     return {
       ...schedule,
       code: 'L',
@@ -592,7 +605,6 @@ export function evaluateEmployeeDayAttendance(
 
   // Jadwal dinas / Hari Kerja tapi TIDAK ABSEN
   if (isPastOrToday) {
-    // Sudah lewat / hari ini dan tidak ada absen -> TANPA KETERANGAN (TK / ALPHA)
     return {
       ...schedule,
       code: 'TK',
@@ -601,7 +613,6 @@ export function evaluateEmployeeDayAttendance(
       workHours: 0
     };
   } else {
-    // Belum berlangsung (tanggal di masa mendatang)
     return {
       ...schedule,
       code: '-',
@@ -610,6 +621,38 @@ export function evaluateEmployeeDayAttendance(
       workHours: 0
     };
   }
+}
+
+/**
+ * Evaluasi status presensi per hari untuk seorang pegawai (Kompatibel penuh)
+ */
+export function evaluateEmployeeDayAttendance(
+  employee: Employee,
+  dateStr: string,
+  records: AttendanceRecord[],
+  leaveRequests: LeaveRequest[],
+  todayStr: string,
+  customHolidays?: CustomHoliday[],
+  calibration?: MonthlyShiftCalibration | null
+): DayAttendanceStatus {
+  // 1. Cari record presensi di tanggal ini secara aman & anti salah kamar
+  const record = findRecordForEmployeeAndDate(records, employee, dateStr);
+
+  // 2. Cari izin / sakit / dispensasi kantor yang disetujui (approved) pada rentang tanggal ini
+  const approvedLeave = leaveRequests.find(l => {
+    if (!isLeaveForEmployee(l, employee) || l.status !== 'approved') return false;
+    return dateStr >= l.startDate && dateStr <= l.endDate;
+  });
+
+  return evaluateEmployeeDayAttendanceFast(
+    employee,
+    dateStr,
+    record,
+    approvedLeave,
+    todayStr,
+    customHolidays,
+    calibration
+  );
 }
 
 export interface SmartMonthlyReportResult {
@@ -708,12 +751,43 @@ export function calculateSmartMonthlyReport(
     l => l.status === 'approved' && !l.id.startsWith('LEAVE-SAMPLE-')
   );
 
+  // Pre-index empRecords by date for O(1) instant lookup
+  const recordByDate = new Map<string, AttendanceRecord>();
+  for (let i = 0; i < empRecords.length; i++) {
+    recordByDate.set(empRecords[i].date, empRecords[i]);
+  }
+
+  // Pre-index empLeaves by date for O(1) instant lookup
+  const leaveByDate = new Map<string, LeaveRequest>();
+  for (let i = 0; i < empLeaves.length; i++) {
+    const l = empLeaves[i];
+    if (l.startDate && l.endDate && l.startDate <= l.endDate) {
+      let cur = l.startDate;
+      while (cur <= l.endDate && cur.slice(0, 7) <= selectedMonth) {
+        if (cur.startsWith(selectedMonth) && !leaveByDate.has(cur)) {
+          leaveByDate.set(cur, l);
+        }
+        const [cy, cm, cd] = cur.split('-').map(Number);
+        const nextD = new Date(cy, cm - 1, cd + 1);
+        const ny = nextD.getFullYear();
+        const nm = String(nextD.getMonth() + 1).padStart(2, '0');
+        const nd = String(nextD.getDate()).padStart(2, '0');
+        cur = `${ny}-${nm}-${nd}`;
+      }
+    }
+  }
+
   // Ambil lokasi
   const loc = locations.find(l => 
     String(l.id) === String(employee.locationSlotId) || 
     Number(l.slotNumber) === Number(employee.locationSlotId) || 
     Number(l.id) === Number(employee.locationSlotId)
   ) || locations[0];
+
+  // Pre-compute current time for the duty-ended evaluation once per employee
+  const now = new Date();
+  const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+  const isFridayToday = now.getDay() === 5;
 
   // Susun rincian harian 1 s/d daysInMonth
   const dailyBreakdown: DayAttendanceStatus[] = [];
@@ -732,14 +806,16 @@ export function calculateSmartMonthlyReport(
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dayStr = `${selectedMonth}-${String(day).padStart(2, '0')}`;
-    const status = evaluateEmployeeDayAttendance(
+    const status = evaluateEmployeeDayAttendanceFast(
       employee, 
       dayStr, 
-      empRecords, 
-      empLeaves, 
+      recordByDate.get(dayStr), 
+      leaveByDate.get(dayStr), 
       todayStr, 
       customHolidays,
-      calibration
+      calibration,
+      currentTotalMinutes,
+      isFridayToday
     );
     dailyBreakdown.push(status);
 
