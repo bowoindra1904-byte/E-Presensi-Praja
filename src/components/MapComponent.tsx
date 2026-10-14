@@ -34,40 +34,54 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   // Map type state: DEFAULT IS SATELLITE (Tampilan Peta Satelit)
   const [mapType, setMapType] = useState<MapViewType>(defaultMapType);
 
-  // Initialize Leaflet Map
+  // Initialize Leaflet Map safely for mobile viewports
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    const container = mapContainerRef.current;
+    if (!container) return;
 
-    if (!mapInstanceRef.current) {
-      const activeLoc = locations.find(l => l.id === activeLocationId) || locations[0];
-      const initialCenter: [number, number] = userCoords
-        ? [userCoords.latitude, userCoords.longitude]
-        : activeLoc
-        ? [activeLoc.latitude, activeLoc.longitude]
-        : [-6.1825, 106.8285];
-
-      const map = L.map(mapContainerRef.current, {
-        center: initialCenter,
-        zoom: zoom,
-        zoomControl: false, // Custom placed zoom control
-        dragging: interactive,
-        scrollWheelZoom: interactive,
-        attributionControl: false,
-      });
-
-      // Add zoom control at bottomright so top-right is clean for satellite switcher
-      if (interactive) {
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+    try {
+      // Clear leftover leaflet instance id on container to prevent "Map container is already initialized" crash
+      if ((container as any)._leaflet_id) {
+        delete (container as any)._leaflet_id;
       }
 
-      layerGroupRef.current = L.layerGroup().addTo(map);
-      mapInstanceRef.current = map;
+      if (!mapInstanceRef.current) {
+        const activeLoc = locations.find(l => l.id === activeLocationId) || locations[0];
+        const initialCenter: [number, number] = userCoords
+          ? [userCoords.latitude, userCoords.longitude]
+          : activeLoc
+          ? [activeLoc.latitude, activeLoc.longitude]
+          : [-6.1825, 106.8285];
+
+        const map = L.map(container, {
+          center: initialCenter,
+          zoom: zoom,
+          zoomControl: false, // Custom placed zoom control
+          dragging: interactive,
+          scrollWheelZoom: interactive,
+          attributionControl: false,
+        });
+
+        // Add zoom control at bottomright so top-right is clean for satellite switcher
+        if (interactive) {
+          L.control.zoom({ position: 'bottomright' }).addTo(map);
+        }
+
+        layerGroupRef.current = L.layerGroup().addTo(map);
+        mapInstanceRef.current = map;
+      }
+    } catch (err) {
+      console.warn('Leaflet map initialization notice:', err);
     }
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+      try {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+      } catch (err) {
+        console.warn('Leaflet map cleanup notice:', err);
       }
     };
   }, []);

@@ -65,7 +65,11 @@ export function forceSetDeviceId(newDeviceId: string, deviceName = "Perangkat La
     resolution: "1080x2400",
     generatedAt: new Date().toISOString()
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
+  } catch {
+    // ignore
+  }
   return info;
 }
 

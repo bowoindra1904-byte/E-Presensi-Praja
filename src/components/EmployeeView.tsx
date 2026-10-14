@@ -77,6 +77,33 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
   // Navigation tab on sidebar
   const [activeTab, setActiveTab] = useState<EmployeeTab>('presence');
 
+  if (!employee) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 text-amber-600">
+          <ShieldCheck className="w-8 h-8" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-800">Menghubungkan Akun Personel...</h2>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm">
+          Data personel sedang disinkronisasi dari Cloud atau Anda belum memilih akun login.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              localStorage.removeItem('sipraja_is_logged_in_v2');
+              localStorage.removeItem('sipraja_active_officer_v2');
+            } catch {}
+            window.location.reload();
+          }}
+          className="mt-4 px-4 py-2.5 bg-amber-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-amber-700 transition"
+        >
+          Buka Halaman Login
+        </button>
+      </div>
+    );
+  }
+
   const location = locations.find(l => l.id === employee.locationSlotId) || locations[0] || {
     id: 1,
     slotNumber: 1,

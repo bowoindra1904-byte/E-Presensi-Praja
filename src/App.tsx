@@ -40,6 +40,7 @@ import { AdminAccountModal } from './components/admin/AdminAccountModal';
 import { PrintReportModal, PrintMenuType } from './components/admin/PrintReportModal';
 import { OperationalGuideModal } from './components/OperationalGuideModal';
 import { SatpolPPWatermarkBackground } from './components/SatpolPPWatermarkBackground';
+import { SatpolPPLogo } from './components/SatpolPPLogo';
 import { Shield, Sparkles, FileText, Printer, KeyRound, Cloud } from 'lucide-react';
 import { testFirestoreConnection } from './services/firebase';
 import { getOrCreateDeviceId } from './utils/deviceLock';
@@ -1608,6 +1609,35 @@ export default function App() {
         onAddSecurityLog={handleAddSecurityLog}
         onAddNotification={handleAddNotification}
       />
+    );
+  }
+
+  // Safety fallback for mobile if logged in as pegawai but activeEmployee is not yet resolved
+  if (currentRole === 'pegawai' && !activeEmployee) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-white relative">
+        <SatpolPPWatermarkBackground theme="dark" opacity="opacity-25" size="xl" />
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 p-2 flex items-center justify-center mb-4 animate-pulse">
+          <SatpolPPLogo className="w-full h-full object-contain" />
+        </div>
+        <h2 className="text-base font-bold tracking-tight">Menghubungkan Data Personel...</h2>
+        <p className="text-xs text-slate-400 mt-1.5 text-center max-w-xs leading-relaxed">
+          Mengambil data resmi Satpol PP dari Cloud Firestore. Jika memakan waktu lama, pastikan koneksi internet HP aktif.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setIsLoggedIn(false);
+            try {
+              localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
+              localStorage.removeItem(STORAGE_KEYS.ACTIVE_OFFICER);
+            } catch {}
+          }}
+          className="mt-5 px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-400 hover:text-amber-300 text-xs font-semibold shadow transition"
+        >
+          Kembali ke Portal Login
+        </button>
+      </div>
     );
   }
 

@@ -479,8 +479,17 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                   </div>
                   {nameSuggestions.length === 0 ? (
                     <div className="px-3.5 py-4 text-xs text-slate-400 text-center">
-                      <p className="font-semibold text-slate-300">Tidak ada personel yang cocok dengan "{inputName}"</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Pastikan ejaan nama atau digit NIP sudah benar.</p>
+                      {employees.length === 0 ? (
+                        <>
+                          <p className="font-semibold text-amber-400">Sinkronisasi Database Cloud...</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Sedang memuat data personel. Mohon tunggu sejenak atau periksa koneksi data HP Anda.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-semibold text-slate-300">Tidak ada personel yang cocok dengan "{inputName}"</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">Pastikan ejaan nama atau digit NIP sudah benar.</p>
+                        </>
+                      )}
                     </div>
                   ) : (
                     nameSuggestions.map((emp, idx) => (

@@ -19,10 +19,97 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   </head>
-  <body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-amber-600 selection:text-white">
-    <div id="root"></div>
+  <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-600 selection:text-white">
+    <div id="root">
+      <!-- Instant Mobile Pre-render Splash Screen: Prevents blank white screen while JS loads -->
+      <style>
+        .sipraja-loader {
+          min-height: 100dvh;
+          width: 100%;
+          background: #020617;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+          color: #ffffff;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          text-align: center;
+          box-sizing: border-box;
+        }
+        .sipraja-crest {
+          width: 72px;
+          height: 72px;
+          margin-bottom: 1.25rem;
+          background: rgba(217, 119, 6, 0.15);
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          border-radius: 1.25rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.25);
+          animation: sipraja-pulse 2s infinite ease-in-out;
+        }
+        .sipraja-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+          margin: 0;
+          color: #ffffff;
+        }
+        .sipraja-subtitle {
+          font-size: 0.75rem;
+          color: #94a3b8;
+          margin-top: 0.35rem;
+          max-width: 280px;
+          line-height: 1.4;
+        }
+        .sipraja-bar-container {
+          width: 160px;
+          height: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 9999px;
+          margin-top: 1.5rem;
+          overflow: hidden;
+          position: relative;
+        }
+        .sipraja-bar {
+          position: absolute;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          width: 45%;
+          background: linear-gradient(90deg, #d97706, #fbbf24);
+          border-radius: 9999px;
+          animation: sipraja-slide 1.5s infinite ease-in-out;
+        }
+        @keyframes sipraja-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.85; }
+        }
+        @keyframes sipraja-slide {
+          0% { left: -45%; }
+          100% { left: 100%; }
+        }
+      </style>
+      <div class="sipraja-loader">
+        <div class="sipraja-crest">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <h1 class="sipraja-title">SI-PRAJA SATPOL PP</h1>
+        <p class="sipraja-subtitle">Sistem Informasi Presensi Digital Satpol PP<br>Memuat sistem ke perangkat Anda...</p>
+        <div class="sipraja-bar-container">
+          <div class="sipraja-bar"></div>
+        </div>
+        <noscript>
+          <p style="color: #ef4444; font-size: 11px; margin-top: 1rem;">JavaScript dinonaktifkan pada browser HP Anda. Harap aktifkan JavaScript untuk menggunakan aplikasi.</p>
+        </noscript>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
