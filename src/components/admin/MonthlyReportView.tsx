@@ -220,13 +220,14 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   const totalIzinOccurrences = filteredReports.reduce((acc, curr) => acc + (curr.izinCount ?? curr.totalIzinCount ?? 0), 0);
   const totalPemutihanOccurrences = filteredReports.reduce((acc, curr) => acc + (curr.pemutihanCount ?? curr.totalDispensasiCount ?? 0), 0);
   const totalTanpaKeteranganOccurrences = filteredReports.reduce((acc, curr) => acc + (curr.tanpaKeteranganCount ?? 0), 0);
+  const totalTidakTapPulangOccurrences = filteredReports.reduce((acc, curr) => acc + (curr.tidakTapPulangCount ?? 0), 0);
 
   // Rata-rata persentase kehadiran pintar otomatis
   const avgAttendanceRate = filteredReports.length > 0
     ? Math.round(filteredReports.reduce((acc, curr) => acc + (curr.attendanceRate ?? 100), 0) / filteredReports.length)
     : 100;
 
-  // Export CSV Lengkap dengan Kolom Wajib Kerja, Hadir (H), Izin (I), Sakit (S), TK, Pemutihan (P)
+  // Export CSV Lengkap dengan Kolom Wajib Kerja, Hadir (H), Izin (I), Sakit (S), TK, Pemutihan (P), TAP (Tanpa Pulang)
   const handleExportCSV = () => {
     const headers = [
       "ID Personel", 
@@ -244,6 +245,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       "Sakit (S)",
       "Tanpa Keterangan (TK)",
       "Pemutihan (P)",
+      "Tanpa Absen Pulang (TAP)",
       "Total Hadir Sah",
       "Persentase Kehadiran (%)",
       "Tingkat Ketepatan Waktu (%)",
@@ -267,6 +269,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       r.sakitCount ?? 0,
       r.tanpaKeteranganCount ?? 0,
       r.pemutihanCount ?? 0,
+      r.tidakTapPulangCount ?? 0,
       r.totalHadirSah ?? 0,
       `${r.attendanceRate ?? 100}%`,
       `${r.disciplineRate}%`,
@@ -532,7 +535,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
               <span>Sistem Pintar Perhitungan Kehadiran Otomatis Berdasarkan Tipe Jadwal</span>
               <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-mono">Dinamis</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-[11px] text-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 pt-1 text-[11px] text-slate-700">
               <div className="bg-white/80 p-2.5 rounded-xl border border-slate-200/80">
                 <div className="font-bold text-emerald-800 flex items-center gap-1 mb-0.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -560,13 +563,22 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                   Jika admin mengganti jadwal personel, persentase kehadiran <strong>otomatis berubah</strong>. Pemutihan (P) dihitung hadir sah.
                 </p>
               </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-orange-200/80">
+                <div className="font-bold text-orange-800 flex items-center gap-1 mb-0.5">
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                  Sanksi Tanpa Pulang (TAP)
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[10.5px]">
+                  Hadir tanpa absen pulang dikenakan <strong>sanksi jam kerja (hanya 4 jam)</strong> dan pemotongan kedisiplinan.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Aggregate Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
         
         {/* Rata-Rata Persentase Kehadiran Pintar */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
@@ -650,6 +662,20 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
           </div>
         </div>
 
+        {/* Tanpa Absen Pulang (TAP) - Opsi A */}
+        <div className="bg-white border border-orange-200/90 rounded-2xl p-4 shadow-xs flex flex-col justify-between bg-gradient-to-b from-white to-orange-50/20">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-orange-950">Tanpa Pulang (TAP)</span>
+            <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-800 text-[9.5px] font-black flex items-center justify-center">TAP</span>
+          </div>
+          <div className="mt-3">
+            <span className={`text-2xl sm:text-3xl font-black font-mono ${totalTidakTapPulangOccurrences > 0 ? 'text-orange-600' : 'text-slate-400'}`}>
+              {totalTidakTapPulangOccurrences}
+            </span>
+            <span className="text-[10px] text-orange-700 block mt-0.5">Sanksi 4 Jam Dinas</span>
+          </div>
+        </div>
+
       </div>
 
       {/* Official Legend Bar (Keterangan Kode S, I, TK, P, H, T, L) */}
@@ -683,6 +709,10 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-900 font-semibold">
               <span className="w-4 h-4 rounded bg-cyan-600 text-white font-bold flex items-center justify-center text-[9px]">P</span>
               <span>Pemutihan (Disp. HP / Lapangan)</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-900 font-semibold">
+              <span className="w-5 h-4 rounded bg-orange-600 text-white font-bold flex items-center justify-center text-[8.5px]">TAP</span>
+              <span>Tanpa Pulang (Sanksi 4 Jam)</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 font-medium">
               <span className="w-4 h-4 rounded bg-slate-400 text-white font-bold flex items-center justify-center text-[9px]">L</span>
@@ -870,8 +900,8 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     <span className="text-[10px] text-slate-500 font-mono font-bold">Wajib: {item.targetWorkDays ?? 0}h</span>
                   </div>
 
-                  {/* Grid Badge S, I, TK, P, H, T */}
-                  <div className="grid grid-cols-6 gap-1 text-center text-xs">
+                  {/* Grid Badge S, I, TK, P, H, T, TAP */}
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs">
                     <div className="bg-white p-1.5 rounded-xl border border-slate-200">
                       <span className="text-[8.5px] text-emerald-700 font-bold block">H</span>
                       <span className="font-mono font-bold text-slate-900 text-[11px]">{item.hadirCount ?? item.totalPresentDays}</span>
@@ -904,6 +934,12 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                       <span className="text-[8.5px] text-cyan-800 font-bold block">P</span>
                       <span className={`font-mono font-bold text-[11px] ${(item.pemutihanCount ?? 0) > 0 ? 'text-cyan-800' : 'text-slate-400'}`}>
                         {item.pemutihanCount ?? 0}
+                      </span>
+                    </div>
+                    <div className="bg-white p-1.5 rounded-xl border border-orange-200 bg-orange-50/30">
+                      <span className="text-[8.5px] text-orange-800 font-bold block">TAP</span>
+                      <span className={`font-mono font-bold text-[11px] ${(item.tidakTapPulangCount ?? 0) > 0 ? 'text-orange-700 font-black' : 'text-slate-400'}`}>
+                        {item.tidakTapPulangCount ?? 0}
                       </span>
                     </div>
                   </div>
@@ -968,6 +1004,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     <th className="py-3 px-2.5 text-center text-purple-800 bg-purple-50/50" title="Sakit">S</th>
                     <th className="py-3 px-2.5 text-center text-rose-800 bg-rose-50/60 font-black" title="Tanpa Keterangan / Alpha">TK</th>
                     <th className="py-3 px-2.5 text-center text-cyan-800 bg-cyan-50/50" title="Pemutihan (HP Rusak / Penugasan Sah)">P</th>
+                    <th className="py-3 px-2.5 text-center text-orange-900 bg-orange-100/70 font-black" title="Tanpa Absen Pulang (Sanksi Pengurangan Jam Kerja Menjadi 4 Jam & Disiplin)">TAP</th>
                     <th className="py-3 px-4 text-center min-w-[130px]">
                       % Kehadiran
                     </th>
@@ -1086,6 +1123,17 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                           {(item.pemutihanCount ?? 0) > 0 ? (
                             <span className="font-bold text-cyan-800 px-1.5 py-0.5 bg-cyan-100 rounded">
                               {item.pemutihanCount}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+
+                        {/* TAP (Tanpa Absen Pulang - Sanksi 4 Jam) */}
+                        <td className="py-3 px-2.5 text-center font-mono text-xs bg-orange-50/20">
+                          {(item.tidakTapPulangCount ?? 0) > 0 ? (
+                            <span className="font-bold text-orange-800 px-1.5 py-0.5 bg-orange-100 border border-orange-200 rounded">
+                              {item.tidakTapPulangCount}
                             </span>
                           ) : (
                             <span className="text-slate-300">-</span>
@@ -1329,7 +1377,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
             </div>
 
             {/* Quick Metrics Header inside modal */}
-            <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 text-center text-xs">
               <div className="bg-white p-2 rounded-xl border border-slate-200">
                 <span className="text-[10px] text-slate-500 block">Jadwal</span>
                 <span className={`font-bold text-xs ${
@@ -1351,9 +1399,21 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                 </span>
               </div>
               <div className="bg-white p-2 rounded-xl border border-slate-200">
-                <span className="text-[10px] text-indigo-700 block font-semibold">Izin (I) / S</span>
+                <span className="text-[10px] text-indigo-700 block font-semibold">Izin (I) / Sakit (S)</span>
                 <span className="font-mono font-bold text-slate-800 text-xs">
                   {selectedEmpForCalendar.izinCount ?? 0}I · {selectedEmpForCalendar.sakitCount ?? 0}S
+                </span>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-slate-200">
+                <span className="text-[10px] text-cyan-800 block font-bold">Pemutihan (P)</span>
+                <span className={`font-mono font-bold text-xs ${(selectedEmpForCalendar.pemutihanCount ?? 0) > 0 ? 'text-cyan-800' : 'text-slate-400'}`}>
+                  {(selectedEmpForCalendar.pemutihanCount ?? 0) > 0 ? `${selectedEmpForCalendar.pemutihanCount} Hari (Sah)` : '-'}
+                </span>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-orange-200 bg-orange-50/20">
+                <span className="text-[10px] text-orange-800 block font-bold">Tanpa Pulang (TAP)</span>
+                <span className={`font-mono font-bold text-xs ${(selectedEmpForCalendar.tidakTapPulangCount ?? 0) > 0 ? 'text-orange-700 font-black' : 'text-slate-400'}`}>
+                  {(selectedEmpForCalendar.tidakTapPulangCount ?? 0) > 0 ? `${selectedEmpForCalendar.tidakTapPulangCount} Hari (4J)` : '0'}
                 </span>
               </div>
               <div className="bg-white p-2 rounded-xl border border-slate-200">
@@ -1364,7 +1424,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                   {selectedEmpForCalendar.tanpaKeteranganCount ?? 0} Hari
                 </span>
               </div>
-              <div className="bg-white p-2 rounded-xl border border-slate-200">
+              <div className="bg-white p-2 rounded-xl border border-slate-200 col-span-2 sm:col-span-1">
                 <span className="text-[10px] text-slate-500 block">% Kehadiran</span>
                 <span className={`font-mono font-black text-xs ${
                   (selectedEmpForCalendar.attendanceRate ?? 100) >= 90 ? 'text-emerald-700' : 'text-amber-700'
@@ -1423,8 +1483,12 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                         {day.record?.checkInTime ? (
                           <div className="font-mono text-[11px] font-bold text-slate-800">
                             Masuk: {day.record.checkInTime}
-                            {day.record.checkOutTime && day.record.checkOutTime !== '-' && (
+                            {day.record.checkOutTime && day.record.checkOutTime !== '-' ? (
                               <span className="text-slate-500 font-normal"> · Pulang: {day.record.checkOutTime}</span>
+                            ) : day.isMissingCheckOut ? (
+                              <span className="text-orange-700 font-bold"> · Pulang: - (TAP · Sanksi 4 Jam)</span>
+                            ) : (
+                              <span className="text-amber-600 font-normal"> · Pulang: - (Sedang Dinas)</span>
                             )}
                           </div>
                         ) : (

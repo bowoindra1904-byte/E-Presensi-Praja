@@ -26,7 +26,8 @@ import {
   UserX,
   UserCheck,
   Shield,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react';
 import { 
   calculateSmartMonthlyReport, 
@@ -76,7 +77,7 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
   const [selectedSlot, setSelectedSlot] = useState<string>('all');
   const [selectedSchedule, setSelectedSchedule] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeCategory, setActiveCategory] = useState<'all' | 'tepat_waktu' | 'terlambat' | 'tk'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'tepat_waktu' | 'terlambat' | 'tk' | 'tap'>('all');
 
   // Detail Modal State
   const [selectedEmployeeDetail, setSelectedEmployeeDetail] = useState<SmartMonthlyReportResult | null>(null);
@@ -159,6 +160,21 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
       .slice(0, 5);
   }, [filteredReports]);
 
+  // 4. TOP 5 PALING SERING TANPA ABSEN PULANG (TAP - SANKSI 4 JAM)
+  // Diurutkan berdasarkan: tidakTapPulangCount terbanyak
+  const topFiveTAP = useMemo(() => {
+    return [...filteredReports]
+      .sort((a, b) => {
+        const tapA = a.tidakTapPulangCount || 0;
+        const tapB = b.tidakTapPulangCount || 0;
+        if (tapB !== tapA) {
+          return tapB - tapA;
+        }
+        return a.disciplineRate - b.disciplineRate;
+      })
+      .slice(0, 5);
+  }, [filteredReports]);
+
   // Export CSV Top Five
   const handleExportCSV = () => {
     const selectedMonthLabel = availableMonths.find(m => m.value === selectedMonth)?.label || selectedMonth;
@@ -169,16 +185,16 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
     lines.push(``);
 
     lines.push(`=== TOP 5 PERSONEL PALING TEPAT WAKTU (TELADAN) ===`);
-    lines.push(`Peringkat,NIP,Nama Personel,Pangkat,Regu,Pos Penugasan,Tepat Waktu (H),Terlambat (T),Disiplin %,Status`);
+    lines.push(`Peringkat,NIP,Nama Personel,Pangkat,Regu,Pos Penugasan,Tepat Waktu (H),Terlambat (T),Tanpa Pulang (TAP),Disiplin %,Status`);
     topFiveTepatWaktu.forEach((p, idx) => {
-      lines.push(`${idx + 1},"${p.nip}","${p.employeeName}","${p.rank}","${p.regu}","Slot ${p.locationSlotId}: ${p.locationName}",${p.onTimeCount},${p.lateCount},${p.disciplineRate}%,"Teladan Disiplin"`);
+      lines.push(`${idx + 1},"${p.nip}","${p.employeeName}","${p.rank}","${p.regu}","Slot ${p.locationSlotId}: ${p.locationName}",${p.onTimeCount},${p.lateCount},${p.tidakTapPulangCount || 0},${p.disciplineRate}%,"Teladan Disiplin"`);
     });
     lines.push(``);
 
     lines.push(`=== TOP 5 PERSONEL PALING SERING TERLAMBAT ===`);
-    lines.push(`Peringkat,NIP,Nama Personel,Pangkat,Regu,Pos Penugasan,Terlambat (T),Tepat Waktu (H),Disiplin %,Rekomendasi`);
+    lines.push(`Peringkat,NIP,Nama Personel,Pangkat,Regu,Pos Penugasan,Terlambat (T),Tepat Waktu (H),Tanpa Pulang (TAP),Disiplin %,Rekomendasi`);
     topFiveTerlambat.forEach((p, idx) => {
-      lines.push(`${idx + 1},"${p.nip}","${p.employeeName}","${p.rank}","${p.regu}","Slot ${p.locationSlotId}: ${p.locationName}",${p.lateCount},${p.onTimeCount},${p.disciplineRate}%,"Pembinaan Ketepatan Waktu"`);
+      lines.push(`${idx + 1},"${p.nip}","${p.employeeName}","${p.rank}","${p.regu}","Slot ${p.locationSlotId}: ${p.locationName}",${p.lateCount},${p.onTimeCount},${p.tidakTapPulangCount || 0},${p.disciplineRate}%,"Pembinaan Ketepatan Waktu"`);
     });
     lines.push(``);
 
@@ -186,6 +202,13 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
     lines.push(`Peringkat,NIP,Nama Personel,Pangkat,Regu,Pos Penugasan,Tanpa Keterangan (TK),Wajib Kerja,Kehadiran %,Rekomendasi`);
     topFiveTK.forEach((p, idx) => {
       lines.push(`${idx + 1},"${p.nip}","${p.employeeName}","${p.rank}","${p.regu}","Slot ${p.locationSlotId}: ${p.locationName}",${p.tanpaKeteranganCount},${p.targetWorkDays},${p.attendanceRate}%,"Tindakan Disiplin Provost"`);
+    });
+    lines.push(``);
+
+    lines.push(`=== TOP 5 PERSONEL PALING SERING TANPA ABSEN PULANG (TAP) ===`);
+    lines.push(`Peringkat,NIP,Nama Personel,Pangkat,Regu,Pos Penugasan,Tanpa Pulang (TAP),Hadir (H),Disiplin %,Sanksi`);
+    topFiveTAP.forEach((p, idx) => {
+      lines.push(`${idx + 1},"${p.nip}","${p.employeeName}","${p.rank}","${p.regu}","Slot ${p.locationSlotId}: ${p.locationName}",${p.tidakTapPulangCount || 0},${p.hadirCount},${p.disciplineRate}%,"Sanksi Jam Kerja 4 Jam"`);
     });
 
     const csvContent = "data:text/csv;charset=utf-8," + lines.join("\n");
@@ -440,7 +463,7 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Semua (3 Kolom)</span>
+                <span>Semua (4 Kategori)</span>
               </button>
               <button
                 type="button"
@@ -478,6 +501,18 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
                 <AlertOctagon className="w-3.5 h-3.5" />
                 <span>Top TK (Alpha)</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveCategory('tap')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+                  activeCategory === 'tap' 
+                    ? 'bg-orange-600 text-white shadow-2xs' 
+                    : 'text-orange-800 hover:text-orange-950'
+                }`}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Top Tanpa Pulang (TAP)</span>
+              </button>
             </div>
           </div>
 
@@ -488,10 +523,10 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
       </div>
 
       {/* ============================================================== */}
-      {/* 3 TOP FIVE SECTIONS                                            */}
+      {/* 4 TOP FIVE SECTIONS                                            */}
       {/* ============================================================== */}
       <div className={`grid gap-6 ${
-        activeCategory === 'all' ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'
+        activeCategory === 'all' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4' : 'grid-cols-1'
       }`}>
         
         {/* ============================================================ */}
@@ -790,6 +825,107 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
           </div>
         )}
 
+        {/* ============================================================ */}
+        {/* KOLOM 4: TOP 5 PALING SERING TANPA ABSEN PULANG (TAP)         */}
+        {/* ============================================================ */}
+        {(activeCategory === 'all' || activeCategory === 'tap') && (
+          <div className="bg-white border-2 border-orange-300 rounded-3xl p-5 shadow-sm flex flex-col justify-between relative overflow-hidden">
+            {/* Header Accent */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-600" />
+            
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-orange-100">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-2xl bg-orange-100 text-orange-800">
+                    <LogOut className="w-5 h-5 text-orange-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                      <span>Top 5 Tanpa Pulang</span>
+                      <span className="text-[10px] px-2 py-0.2 rounded-full bg-orange-100 text-orange-900 font-mono font-bold">
+                        Sanksi 4 Jam
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500">Personel tidak absen pulang dinas (TAP)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* List Cards */}
+              <div className="space-y-3 mt-4">
+                {topFiveTAP.map((emp, idx) => {
+                  const rank = getRankBadgeStyle(idx);
+                  const tapCount = emp.tidakTapPulangCount || 0;
+                  return (
+                    <div 
+                      key={emp.employeeId}
+                      onClick={() => setSelectedEmployeeDetail(emp)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
+                        tapCount > 0 
+                          ? 'bg-orange-50/60 border-orange-300 ring-1 ring-orange-400/20' 
+                          : 'bg-white border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs shrink-0 ${rank.badge}`}>
+                            {rank.medal}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 text-xs truncate">
+                              {emp.employeeName}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-mono">
+                              NIP: {emp.nip} · {emp.regu}
+                            </div>
+                            <div className="text-[10px] text-slate-600 mt-0.5 truncate">
+                              Slot {emp.locationSlotId}: {emp.locationName.replace(/^Slot \d+:\s*/, '')}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Metric Badge */}
+                        <div className="text-right shrink-0">
+                          <div className={`font-mono font-black text-sm ${
+                            tapCount > 0 ? 'text-orange-700' : 'text-slate-400'
+                          }`}>
+                            {tapCount}x TAP
+                          </div>
+                          <span className="text-[10px] font-bold text-orange-900 bg-orange-100 px-1.5 py-0.2 rounded inline-block mt-0.5">
+                            {emp.disciplineRate}% Disiplin
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 mt-2 border-t border-slate-100">
+                        <span>Hadir: <strong className="text-slate-800">{emp.hadirCount}h</strong></span>
+                        <span>Jam Kerja: <strong className="text-orange-700">{emp.totalWorkHours} Jam</strong></span>
+                        <span className="text-orange-700 font-semibold flex items-center gap-0.5">
+                          <Eye className="w-3 h-3" /> Audit
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {topFiveTAP.length === 0 && (
+                  <div className="py-8 text-center text-slate-400 text-xs italic">
+                    Nihil pelanggaran TAP pada periode ini.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-orange-100 text-[11px] text-orange-950 flex items-center justify-between">
+              <span className="flex items-center gap-1 font-semibold">
+                <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />
+                Sanksi Jam Kerja Diakui 4 Jam
+              </span>
+              <span className="text-[10px] text-slate-500">Kepatuhan Operasional</span>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ============================================================== */}
@@ -827,7 +963,7 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
             </div>
 
             {/* Metrics Breakdown */}
-            <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
               <div className="bg-white p-2 rounded-xl border border-slate-200">
                 <span className="text-[10px] text-slate-500 block">Tepat Waktu (H)</span>
                 <span className="font-mono font-bold text-emerald-700 text-xs">
@@ -850,6 +986,12 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
                 <span className="text-[10px] text-slate-500 block">Pemutihan (P)</span>
                 <span className="font-mono font-bold text-cyan-800 text-xs">
                   {selectedEmployeeDetail.pemutihanCount} Hari
+                </span>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-orange-200 bg-orange-50/20">
+                <span className="text-[10px] text-orange-800 block font-bold">Tanpa Pulang (TAP)</span>
+                <span className="font-mono font-bold text-orange-800 text-xs">
+                  {selectedEmployeeDetail.tidakTapPulangCount || 0} Hari (4J)
                 </span>
               </div>
               <div className="bg-white p-2 rounded-xl border border-slate-200">
@@ -898,9 +1040,16 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
 
                     <div className="text-right shrink-0">
                       {d.record?.checkInTime ? (
-                        <span className="font-mono text-[11px] font-bold text-slate-800">
-                          {d.record.checkInTime}
-                        </span>
+                        <div className="font-mono text-[11px] font-bold text-slate-800">
+                          Masuk: {d.record.checkInTime}
+                          {d.record.checkOutTime && d.record.checkOutTime !== '-' ? (
+                            <span className="text-slate-500 font-normal"> · Pulang: {d.record.checkOutTime}</span>
+                          ) : d.isMissingCheckOut ? (
+                            <span className="text-orange-700 font-bold"> · Pulang: - (TAP · 4J)</span>
+                          ) : (
+                            <span className="text-amber-600 font-normal"> · Pulang: - (Sedang Dinas)</span>
+                          )}
+                        </div>
                       ) : (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${badge.bg}`}>
                           {badge.tooltip}

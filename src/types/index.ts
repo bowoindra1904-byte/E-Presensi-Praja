@@ -170,6 +170,7 @@ export interface MonthlyEmployeeReport {
   izinCount?: number;
   tanpaKeteranganCount?: number;
   pemutihanCount?: number;
+  tidakTapPulangCount?: number;
   liburCount?: number;
   totalHadirSah?: number;
   attendanceRate?: number; // Persentase Kehadiran Pintar (0-100%)
@@ -189,6 +190,7 @@ export interface MonthlyEmployeeReport {
     workHours?: number;
     record?: AttendanceRecord;
     leaveRequest?: LeaveRequest;
+    isMissingCheckOut?: boolean;
   }>;
   shiftCalibration?: MonthlyShiftCalibration;
 }

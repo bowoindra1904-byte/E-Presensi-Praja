@@ -1000,8 +1000,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="font-mono font-bold text-slate-900 text-[11px]">{r.checkOutTime} WIB</span>
                         <span className="block text-[9.5px] font-semibold text-emerald-700">Selesai Dinas</span>
                       </div>
+                    ) : r.date < todayStr ? (
+                      <div>
+                        <span className="font-mono font-bold text-orange-700 text-[11px]">-</span>
+                        <span className="block text-[9.5px] font-bold text-orange-700 bg-orange-50 px-1 py-0.2 rounded border border-orange-200 w-fit">
+                          TAP (Tanpa Pulang)
+                        </span>
+                      </div>
                     ) : (
-                      <span className="text-slate-400 italic text-[10.5px]">Belum Pulang</span>
+                      <span className="text-slate-400 italic text-[10.5px]">Sedang Dinas / Belum Pulang</span>
                     )}
                   </div>
                 </div>
@@ -1161,8 +1168,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             Selesai Dinas
                           </span>
                         </div>
+                      ) : r.date < todayStr ? (
+                        <div className="space-y-0.5">
+                          <div className="font-mono font-bold text-orange-700 text-[11px]">-</div>
+                          <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200 inline-block">
+                            TAP (Tanpa Pulang)
+                          </span>
+                        </div>
                       ) : (
-                        <span className="text-slate-400 italic text-[11px]">Belum Pulang</span>
+                        <span className="text-slate-400 italic text-[11px]">Sedang Dinas / Belum Pulang</span>
                       )}
                     </td>
 

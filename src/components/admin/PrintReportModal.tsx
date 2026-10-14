@@ -1447,6 +1447,8 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                         const isSakit = rec?.checkInStatus === 'sakit' || activeLeave?.type === 'sakit';
                         const isPresent = (!!rec?.checkInTime && rec.checkInTime !== '-') && !isIzin && !isSakit && !isDisp;
                         const isLate = rec?.checkInStatus === 'terlambat';
+                        const isDutyEnded = filterDate < todayStr;
+                        const isMissingCheckOut = isPresent && isDutyEnded && (!rec?.checkOutTime || rec?.checkOutTime === '-');
 
                         return (
                           <tr key={emp.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
@@ -1481,8 +1483,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                                 </span>
                               ) : isIzin || isSakit ? (
                                 <span className="text-slate-500 text-[9px] font-mono">Disahkan</span>
+                              ) : isPresent ? (
+                                rec?.checkOutTime && rec.checkOutTime !== '-' ? (
+                                  rec.checkOutTime
+                                ) : isMissingCheckOut ? (
+                                  <span className="text-orange-900 font-bold text-[8.5px]">TAP (Tanpa Pulang)</span>
+                                ) : (
+                                  <span className="text-slate-400 text-[9px] italic">Sedang Dinas</span>
+                                )
                               ) : (
-                                rec?.checkOutTime || "-"
+                                "-"
                               )}
                             </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono">
@@ -1510,7 +1520,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                               ) : isSakit ? (
                                 <span className="text-purple-800">SAKIT</span>
                               ) : isPresent ? (
-                                isLate ? (
+                                isMissingCheckOut ? (
+                                  <span className="text-orange-900 font-bold text-[9px]">HADIR (TAP / 4 JAM)</span>
+                                ) : isLate ? (
                                   <span className="text-amber-800">TERLAMBAT</span>
                                 ) : (
                                   <span className="text-emerald-800">TEPAT WAKTU</span>
@@ -1544,6 +1556,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <th className="p-1.5 border border-slate-300 text-center w-8 text-purple-900 bg-purple-100/50" title="Sakit">S</th>
                       <th className="p-1.5 border border-slate-300 text-center w-8 text-rose-900 bg-rose-100/60 font-black" title="Tanpa Keterangan">TK</th>
                       <th className="p-1.5 border border-slate-300 text-center w-8 text-cyan-900 bg-cyan-100/50" title="Pemutihan (Disp HP / Lapangan)">P</th>
+                      <th className="p-1.5 border border-slate-300 text-center w-8 text-orange-950 bg-orange-100/70 font-black" title="Tanpa Absen Pulang (Sanksi 4 Jam)">TAP</th>
                       <th className="p-1.5 border border-slate-300 text-center w-8 text-amber-900" title="Terlambat">T</th>
                       <th className="p-1.5 border border-slate-300 text-center w-14 font-black">% Hadir</th>
                       <th className="p-1.5 border border-slate-300">Pola & Evaluasi</th>
@@ -1604,6 +1617,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-cyan-800">
                               {smart.pemutihanCount > 0 ? smart.pemutihanCount : "-"}
                             </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-orange-800 bg-orange-50/20">
+                              {smart.tidakTapPulangCount > 0 ? smart.tidakTapPulangCount : "-"}
+                            </td>
                             <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 font-semibold">
                               {smart.lateCount > 0 ? smart.lateCount : "-"}
                             </td>
@@ -1631,6 +1647,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     <span><strong>I</strong> = Izin (Dinas / Pribadi Disetujui)</span>
                     <span><strong>TK</strong> = Tanpa Keterangan (Alpha)</span>
                     <span><strong>P</strong> = Pemutihan (Dispensasi HP Rusak / Lapangan Menyesuaikan Hadir Sah)</span>
+                    <span><strong>TAP</strong> = Tanpa Absen Pulang (Sanksi Jam Kerja 4 Jam & Disiplin)</span>
                     <span><strong>L</strong> = Libur (Weekend / Hari Besar Nasional / Off Siklus Shift)</span>
                   </div>
                   <div className="text-[8.5px] text-slate-500 italic pt-0.5 border-t border-slate-200">

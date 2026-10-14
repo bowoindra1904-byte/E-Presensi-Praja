@@ -988,6 +988,24 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
                 </div>
 
+                {/* Mandatory Check-Out Alert Banner (Opsi A Kedisiplinan) */}
+                {todayRecord?.checkInTime && !todayRecord?.checkOutTime && (
+                  <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-200 text-orange-950 flex items-start gap-2.5 text-xs shadow-2xs">
+                    <AlertTriangle className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold flex items-center gap-1.5 text-orange-900">
+                        <span>Peringatan Kedisiplinan: Wajib Melakukan Tap Pulang</span>
+                        <span className="text-[9.5px] font-mono px-1.5 py-0.2 bg-orange-200 text-orange-900 rounded font-bold">
+                          Sanksi Jam 4 Jam (TAP)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-orange-800/90 mt-0.5 leading-relaxed">
+                        Pastikan Anda melakukan <strong>Tap Pulang</strong> begitu jam dinas berakhir. Apabila Anda tidak tap pulang, sistem rekapitulasi otomatis mencatat status <strong>TAP (Tanpa Pulang)</strong> dengan sanksi jam kerja dinas hanya diakui <strong>4 Jam</strong> (bukan jam penuh) serta mengurangi nilai kedisiplinan bulanan Anda.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* GPS Status Badges Grid (Replaces Map cleanly) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 pt-1 text-xs">
                   <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">

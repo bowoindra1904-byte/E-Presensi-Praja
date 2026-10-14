@@ -311,6 +311,24 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
           </span>
         </div>
 
+        {/* Tanpa Absen Pulang (TAP) */}
+        <div className="bg-white border border-orange-200/90 rounded-2xl p-4 shadow-xs">
+          <span className="text-[11px] font-semibold text-orange-800 block">Tanpa Pulang (TAP)</span>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className={`text-xl sm:text-2xl font-black font-mono ${
+              smartReport.tidakTapPulangCount > 0 ? 'text-orange-600' : 'text-slate-400'
+            }`}>
+              {smartReport.tidakTapPulangCount}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">Hari</span>
+          </div>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold mt-1.5 inline-block ${
+            smartReport.tidakTapPulangCount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-500'
+          }`}>
+            {smartReport.tidakTapPulangCount > 0 ? 'Sanksi 4 Jam' : 'Tertib Pulang'}
+          </span>
+        </div>
+
       </div>
 
       {/* Official Legend Bar */}
@@ -327,6 +345,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
             <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold">I = Izin</span>
             <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 font-black">TK = Tanpa Keterangan</span>
             <span className="px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 font-bold">P = Pemutihan (Hadir Sah)</span>
+            <span className="px-2 py-0.5 rounded bg-orange-50 text-orange-900 border border-orange-200 font-bold">TAP = Tanpa Pulang (Sanksi 4J)</span>
             <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-medium">L = Libur</span>
           </div>
         </div>
@@ -432,8 +451,12 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
                       {day.record?.checkInTime ? (
                         <div className="font-mono text-xs font-bold text-slate-800">
                           Masuk: {day.record.checkInTime}
-                          {day.record.checkOutTime && day.record.checkOutTime !== '-' && (
+                          {day.record.checkOutTime && day.record.checkOutTime !== '-' ? (
                             <span className="text-slate-500 font-normal"> · Pulang: {day.record.checkOutTime}</span>
+                          ) : day.isMissingCheckOut ? (
+                            <span className="text-orange-700 font-bold"> · Pulang: - (TAP · Sanksi 4 Jam)</span>
+                          ) : (
+                            <span className="text-amber-600 font-normal"> · Pulang: - (Sedang Dinas)</span>
                           )}
                         </div>
                       ) : (

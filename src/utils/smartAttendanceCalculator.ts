@@ -104,6 +104,7 @@ export interface DayAttendanceStatus extends DayScheduleInfo {
   leaveRequest?: LeaveRequest;
   notes?: string;
   workHours?: number;
+  isMissingCheckOut?: boolean; // True jika pegawai hadir tapi tidak melakukan absen pulang pada hari/jam dinas yang telah selesai
 }
 
 // ============================================================================
@@ -538,13 +539,42 @@ export function evaluateEmployeeDayAttendance(
   // Jika ada record absensi hadir
   if (record && (record.checkInTime || record.checkInStatus === 'tepat_waktu' || record.checkInStatus === 'terlambat')) {
     const isLate = record.checkInStatus === 'terlambat';
+
+    // Evaluasi Kedisiplinan Opsi A: Apakah dinas sudah selesai dan pegawai tidak absen pulang?
+    let isDutyEnded = dateStr < todayStr;
+    if (dateStr === todayStr) {
+      const now = new Date();
+      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+      const isFriday = now.getDay() === 5;
+      const endOfDayMinutes = employee.scheduleType === 'harian'
+        ? (isFriday ? 16 * 60 + 30 : 16 * 60)
+        : 20 * 60; // Shift Pagi selesai 20:00 WIB
+      if (currentTotalMinutes >= endOfDayMinutes) {
+        isDutyEnded = true;
+      }
+    }
+
+    const isMissingCheckOut = isDutyEnded && (!record.checkOutTime || record.checkOutTime === '-');
+    // Sanksi Opsi A: Jika tidak absen pulang saat dinas usai, jam kerja dipotong menjadi 4 jam
+    const workHours = isMissingCheckOut 
+      ? 4 
+      : (employee.scheduleType === 'shift' ? 12 : 8.5);
+
+    let notes = isLate ? `Terlambat (Masuk ${record.checkInTime || '-'})` : `Tepat Waktu (${record.checkInTime || '-'})`;
+    if (isMissingCheckOut) {
+      notes += ' · TAP (Tanpa Tap Pulang - Sanksi Jam: 4 Jam)';
+    }
+
     return {
       ...schedule,
       code: isLate ? 'T' : 'H',
-      codeLabel: isLate ? 'Hadir Terlambat' : 'Hadir Tepat Waktu',
+      codeLabel: isMissingCheckOut 
+        ? `${isLate ? 'Hadir Terlambat' : 'Hadir Tepat Waktu'} (Tanpa Pulang - Sanksi 4 Jam)`
+        : (isLate ? 'Hadir Terlambat' : 'Hadir Tepat Waktu'),
       record,
-      notes: isLate ? `Terlambat (Masuk ${record.checkInTime || '-'})` : `Tepat Waktu (${record.checkInTime || '-'})`,
-      workHours: employee.scheduleType === 'shift' ? 12 : 8.5
+      notes,
+      workHours,
+      isMissingCheckOut
     };
   }
 
@@ -606,6 +636,7 @@ export interface SmartMonthlyReportResult {
   izinCount: number; // I (Izin)
   tanpaKeteranganCount: number; // TK (Tanpa Keterangan)
   pemutihanCount: number; // P (Pemutihan HP Rusak / Penugasan Sah)
+  tidakTapPulangCount: number; // TAP (Tanpa Absen Pulang - Sanksi Jam 4 Jam & Disiplin)
   liburCount: number; // L (Libur)
 
   // Kehadiran Sah (Hadir + Pemutihan disesuaikan)
@@ -695,6 +726,7 @@ export function calculateSmartMonthlyReport(
   let izinCount = 0;
   let tanpaKeteranganCount = 0;
   let pemutihanCount = 0;
+  let tidakTapPulangCount = 0;
   let liburCount = 0;
   let totalWorkHours = 0;
 
@@ -718,17 +750,21 @@ export function calculateSmartMonthlyReport(
       }
     }
 
+    if (status.isMissingCheckOut) {
+      tidakTapPulangCount++;
+    }
+
     if (status.code === 'H') {
       hadirCount++;
       onTimeCount++;
-      totalWorkHours += status.workHours || (employee.scheduleType === 'shift' ? 12 : 8.5);
+      totalWorkHours += status.workHours !== undefined ? status.workHours : (employee.scheduleType === 'shift' ? 12 : 8.5);
     } else if (status.code === 'T') {
       hadirCount++;
       lateCount++;
-      totalWorkHours += status.workHours || (employee.scheduleType === 'shift' ? 12 : 8.5);
+      totalWorkHours += status.workHours !== undefined ? status.workHours : (employee.scheduleType === 'shift' ? 12 : 8.5);
     } else if (status.code === 'P') {
       pemutihanCount++;
-      totalWorkHours += status.workHours || (employee.scheduleType === 'shift' ? 12 : 8.5);
+      totalWorkHours += status.workHours !== undefined ? status.workHours : (employee.scheduleType === 'shift' ? 12 : 8.5);
     } else if (status.code === 'S') {
       sakitCount++;
     } else if (status.code === 'I') {
@@ -759,20 +795,27 @@ export function calculateSmartMonthlyReport(
     attendanceRate = Math.min(100, Math.max(0, isNaN(rawAttendanceRate) ? 100 : rawAttendanceRate));
   }
 
-  // Tingkat Disiplin Ketepatan Waktu (antara yang hadir)
+  // Tingkat Disiplin Ketepatan Waktu & Kepatuhan Absen Pulang (Opsi A)
+  // Kehadiran yang benar-benar tertib adalah tepat waktu (bukan terlambat) DAN tertib tap pulang (bukan TAP)
+  const penalizedDays = lateCount + tidakTapPulangCount;
+  const fullDisciplineDays = Math.max(0, hadirCount - penalizedDays);
   const rawDisciplineRate = hadirCount > 0 
-    ? Math.round((onTimeCount / hadirCount) * 100) 
+    ? Math.round((fullDisciplineDays / hadirCount) * 100) 
     : 100;
   const disciplineRate = Math.min(100, Math.max(0, isNaN(rawDisciplineRate) ? 100 : rawDisciplineRate));
 
   // Pola Evaluasi
-  let attendancePattern = "Disiplin Prima (100% Hadir Tepat Waktu)";
+  let attendancePattern = "Disiplin Prima (100% Hadir Tepat Waktu & Tertib Pulang)";
   if (isFutureMonth) {
     attendancePattern = "Jadwal Penugasan Mendatang";
   } else if (tanpaKeteranganCount > 0) {
     attendancePattern = `Tindakan Disiplin (${tanpaKeteranganCount} Hari TK/Alpha)`;
+  } else if (tidakTapPulangCount > 0 && lateCount > 0) {
+    attendancePattern = `Sanksi Disiplin (${tidakTapPulangCount}x Tanpa Pulang, ${lateCount}x Terlambat)`;
+  } else if (tidakTapPulangCount > 0) {
+    attendancePattern = `Peringatan Disiplin (${tidakTapPulangCount}x Tanpa Pulang - Sanksi 4 Jam)`;
   } else if (attendanceRate === 100 && lateCount === 0) {
-    attendancePattern = "Sempurna (100% Hadir Tepat Waktu)";
+    attendancePattern = "Sempurna (100% Hadir Tepat Waktu & Tertib Pulang)";
   } else if (attendanceRate === 100 && lateCount > 0) {
     attendancePattern = `Hadir Lengkap (${lateCount}x Terlambat)`;
   } else if (sakitCount > 0 || izinCount > 0) {
@@ -803,6 +846,7 @@ export function calculateSmartMonthlyReport(
     izinCount,
     tanpaKeteranganCount,
     pemutihanCount,
+    tidakTapPulangCount,
     liburCount,
     totalHadirSah,
     attendanceRate,
