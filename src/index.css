@@ -87,8 +87,8 @@ html, body {
    ========================================================================== */
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 12mm 10mm 15mm 10mm;
+    size: landscape;
+    margin: 6mm 8mm 8mm 8mm;
   }
 
   /* Reset document root to allow natural multi-page flow */

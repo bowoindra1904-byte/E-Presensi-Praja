@@ -43,7 +43,8 @@ import {
   Upload,
   Image as ImageIcon,
   Trash2,
-  Sparkles
+  Sparkles,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export type PrintMenuType = 'daily' | 'monthly' | 'locations' | 'regu' | 'security' | 'top_five';
@@ -75,7 +76,7 @@ export const DEFAULT_SIGNATURE_CONFIG: PrintSignatureConfig = {
   signatory1Name: "AGUS PRASETYO, A.Md.",
   signatory1Rank: "Penata Muda (III/a)",
   signatory1Nip: "19920120 201402 1 003",
-  signatory2Role: "KEPALA SATUAN POLISI PAMONG PRAJA KABUPATEN BANGKA BARAT",
+  signatory2Role: "KEPALA SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN KABUPATEN BANGKA BARAT",
   signatory2Name: "SIDARTA GAUTAMA, S.STP",
   signatory2Rank: "Pembina Utama Muda (IV/c)",
   signatory2Nip: "19740512 199903 1 002",
@@ -83,7 +84,7 @@ export const DEFAULT_SIGNATURE_CONFIG: PrintSignatureConfig = {
   customKopImage: '',
   customKopHeight: 120,
   kopHeaderTop: "PEMERINTAH KABUPATEN BANGKA BARAT",
-  kopHeaderTitle: "SATPOL PP KABUPATEN BANGKA BARAT",
+  kopHeaderTitle: "SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN",
   kopHeaderSubtitle: "PRAJA WIBAWA",
 };
 
@@ -139,7 +140,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         signatory1Name: currentAdmin?.name || `KOMANDAN ${adminRegu.toUpperCase()}`,
         signatory1Rank: "Pengatur (II/c)",
         signatory1Nip: currentAdmin?.username ? currentAdmin.username.toUpperCase() : "DANRU",
-        signatory2Role: "KEPALA SATUAN POLISI PAMONG PRAJA KABUPATEN BANGKA BARAT",
+        signatory2Role: "KEPALA SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN KABUPATEN BANGKA BARAT",
         signatory2Name: "SIDARTA GAUTAMA, S.STP",
         signatory2Rank: "Pembina Utama Muda (IV/c)",
         signatory2Nip: "19740512 199903 1 002",
@@ -147,7 +148,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         customKopImage: '',
         customKopHeight: 120,
         kopHeaderTop: "PEMERINTAH KABUPATEN BANGKA BARAT",
-        kopHeaderTitle: "SATPOL PP KABUPATEN BANGKA BARAT",
+        kopHeaderTitle: "SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN",
         kopHeaderSubtitle: "PRAJA WIBAWA",
       };
     }
@@ -161,7 +162,16 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   const [signConfig, setSignConfig] = useState<PrintSignatureConfig>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.kopHeaderTitle || parsed.kopHeaderTitle === "SATPOL PP KABUPATEN BANGKA BARAT" || parsed.kopHeaderTitle === "REKAPITULASI ABSENSI PEGAWAI") {
+          parsed.kopHeaderTitle = "SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN";
+        }
+        if (!parsed.signatory2Role || parsed.signatory2Role === "KEPALA SATUAN POLISI PAMONG PRAJA KABUPATEN BANGKA BARAT") {
+          parsed.signatory2Role = "KEPALA SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN KABUPATEN BANGKA BARAT";
+        }
+        return parsed;
+      }
     } catch {}
     return defaultDanruConfig;
   });
@@ -171,7 +181,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        setSignConfig(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (!parsed.kopHeaderTitle || parsed.kopHeaderTitle === "SATPOL PP KABUPATEN BANGKA BARAT" || parsed.kopHeaderTitle === "REKAPITULASI ABSENSI PEGAWAI") {
+          parsed.kopHeaderTitle = "SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN";
+        }
+        if (!parsed.signatory2Role || parsed.signatory2Role === "KEPALA SATUAN POLISI PAMONG PRAJA KABUPATEN BANGKA BARAT") {
+          parsed.signatory2Role = "KEPALA SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN KABUPATEN BANGKA BARAT";
+        }
+        setSignConfig(parsed);
         return;
       }
     } catch {}
@@ -359,9 +376,29 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         });
     } else if (activeMenu === 'monthly') {
       filename = isDanru && adminRegu
-        ? `Laporan_Bulanan_${adminRegu.replace(/\s+/g, '_')}_${filterMonth}.csv`
-        : `Laporan_Bulanan_Satpol_PP_${filterMonth}.csv`;
-      headers = ["No", "NIP", "Nama Personel", "Pangkat", "Jabatan", "Regu", "Pos Penugasan", "Hari Hadir", "Total Jam Kerja", "Terlambat", "Tingkat Disiplin", "Pola Absensi"];
+        ? `Rekapitulasi_Absensi_Pegawai_${adminRegu.replace(/\s+/g, '_')}_${filterMonth}.csv`
+        : `Rekapitulasi_Absensi_Pegawai_${filterMonth}.csv`;
+      headers = [
+        "No", 
+        "NIP", 
+        "Nama Personel", 
+        "Pangkat", 
+        "Jabatan", 
+        "Regu", 
+        "Pos Penugasan", 
+        "Wajib Kerja", 
+        "Hadir (H)", 
+        "TL 1 (1-30m)", 
+        "TL 2 (31-60m)", 
+        "TL 3 (61-90m)", 
+        "TL 4 (91-120m)", 
+        "PSW (Tidak Absen Pulang)", 
+        "Izin (I)", 
+        "Sakit (S)", 
+        "Tanpa Keterangan (TK)", 
+        "% Kehadiran", 
+        "Pola Evaluasi"
+      ];
       rows = scopedEmployees
         .filter(emp => {
           const matchRegu = isDanru ? emp.regu === adminRegu : (filterRegu === 'all' || emp.regu === filterRegu);
@@ -369,12 +406,17 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           return matchRegu && matchSlot;
         })
         .map((emp, idx) => {
-          const empRecords = filterRecordsForEmployee(attendanceRecords, emp).filter(r => r.date.startsWith(filterMonth));
-          const presentDays = empRecords.filter(r => !!r.checkInTime).length;
-          const lateCount = empRecords.filter(r => r.checkInStatus === 'terlambat').length;
-          const disciplineRate = presentDays > 0 ? Math.round(((presentDays - lateCount) / presentDays) * 100) : 100;
+          const smart = calculateSmartMonthlyReport(
+            emp,
+            filterMonth,
+            attendanceRecords,
+            leaveRequests,
+            locations,
+            undefined,
+            undefined,
+            employees
+          );
           const posText = getPosPenugasanLabel(emp);
-          const totalHours = (presentDays * (emp.scheduleType === 'shift' ? 12 : 8.5)).toFixed(1);
           return [
             String(idx + 1),
             `"${emp.nip}"`,
@@ -383,11 +425,18 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             `"${emp.role}"`,
             `"${emp.regu}"`,
             `"${posText}"`,
-            String(presentDays),
-            totalHours,
-            String(lateCount),
-            `${disciplineRate}%`,
-            disciplineRate >= 90 ? "Sangat Baik" : disciplineRate >= 75 ? "Cukup Disiplin" : "Perlu Pembinaan"
+            String(smart.targetWorkDays),
+            String(smart.hadirCount),
+            String(smart.tl1Count),
+            String(smart.tl2Count),
+            String(smart.tl3Count),
+            String(smart.tl4Count),
+            String(smart.tidakTapPulangCount),
+            String(smart.izinCount),
+            String(smart.sakitCount),
+            String(smart.tanpaKeteranganCount),
+            `${smart.attendanceRate}%`,
+            `"${smart.attendancePattern}"`
           ];
         });
     } else if (activeMenu === 'locations') {
@@ -464,28 +513,43 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
   return (
     <div 
       id="print-report-modal-root"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print-modal-overlay print:static print:inset-auto print:block print:p-0 print:m-0 print:w-full print:h-auto print:bg-transparent print:overflow-visible"
+      className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-3 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print-modal-overlay print:static print:inset-auto print:block print:p-0 print:m-0 print:w-full print:h-auto print:bg-transparent print:overflow-visible"
     >
+      {/* Force Landscape Orientation on all browser print dialogs */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: landscape !important;
+            margin: 6mm 8mm 8mm 8mm !important;
+          }
+        }
+      `}} />
       
-      {/* Modal Container */}
+      {/* Modal Container (Landscape Enhanced Width) */}
       <div 
         id="print-report-modal-container"
-        className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl h-[92vh] flex flex-col shadow-2xl overflow-hidden print-modal-container print:m-0 print:p-0 print:border-none print:shadow-none print:w-full print:h-auto print:max-h-none print:bg-white print:text-black print:overflow-visible print:block"
+        className="bg-white border border-slate-200 rounded-3xl w-full max-w-[98vw] 2xl:max-w-[1440px] h-[94vh] flex flex-col shadow-2xl overflow-hidden print-modal-container print:m-0 print:p-0 print:border-none print:shadow-none print:w-full print:h-auto print:max-h-none print:bg-white print:text-black print:overflow-visible print:block"
       >
         
         {/* Modal Top Header (Screen Only) */}
-        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white print:hidden shrink-0">
+        <div className="px-3 sm:px-6 py-3 sm:py-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white print:hidden shrink-0">
           <div className="flex items-center justify-between sm:justify-start gap-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
                 <Printer className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-xs sm:text-base font-bold text-slate-900 tracking-tight truncate">
-                  Pusat Cetak Dokumen Satpol PP
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs sm:text-base font-bold text-slate-900 tracking-tight truncate">
+                    Pusat Cetak Dokumen Satpol PP
+                  </h3>
+                  <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-[10px] font-extrabold tracking-wide uppercase">
+                    <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
+                    Format Lanskap (Landscape A4)
+                  </span>
+                </div>
                 <p className="text-[10px] sm:text-xs text-slate-500 truncate">
-                  Format cetak dinas resmi sesuai menu
+                  Tampilan cetak lanskap & KOP resmi Satuan Polisi Pamong Praja dan Pemadam Kebakaran
                 </p>
               </div>
             </div>
@@ -499,6 +563,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="inline-flex md:hidden items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold">
+              <span>Lanskap</span>
+            </div>
+
             <button
               onClick={handleExportCSV}
               className="flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-1 shadow-xs"
@@ -513,7 +581,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               className="flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Cetak / PDF</span>
+              <span>Cetak / PDF (Lanskap)</span>
             </button>
 
             <button
@@ -581,7 +649,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>2. Laporan Evaluasi Bulanan & Disiplin</span>
+            <span>2. Rekapitulasi Absensi Pegawai</span>
           </button>
 
           <button
@@ -995,9 +1063,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={signConfig.kopHeaderTitle || "SATPOL PP KABUPATEN BANGKA BARAT"}
+                        value={signConfig.kopHeaderTitle || "SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN"}
                         onChange={(e) => handleUpdateSignConfig({ kopHeaderTitle: e.target.value })}
-                        placeholder="SATPOL PP KABUPATEN BANGKA BARAT"
+                        placeholder="SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN"
                         className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 text-xs focus:outline-none focus:border-amber-500 font-bold"
                       />
                     </div>
@@ -1156,7 +1224,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     type="text"
                     value={signConfig.signatory2Role}
                     onChange={(e) => handleUpdateSignConfig({ signatory2Role: e.target.value })}
-                    placeholder="KEPALA SATUAN POLISI PAMONG PRAJA KABUPATEN BANGKA BARAT"
+                    placeholder="KEPALA SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN KABUPATEN BANGKA BARAT"
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-amber-500 font-medium"
                   />
                 </div>
@@ -1227,13 +1295,13 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
           </div>
         )}
 
-        {/* Scrollable Printable Paper Container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 print-modal-scrollable print:p-0 print:m-0 print:overflow-visible print:bg-white print:block">
+        {/* Scrollable Printable Paper Container (Landscape Mode) */}
+        <div className="flex-1 overflow-x-auto overflow-y-auto p-3 sm:p-6 bg-slate-100 print-modal-scrollable print:p-0 print:m-0 print:overflow-visible print:bg-white print:block">
           
-          {/* Printable White Paper Sheet */}
+          {/* Printable White Paper Sheet (A4 Landscape Proportions) */}
           <div 
             id="printable-paper-sheet" 
-            className="max-w-4xl mx-auto bg-white text-slate-900 rounded-xl p-8 sm:p-10 shadow-xl border border-slate-200 printable-paper-sheet print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:w-full relative overflow-hidden print:overflow-visible print:block"
+            className="w-full max-w-[1340px] min-w-[1020px] mx-auto bg-white text-slate-900 rounded-xl p-6 sm:p-9 shadow-xl border border-slate-200 printable-paper-sheet print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-none print:min-w-0 print:w-full relative overflow-visible print:block"
           >
             
             {/* Authentic Document Watermark Background (Satpol PP Praja Wibawa Emblem) */}
@@ -1251,7 +1319,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
             {/* Document Content */}
             <div className="relative z-10 print:z-auto">
 
-            {/* 1. KOP SURAT RESMI: DUKUNGAN FILE GAMBAR KUSTOM ATAU KOP RESMI STANDAR */}
+            {/* 1. KOP SURAT RESMI */}
             {signConfig.kopType === 'custom_image' && signConfig.customKopImage ? (
               <div className="border-b-4 border-double border-slate-900 pb-3 mb-6 print-kop-surat">
                 <div className="w-full flex justify-center items-center overflow-hidden">
@@ -1272,14 +1340,17 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     <SatpolPPLogo className="w-16 h-16 object-contain" />
                   </div>
 
-                  {/* Kop Text: SATPOL PP KABUPATEN BANGKA BARAT */}
+                  {/* Kop Text: PEMERINTAH, SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN, REKAPITULASI ABSENSI PEGAWAI */}
                   <div className="text-center flex-1">
                     <h4 className="text-xs sm:text-sm font-bold tracking-widest uppercase text-slate-700">
                       {signConfig.kopHeaderTop || "PEMERINTAH KABUPATEN BANGKA BARAT"}
                     </h4>
-                    <h2 className="text-base sm:text-2xl font-black uppercase text-slate-900 tracking-tight leading-tight mt-0.5">
-                      {signConfig.kopHeaderTitle || "SATPOL PP KABUPATEN BANGKA BARAT"}
+                    <h2 className="text-sm sm:text-xl font-black uppercase text-slate-900 tracking-tight leading-tight mt-0.5">
+                      {signConfig.kopHeaderTitle || "SATUAN POLISI PAMONG PRAJA DAN PEMADAM KEBAKARAN"}
                     </h2>
+                    <h3 className="text-xs sm:text-sm font-black uppercase text-slate-800 tracking-wider mt-1">
+                      REKAPITULASI ABSENSI PEGAWAI
+                    </h3>
                   </div>
 
                   {/* Semboyan Logo */}
@@ -1312,7 +1383,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               {activeMenu === 'monthly' && (
                 <>
                   <h3 className="text-sm sm:text-base font-black uppercase underline decoration-2 underline-offset-4 text-slate-900">
-                    LAPORAN EVALUASI BULANAN REKAPITULASI JAM KERJA & DISIPLIN {isDanru && adminRegu ? `(${adminRegu.toUpperCase()})` : ''}
+                    REKAPITULASI ABSENSI PEGAWAI {isDanru && adminRegu ? `(${adminRegu.toUpperCase()})` : ''}
                   </h3>
                   <p className="text-[11px] text-slate-600 mt-1">
                     Periode: <strong>{filterMonth === '2026-09' ? 'September 2026' : filterMonth}</strong> · Total Formasi: <strong>{scopedEmployees.length} Personel {isDanru && adminRegu ? `(${adminRegu})` : ''}</strong>
@@ -1539,27 +1610,34 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
               </div>
             )}
 
-            {/* Menu 2: Laporan Bulanan (Dengan Sistem Pintar Perhitungan Otomatis: H, S, I, TK, P) */}
+            {/* Menu 2: Format Cetak Rekapitulasi Absensi Pegawai (Revisi Resmi: TL 1-4, Cuti jadi Izin, Diklat & PSW Ditiadakan) */}
             {activeMenu === 'monthly' && (
               <div className="space-y-4">
                 <table className="w-full text-left border-collapse text-[10px] leading-tight print-table">
                   <thead className="print-table-header">
                     <tr className="bg-slate-200 border border-slate-300 text-slate-800 font-bold uppercase text-[9px]">
-                      <th className="p-1.5 border border-slate-300 text-center w-7">No</th>
-                      <th className="p-1.5 border border-slate-300 min-w-[130px]">Nama Personel & NIP</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-14">Regu</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-16">Jadwal</th>
-                      <th className="p-1.5 border border-slate-300">Pos Penugasan</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-12 bg-slate-300/60" title="Target Hari Wajib Kerja">Wajib</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-8 text-emerald-900 bg-emerald-100/50" title="Hadir">H</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-8 text-indigo-900 bg-indigo-100/50" title="Izin">I</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-8 text-purple-900 bg-purple-100/50" title="Sakit">S</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-8 text-rose-900 bg-rose-100/60 font-black" title="Tanpa Keterangan">TK</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-8 text-cyan-900 bg-cyan-100/50" title="Pemutihan (Disp HP / Lapangan)">P</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-8 text-orange-950 bg-orange-100/70 font-black" title="Tanpa Absen Pulang (Sanksi 4 Jam)">TAP</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-8 text-amber-900" title="Terlambat">T</th>
-                      <th className="p-1.5 border border-slate-300 text-center w-14 font-black">% Hadir</th>
-                      <th className="p-1.5 border border-slate-300">Pola & Evaluasi</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-7">No</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 min-w-[130px]">Nama Personel & NIP</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-14">Regu</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-14">Jadwal</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 min-w-[100px]">Pos Penugasan</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-11 bg-slate-300/60" title="Target Hari Wajib Kerja">Wajib</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-8 text-emerald-950 bg-emerald-100/60" title="Hadir (Tepat Waktu & Terlambat Sah)">H</th>
+                      <th colSpan={4} className="p-1 border border-slate-300 text-center text-amber-950 bg-amber-100/80 font-bold">
+                        Keterlambatan (TL)
+                      </th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-8 text-orange-950 bg-orange-100/80 font-black" title="PSW: Pegawai Tidak Melakukan Absensi Pulang">PSW</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-8 text-indigo-950 bg-indigo-100/60" title="Izin Resmi (Termasuk Cuti Disetujui)">I</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-8 text-purple-950 bg-purple-100/60" title="Sakit Surat Dokter">S</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-8 text-rose-950 bg-rose-100/70 font-black" title="Tanpa Keterangan / Alpha">TK</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-12 font-black bg-slate-200/80">% Hadir</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 min-w-[120px]">Pola & Evaluasi Disiplin</th>
+                    </tr>
+                    <tr className="bg-amber-50 border border-slate-300 text-amber-950 font-bold uppercase text-[8px]">
+                      <th className="p-1 border border-slate-300 text-center w-7" title="TL 1: Telat 1 - 30 Menit">TL 1</th>
+                      <th className="p-1 border border-slate-300 text-center w-7" title="TL 2: Telat 31 - 60 Menit">TL 2</th>
+                      <th className="p-1 border border-slate-300 text-center w-7" title="TL 3: Telat 61 - 90 Menit">TL 3</th>
+                      <th className="p-1 border border-slate-300 text-center w-7" title="TL 4: Telat 91 - 120 Menit">TL 4</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1602,28 +1680,40 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-bold bg-slate-100 text-slate-800">
                               {smart.targetWorkDays}h
                             </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-emerald-800">
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-emerald-800 bg-emerald-50/20">
                               {smart.hadirCount > 0 ? smart.hadirCount : "-"}
                             </td>
+                            {/* Rincian Keterlambatan TL 1, 2, 3, 4 */}
+                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 bg-amber-50/10">
+                              {smart.tl1Count > 0 ? <strong className="text-amber-700">{smart.tl1Count}</strong> : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 bg-amber-50/10">
+                              {smart.tl2Count > 0 ? <strong className="text-amber-800">{smart.tl2Count}</strong> : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 bg-amber-50/10">
+                              {smart.tl3Count > 0 ? <strong className="text-amber-900">{smart.tl3Count}</strong> : "-"}
+                            </td>
+                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 bg-amber-50/10">
+                              {smart.tl4Count > 0 ? <strong className="text-rose-800">{smart.tl4Count}</strong> : "-"}
+                            </td>
+                            {/* PSW: Pegawai Tidak Melakukan Absensi Pulang */}
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-orange-950 bg-orange-50/40">
+                              {smart.tidakTapPulangCount > 0 ? <span className="text-orange-800 font-bold">{smart.tidakTapPulangCount}</span> : "-"}
+                            </td>
+                            {/* Izin (pengganti cuti) */}
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-indigo-800">
                               {smart.izinCount > 0 ? smart.izinCount : "-"}
                             </td>
+                            {/* Sakit */}
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-purple-800">
                               {smart.sakitCount > 0 ? smart.sakitCount : "-"}
                             </td>
+                            {/* Tanpa Keterangan (Alpha) */}
                             <td className="p-1.5 border border-slate-300 text-center font-mono font-black text-rose-800">
                               {smart.tanpaKeteranganCount > 0 ? smart.tanpaKeteranganCount : "0"}
                             </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-cyan-800">
-                              {smart.pemutihanCount > 0 ? smart.pemutihanCount : "-"}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-bold text-orange-800 bg-orange-50/20">
-                              {smart.tidakTapPulangCount > 0 ? smart.tidakTapPulangCount : "-"}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono text-amber-800 font-semibold">
-                              {smart.lateCount > 0 ? smart.lateCount : "-"}
-                            </td>
-                            <td className="p-1.5 border border-slate-300 text-center font-mono font-black">
+                            {/* Persentase Kehadiran */}
+                            <td className="p-1.5 border border-slate-300 text-center font-mono font-black bg-slate-50/50">
                               <span className={smart.attendanceRate >= 90 ? 'text-emerald-800' : smart.attendanceRate >= 75 ? 'text-amber-800' : 'text-rose-800'}>
                                 {smart.attendanceRate}%
                               </span>
@@ -1637,21 +1727,22 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                   </tbody>
                 </table>
 
-                {/* Legenda Resmi Cetak */}
+                {/* Legenda Resmi Rekapitulasi Absensi Pegawai */}
                 <div className="p-2.5 bg-slate-50 border border-slate-300 rounded text-[9px] text-slate-700 space-y-1">
-                  <div className="font-bold text-slate-900">Keterangan Singkatan Kode Rekapan:</div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1">
-                    <span><strong>H</strong> = Hadir Tepat Waktu</span>
-                    <span><strong>T</strong> = Terlambat</span>
-                    <span><strong>S</strong> = Sakit (Surat Dokter Sah)</span>
-                    <span><strong>I</strong> = Izin (Dinas / Pribadi Disetujui)</span>
-                    <span><strong>TK</strong> = Tanpa Keterangan (Alpha)</span>
-                    <span><strong>P</strong> = Pemutihan (Dispensasi HP Rusak / Lapangan Menyesuaikan Hadir Sah)</span>
-                    <span><strong>TAP</strong> = Tanpa Absen Pulang (Sanksi Jam Kerja 4 Jam & Disiplin)</span>
-                    <span><strong>L</strong> = Libur (Weekend / Hari Besar Nasional / Off Siklus Shift)</span>
+                  <div className="font-bold text-slate-900">Keterangan Format Rekapitulasi Absensi Pegawai:</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
+                    <span><strong>H (Hadir)</strong> = Kehadiran Dinas Resmi</span>
+                    <span><strong>TL 1</strong> = Telat 1 - 30 Menit dari Jam Masuk</span>
+                    <span><strong>TL 2</strong> = Telat 31 - 60 Menit dari Jam Masuk</span>
+                    <span><strong>TL 3</strong> = Telat 61 - 90 Menit dari Jam Masuk</span>
+                    <span><strong>TL 4</strong> = Telat 91 - 120 Menit dari Jam Masuk</span>
+                    <span><strong>PSW</strong> = Pegawai Tidak Melakukan Absensi Pulang</span>
+                    <span><strong>I (Izin)</strong> = Izin Dinas / Pribadi Disetujui (Pengganti Cuti)</span>
+                    <span><strong>S (Sakit)</strong> = Keterangan Sakit / Surat Dokter Sah</span>
+                    <span><strong>TK</strong> = Tanpa Keterangan / Alpha</span>
                   </div>
-                  <div className="text-[8.5px] text-slate-500 italic pt-0.5 border-t border-slate-200">
-                    * Catatan: Jadwal Harian beroperasi Senin-Jumat (libur Sabtu, Minggu, & Hari Libur Nasional). Jadwal Shift 12 Jam beroperasi sesuai siklus dinamis: Pagi - Malam - Libur - Libur. Perubahan jadwal pegawai otomatis memperbarui persentase kehadiran.
+                  <div className="text-[8.5px] text-slate-500 italic pt-1 border-t border-slate-200">
+                    * Catatan Format: Kode JML dihapus dan diganti dengan PSW (menandakan pegawai tidak melakukan absensi pulang). Modul Diklat ditiadakan. Data Cuti otomatis dimasukkan ke dalam kategori Izin (I).
                   </div>
                 </div>
               </div>

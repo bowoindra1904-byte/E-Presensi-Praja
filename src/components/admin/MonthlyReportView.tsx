@@ -182,6 +182,11 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
         totalMonthWorkDays: smart.totalMonthWorkDays,
         hadirCount: smart.hadirCount,
         lateCount: smart.lateCount,
+        tl1Count: smart.tl1Count,
+        tl2Count: smart.tl2Count,
+        tl3Count: smart.tl3Count,
+        tl4Count: smart.tl4Count,
+        totalTlCount: smart.totalTlCount,
         sakitCount: smart.sakitCount,
         izinCount: smart.izinCount,
         tanpaKeteranganCount: smart.tanpaKeteranganCount,
@@ -246,7 +251,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
     ? Math.round(filteredReports.reduce((acc, curr) => acc + (curr.attendanceRate ?? 100), 0) / filteredReports.length)
     : 100;
 
-  // Export CSV Lengkap dengan Kolom Wajib Kerja, Hadir (H), Izin (I), Sakit (S), TK, Pemutihan (P), TAP (Tanpa Pulang)
+  // Export CSV Format Rekapitulasi Absensi Pegawai dengan TL 1-4, Izin, Sakit, TK
   const handleExportCSV = () => {
     const headers = [
       "ID Personel", 
@@ -259,13 +264,14 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       "Tipe Jam Kerja", 
       "Target Hari Wajib Kerja",
       "Hadir (H)", 
-      "Terlambat (T)",
+      "TL 1 (1-30m)",
+      "TL 2 (31-60m)",
+      "TL 3 (61-90m)",
+      "TL 4 (91-120m)",
+      "PSW (Tidak Absen Pulang)",
       "Izin (I)",
       "Sakit (S)",
       "Tanpa Keterangan (TK)",
-      "Pemutihan (P)",
-      "Tanpa Absen Pulang (TAP)",
-      "Total Hadir Sah",
       "Persentase Kehadiran (%)",
       "Tingkat Ketepatan Waktu (%)",
       "Total Jam Kerja", 
@@ -283,13 +289,14 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       r.scheduleType.toUpperCase(),
       r.targetWorkDays ?? 0,
       r.hadirCount ?? 0,
-      r.lateCount ?? 0,
+      r.tl1Count ?? 0,
+      r.tl2Count ?? 0,
+      r.tl3Count ?? 0,
+      r.tl4Count ?? 0,
+      r.tidakTapPulangCount ?? 0,
       r.izinCount ?? 0,
       r.sakitCount ?? 0,
       r.tanpaKeteranganCount ?? 0,
-      r.pemutihanCount ?? 0,
-      r.tidakTapPulangCount ?? 0,
-      r.totalHadirSah ?? 0,
       `${r.attendanceRate ?? 100}%`,
       `${r.disciplineRate}%`,
       r.totalWorkHours,
@@ -300,7 +307,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Laporan_Absensi_Pintar_Satpol_PP_${selectedMonth}.csv`);
+    link.setAttribute("download", `Rekapitulasi_Absensi_Pegawai_${selectedMonth}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -403,8 +410,8 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
             <FileText className="w-5 h-5 text-amber-600" />
             <span>
               {isDanru 
-                ? `Laporan Bulanan Personel ${adminRegu}` 
-                : 'Laporan & Rekapan Bulanan Seluruh Personel Satpol PP'
+                ? `Rekapitulasi Absensi Pegawai (${adminRegu})` 
+                : 'Rekapitulasi Absensi Pegawai (Seluruh Personel Satpol PP)'
               }
             </span>
           </h2>
@@ -730,8 +737,8 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
               <span>Pemutihan (Disp. HP / Lapangan)</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-900 font-semibold">
-              <span className="w-5 h-4 rounded bg-orange-600 text-white font-bold flex items-center justify-center text-[8.5px]">TAP</span>
-              <span>Tanpa Pulang (Sanksi 4 Jam)</span>
+              <span className="w-8 h-4 rounded bg-orange-600 text-white font-bold flex items-center justify-center text-[8.5px]">PSW</span>
+              <span>PSW (Pegawai Tidak Absen Pulang)</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 font-medium">
               <span className="w-4 h-4 rounded bg-slate-400 text-white font-bold flex items-center justify-center text-[9px]">L</span>
@@ -927,8 +934,8 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     </div>
                     <div className="bg-white p-1.5 rounded-xl border border-slate-200">
                       <span className="text-[8.5px] text-amber-700 font-bold block">T</span>
-                      <span className={`font-mono font-bold text-[11px] ${(item.lateCount ?? item.totalLateCount) > 0 ? 'text-amber-700' : 'text-slate-400'}`}>
-                        {item.lateCount ?? item.totalLateCount}
+                      <span className={`font-mono font-bold text-[11px] ${(item.totalTlCount ?? item.lateCount ?? item.totalLateCount) > 0 ? 'text-amber-700' : 'text-slate-400'}`}>
+                        {item.totalTlCount ?? item.lateCount ?? item.totalLateCount}
                       </span>
                     </div>
                     <div className="bg-white p-1.5 rounded-xl border border-slate-200">
@@ -956,12 +963,22 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                       </span>
                     </div>
                     <div className="bg-white p-1.5 rounded-xl border border-orange-200 bg-orange-50/30">
-                      <span className="text-[8.5px] text-orange-800 font-bold block">TAP</span>
+                      <span className="text-[8.5px] text-orange-800 font-bold block">PSW</span>
                       <span className={`font-mono font-bold text-[11px] ${(item.tidakTapPulangCount ?? 0) > 0 ? 'text-orange-700 font-black' : 'text-slate-400'}`}>
                         {item.tidakTapPulangCount ?? 0}
                       </span>
                     </div>
                   </div>
+
+                  {/* Rincian Keterlambatan TL 1 - 4 untuk Mobile */}
+                  {((item.totalTlCount ?? item.lateCount ?? 0) > 0) && (
+                    <div className="grid grid-cols-4 gap-1 text-[9px] bg-amber-50/70 border border-amber-200/80 p-1.5 rounded-xl text-amber-950 font-mono text-center">
+                      <div>TL 1 (1-30m): <strong>{item.tl1Count || 0}</strong></div>
+                      <div>TL 2 (31-60m): <strong>{item.tl2Count || 0}</strong></div>
+                      <div>TL 3 (61-90m): <strong>{item.tl3Count || 0}</strong></div>
+                      <div>TL 4 (91-120m): <strong>{item.tl4Count || 0}</strong></div>
+                    </div>
+                  )}
 
                   {/* Attendance Rate Progress */}
                   <div className="space-y-1 pt-1 border-t border-slate-200">
@@ -1010,26 +1027,29 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-700 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200">
                   <tr>
-                    <th className="py-3 px-3 text-center w-10">No</th>
-                    <th className="py-3 px-4 min-w-[200px]">Nama & NIP Personel</th>
-                    <th className="py-3 px-3">Regu & Pos</th>
-                    <th className="py-3 px-3">Tipe Jam Kerja</th>
-                    <th className="py-3 px-3 text-center bg-slate-100/70 border-x border-slate-200/60" title="Target Hari Kerja dari Awal Bulan s.d Hari Ini">
-                      Wajib Kerja
+                    <th className="py-3 px-2.5 text-center w-8">No</th>
+                    <th className="py-3 px-3 min-w-[170px]">Nama & NIP Personel</th>
+                    <th className="py-3 px-2.5">Regu & Pos</th>
+                    <th className="py-3 px-2 text-center w-16">Jadwal</th>
+                    <th className="py-3 px-2 text-center bg-slate-100/70 border-x border-slate-200/60" title="Target Hari Kerja dari Awal Bulan s.d Hari Ini">
+                      Wajib
                     </th>
-                    <th className="py-3 px-2.5 text-center text-emerald-800 bg-emerald-50/50" title="Hadir Tepat Waktu">H</th>
-                    <th className="py-3 px-2.5 text-center text-amber-800 bg-amber-50/50" title="Terlambat">T</th>
-                    <th className="py-3 px-2.5 text-center text-indigo-800 bg-indigo-50/50" title="Izin">I</th>
-                    <th className="py-3 px-2.5 text-center text-purple-800 bg-purple-50/50" title="Sakit">S</th>
-                    <th className="py-3 px-2.5 text-center text-rose-800 bg-rose-50/60 font-black" title="Tanpa Keterangan / Alpha">TK</th>
-                    <th className="py-3 px-2.5 text-center text-cyan-800 bg-cyan-50/50" title="Pemutihan (HP Rusak / Penugasan Sah)">P</th>
-                    <th className="py-3 px-2.5 text-center text-orange-900 bg-orange-100/70 font-black" title="Tanpa Absen Pulang (Sanksi Pengurangan Jam Kerja Menjadi 4 Jam & Disiplin)">TAP</th>
-                    <th className="py-3 px-4 text-center min-w-[130px]">
-                      % Kehadiran
+                    <th className="py-3 px-2 text-center text-emerald-800 bg-emerald-50/50" title="Hadir Tepat Waktu & Terlambat Sah">H</th>
+                    <th className="py-3 px-1.5 text-center text-amber-700 bg-amber-50/40 text-[9px]" title="TL 1: Terlambat 1 - 30 Menit">TL 1</th>
+                    <th className="py-3 px-1.5 text-center text-amber-800 bg-amber-50/40 text-[9px]" title="TL 2: Terlambat 31 - 60 Menit">TL 2</th>
+                    <th className="py-3 px-1.5 text-center text-amber-900 bg-amber-50/40 text-[9px]" title="TL 3: Terlambat 61 - 90 Menit">TL 3</th>
+                    <th className="py-3 px-1.5 text-center text-rose-800 bg-amber-50/40 text-[9px]" title="TL 4: Terlambat 91 - 120 Menit">TL 4</th>
+                    <th className="py-3 px-2 text-center text-orange-950 bg-orange-100/70 font-bold" title="PSW: Pegawai Tidak Melakukan Absensi Pulang">PSW</th>
+                    <th className="py-3 px-2 text-center text-indigo-800 bg-indigo-50/50" title="Izin (Termasuk Cuti Disetujui)">I</th>
+                    <th className="py-3 px-2 text-center text-purple-800 bg-purple-50/50" title="Sakit Surat Dokter">S</th>
+                    <th className="py-3 px-2 text-center text-rose-800 bg-rose-50/60 font-black" title="Tanpa Keterangan / Alpha">TK</th>
+                    <th className="py-3 px-2 text-center text-cyan-800 bg-cyan-50/50" title="Pemutihan (Dispensasi HP Rusak / Penugasan Sah)">P</th>
+                    <th className="py-3 px-3 text-center min-w-[110px]">
+                      % Hadir
                     </th>
-                    <th className="py-3 px-3 text-center">Jam Kerja</th>
-                    <th className="py-3 px-4 min-w-[160px]">Pola & Evaluasi</th>
-                    <th className="py-3 px-3 text-center">Detail</th>
+                    <th className="py-3 px-2 text-center">Jam</th>
+                    <th className="py-3 px-3 min-w-[140px]">Pola & Evaluasi</th>
+                    <th className="py-3 px-2 text-center">Detail</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1043,61 +1063,93 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                         }`}
                       >
                         {/* No */}
-                        <td className="py-3 px-3 text-center font-mono text-slate-400 font-bold text-[11px]">
+                        <td className="py-3 px-2.5 text-center font-mono text-slate-400 font-bold text-[11px]">
                           {idx + 1}
                         </td>
 
                         {/* Personel */}
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-slate-900 text-sm">{item.employeeName}</div>
-                          <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
+                        <td className="py-3 px-3">
+                          <div className="font-bold text-slate-900 text-xs sm:text-sm">{item.employeeName}</div>
+                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
                             <span className="text-amber-700 font-semibold">{item.employeeId}</span>
                             <span>·</span>
                             <span>NIP: {item.nip}</span>
                           </div>
-                          <div className="text-[10px] text-slate-500">{item.role}</div>
+                          <div className="text-[9.5px] text-slate-500">{item.role}</div>
                         </td>
 
                         {/* Regu & Pos */}
-                        <td className="py-3 px-3">
-                          <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 font-bold text-[10px] mb-1">
+                        <td className="py-3 px-2.5">
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-bold text-[9.5px] mb-0.5">
                             {item.regu}
                           </span>
-                          <span className="font-medium text-slate-700 block truncate max-w-[170px] text-[11px]" title={item.locationName}>
+                          <span className="font-medium text-slate-700 block truncate max-w-[150px] text-[10px]" title={item.locationName}>
                             Slot {item.locationSlotId}: {item.locationName.replace(/^Slot \d+:\s*/, '')}
                           </span>
                         </td>
 
                         {/* Tipe Kerja */}
-                        <td className="py-3 px-3">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border inline-block ${
+                        <td className="py-3 px-2 text-center">
+                          <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full border inline-block ${
                             item.scheduleType === 'shift' 
                               ? 'bg-amber-50 border-amber-200 text-amber-800' 
                               : 'bg-emerald-50 border-emerald-200 text-emerald-800'
                           }`}>
-                            {item.scheduleType === 'shift' ? 'Shift 12 Jam' : 'Harian'}
-                          </span>
-                          <span className="text-[9px] text-slate-500 block mt-0.5">
-                            {item.scheduleType === 'shift' ? 'P-M-L-L Dinamis' : 'Senin - Jumat'}
+                            {item.scheduleType === 'shift' ? '12J' : 'Harian'}
                           </span>
                         </td>
 
                         {/* Target Wajib Kerja */}
-                        <td className="py-3 px-3 text-center bg-slate-50/60 border-x border-slate-200/60 font-mono font-bold text-slate-800">
-                          <span className="text-sm">{item.targetWorkDays ?? 0}</span>
-                          <span className="text-[9.5px] text-slate-500 block">Hari</span>
+                        <td className="py-3 px-2 text-center bg-slate-50/60 border-x border-slate-200/60 font-mono font-bold text-slate-800 text-[11px]">
+                          {item.targetWorkDays ?? 0}h
                         </td>
 
                         {/* H (Hadir) */}
-                        <td className="py-3 px-2.5 text-center font-mono font-bold text-emerald-700 bg-emerald-50/20">
+                        <td className="py-3 px-2 text-center font-mono font-bold text-emerald-700 bg-emerald-50/20 text-xs">
                           {item.hadirCount ?? item.totalPresentDays}
                         </td>
 
-                        {/* T (Terlambat) */}
-                        <td className="py-3 px-2.5 text-center font-mono text-xs bg-amber-50/20">
-                          {(item.lateCount ?? item.totalLateCount) > 0 ? (
-                            <span className="font-bold text-amber-700 px-1.5 py-0.5 bg-amber-100 rounded">
-                              {item.lateCount ?? item.totalLateCount}
+                        {/* TL 1 (1 - 30 Menit) */}
+                        <td className="py-3 px-1.5 text-center font-mono text-[11px] bg-amber-50/20">
+                          {(item.tl1Count ?? 0) > 0 ? (
+                            <span className="font-bold text-amber-700">{item.tl1Count}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+
+                        {/* TL 2 (31 - 60 Menit) */}
+                        <td className="py-3 px-1.5 text-center font-mono text-[11px] bg-amber-50/20">
+                          {(item.tl2Count ?? 0) > 0 ? (
+                            <span className="font-bold text-amber-800">{item.tl2Count}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+
+                        {/* TL 3 (61 - 90 Menit) */}
+                        <td className="py-3 px-1.5 text-center font-mono text-[11px] bg-amber-50/20">
+                          {(item.tl3Count ?? 0) > 0 ? (
+                            <span className="font-bold text-amber-900">{item.tl3Count}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+
+                        {/* TL 4 (91 - 120 Menit) */}
+                        <td className="py-3 px-1.5 text-center font-mono text-[11px] bg-amber-50/20">
+                          {(item.tl4Count ?? 0) > 0 ? (
+                            <span className="font-bold text-rose-700">{item.tl4Count}</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+
+                        {/* PSW (Pegawai Tidak Melakukan Absensi Pulang) */}
+                        <td className="py-3 px-2 text-center font-mono text-xs bg-orange-50/30">
+                          {(item.tidakTapPulangCount ?? 0) > 0 ? (
+                            <span className="font-bold text-orange-900 px-1.5 py-0.5 bg-orange-100 border border-orange-200 rounded">
+                              {item.tidakTapPulangCount}
                             </span>
                           ) : (
                             <span className="text-slate-300">-</span>
@@ -1105,7 +1157,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                         </td>
 
                         {/* I (Izin) */}
-                        <td className="py-3 px-2.5 text-center font-mono text-xs bg-indigo-50/20">
+                        <td className="py-3 px-2 text-center font-mono text-xs bg-indigo-50/20">
                           {(item.izinCount ?? 0) > 0 ? (
                             <span className="font-bold text-indigo-700 px-1.5 py-0.5 bg-indigo-100 rounded">
                               {item.izinCount}
@@ -1116,7 +1168,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                         </td>
 
                         {/* S (Sakit) */}
-                        <td className="py-3 px-2.5 text-center font-mono text-xs bg-purple-50/20">
+                        <td className="py-3 px-2 text-center font-mono text-xs bg-purple-50/20">
                           {(item.sakitCount ?? 0) > 0 ? (
                             <span className="font-bold text-purple-700 px-1.5 py-0.5 bg-purple-100 rounded">
                               {item.sakitCount}
@@ -1127,7 +1179,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                         </td>
 
                         {/* TK (Tanpa Keterangan) */}
-                        <td className="py-3 px-2.5 text-center font-mono text-xs bg-rose-50/30">
+                        <td className="py-3 px-2 text-center font-mono text-xs bg-rose-50/30">
                           {(item.tanpaKeteranganCount ?? 0) > 0 ? (
                             <span className="font-black text-rose-700 px-1.5 py-0.5 bg-rose-200 rounded animate-pulse">
                               {item.tanpaKeteranganCount}
@@ -1142,17 +1194,6 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                           {(item.pemutihanCount ?? 0) > 0 ? (
                             <span className="font-bold text-cyan-800 px-1.5 py-0.5 bg-cyan-100 rounded">
                               {item.pemutihanCount}
-                            </span>
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
-                        </td>
-
-                        {/* TAP (Tanpa Absen Pulang - Sanksi 4 Jam) */}
-                        <td className="py-3 px-2.5 text-center font-mono text-xs bg-orange-50/20">
-                          {(item.tidakTapPulangCount ?? 0) > 0 ? (
-                            <span className="font-bold text-orange-800 px-1.5 py-0.5 bg-orange-100 border border-orange-200 rounded">
-                              {item.tidakTapPulangCount}
                             </span>
                           ) : (
                             <span className="text-slate-300">-</span>
@@ -1430,7 +1471,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                 </span>
               </div>
               <div className="bg-white p-2 rounded-xl border border-orange-200 bg-orange-50/20">
-                <span className="text-[10px] text-orange-800 block font-bold">Tanpa Pulang (TAP)</span>
+                <span className="text-[10px] text-orange-800 block font-bold">Tanpa Pulang (PSW)</span>
                 <span className={`font-mono font-bold text-xs ${(selectedEmpForCalendar.tidakTapPulangCount ?? 0) > 0 ? 'text-orange-700 font-black' : 'text-slate-400'}`}>
                   {(selectedEmpForCalendar.tidakTapPulangCount ?? 0) > 0 ? `${selectedEmpForCalendar.tidakTapPulangCount} Hari (4J)` : '0'}
                 </span>
@@ -1452,6 +1493,24 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Rincian Keterlambatan Resmi TL 1 - 4 */}
+            {((selectedEmpForCalendar.totalTlCount ?? selectedEmpForCalendar.lateCount ?? 0) > 0) && (
+              <div className="px-4 py-2.5 bg-amber-50/80 border-b border-amber-200/90 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[11px] text-amber-950">
+                  <span className="font-bold flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-700" />
+                    Rincian Keterlambatan (Total {selectedEmpForCalendar.totalTlCount ?? selectedEmpForCalendar.lateCount}x):
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10.5px]">
+                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 1 (1-30m): <strong>{selectedEmpForCalendar.tl1Count || 0}</strong></span>
+                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 2 (31-60m): <strong>{selectedEmpForCalendar.tl2Count || 0}</strong></span>
+                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 3 (61-90m): <strong>{selectedEmpForCalendar.tl3Count || 0}</strong></span>
+                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 4 (91-120m): <strong>{selectedEmpForCalendar.tl4Count || 0}</strong></span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal Body: Day-by-Day Calendar List */}
             <div className="p-4 overflow-y-auto space-y-2 flex-1">

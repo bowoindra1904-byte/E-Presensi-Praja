@@ -97,6 +97,75 @@ export interface DayScheduleInfo {
   holidayName?: string;
 }
 
+export interface LateCategoryDetails {
+  minutesLate: number;
+  category: 'TL1' | 'TL2' | 'TL3' | 'TL4' | null;
+  label: string;
+}
+
+export function getLateCategoryDetails(
+  record: AttendanceRecord,
+  employee: Employee
+): LateCategoryDetails {
+  if (record.checkInStatus !== 'terlambat' || !record.checkInTime || record.checkInTime === '-') {
+    return { minutesLate: 0, category: null, label: 'Tepat Waktu' };
+  }
+
+  // Parse checkInTime (format could be HH:mm:ss or HH:mm or HH.mm)
+  const parts = record.checkInTime.replace('.', ':').split(':');
+  if (parts.length < 2) {
+    return { minutesLate: 15, category: 'TL1', label: 'TL 1 (1-30 mnt)' };
+  }
+  const checkInHours = parseInt(parts[0], 10);
+  const checkInMins = parseInt(parts[1], 10);
+  if (isNaN(checkInHours) || isNaN(checkInMins)) {
+    return { minutesLate: 15, category: 'TL1', label: 'TL 1 (1-30 mnt)' };
+  }
+  const checkInTotalMins = checkInHours * 60 + checkInMins;
+
+  // Determine official scheduled in time in minutes
+  let officialInMins = 7 * 60 + 30; // default 07:30
+  if (employee.scheduleType === 'harian') {
+    // Check day of week from record.date (YYYY-MM-DD)
+    const recDate = new Date(record.date + 'T00:00:00');
+    const isFriday = recDate.getDay() === 5;
+    officialInMins = isFriday ? 7 * 60 : (7 * 60 + 30);
+  } else if (employee.scheduleType === 'shift') {
+    if (checkInTotalMins >= 18 * 60 || checkInTotalMins < 5 * 60) {
+      officialInMins = 20 * 60; // 20:00 WIB
+    } else {
+      officialInMins = 8 * 60;  // 08:00 WIB
+    }
+  }
+
+  let diff = 0;
+  if (officialInMins === 20 * 60 && checkInTotalMins < 5 * 60) {
+    diff = (24 * 60 - officialInMins) + checkInTotalMins;
+  } else {
+    diff = checkInTotalMins - officialInMins;
+  }
+
+  const minutesLate = Math.max(1, diff);
+
+  let category: 'TL1' | 'TL2' | 'TL3' | 'TL4' = 'TL1';
+  let label = 'TL 1 (1-30 mnt)';
+  if (minutesLate <= 30) {
+    category = 'TL1';
+    label = 'TL 1 (1-30 mnt)';
+  } else if (minutesLate <= 60) {
+    category = 'TL2';
+    label = 'TL 2 (31-60 mnt)';
+  } else if (minutesLate <= 90) {
+    category = 'TL3';
+    label = 'TL 3 (61-90 mnt)';
+  } else {
+    category = 'TL4';
+    label = 'TL 4 (91-120 mnt)';
+  }
+
+  return { minutesLate, category, label };
+}
+
 export interface DayAttendanceStatus extends DayScheduleInfo {
   code: AttendanceStatusCode;
   codeLabel: string;
@@ -105,6 +174,7 @@ export interface DayAttendanceStatus extends DayScheduleInfo {
   notes?: string;
   workHours?: number;
   isMissingCheckOut?: boolean; // True jika pegawai hadir tapi tidak melakukan absen pulang pada hari/jam dinas yang telah selesai
+  lateDetails?: LateCategoryDetails;
 }
 
 // ============================================================================
@@ -675,6 +745,18 @@ export interface SmartMonthlyReportResult {
   hadirCount: number; // H (Hadir Tepat Waktu + Hadir Terlambat)
   onTimeCount: number; // H Tepat Waktu
   lateCount: number; // T (Terlambat)
+  
+  // Rincian Keterlambatan Resmi:
+  // TL 1: 1 - 30 menit
+  // TL 2: 31 - 60 menit
+  // TL 3: 61 - 90 menit
+  // TL 4: 91 - 120 menit
+  tl1Count: number;
+  tl2Count: number;
+  tl3Count: number;
+  tl4Count: number;
+  totalTlCount: number;
+
   sakitCount: number; // S (Sakit)
   izinCount: number; // I (Izin)
   tanpaKeteranganCount: number; // TK (Tanpa Keterangan)
@@ -796,6 +878,10 @@ export function calculateSmartMonthlyReport(
   let hadirCount = 0;
   let onTimeCount = 0;
   let lateCount = 0;
+  let tl1Count = 0;
+  let tl2Count = 0;
+  let tl3Count = 0;
+  let tl4Count = 0;
   let sakitCount = 0;
   let izinCount = 0;
   let tanpaKeteranganCount = 0;
@@ -837,6 +923,16 @@ export function calculateSmartMonthlyReport(
     } else if (status.code === 'T') {
       hadirCount++;
       lateCount++;
+      const lateDet = status.record 
+        ? getLateCategoryDetails(status.record, employee) 
+        : { minutesLate: 15, category: 'TL1' as const, label: 'TL 1 (1-30 mnt)' };
+      status.lateDetails = lateDet;
+      if (lateDet.category === 'TL1') tl1Count++;
+      else if (lateDet.category === 'TL2') tl2Count++;
+      else if (lateDet.category === 'TL3') tl3Count++;
+      else if (lateDet.category === 'TL4') tl4Count++;
+      else tl1Count++;
+
       totalWorkHours += status.workHours !== undefined ? status.workHours : (employee.scheduleType === 'shift' ? 12 : 8.5);
     } else if (status.code === 'P') {
       pemutihanCount++;
@@ -918,6 +1014,11 @@ export function calculateSmartMonthlyReport(
     hadirCount,
     onTimeCount,
     lateCount,
+    tl1Count,
+    tl2Count,
+    tl3Count,
+    tl4Count,
+    totalTlCount: tl1Count + tl2Count + tl3Count + tl4Count,
     sakitCount,
     izinCount,
     tanpaKeteranganCount,

@@ -311,9 +311,9 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
           </span>
         </div>
 
-        {/* Tanpa Absen Pulang (TAP) */}
+        {/* Tanpa Absen Pulang (PSW) */}
         <div className="bg-white border border-orange-200/90 rounded-2xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-orange-800 block">Tanpa Pulang (TAP)</span>
+          <span className="text-[11px] font-semibold text-orange-800 block">Tanpa Pulang (PSW)</span>
           <div className="flex items-baseline gap-1 mt-1">
             <span className={`text-xl sm:text-2xl font-black font-mono ${
               smartReport.tidakTapPulangCount > 0 ? 'text-orange-600' : 'text-slate-400'
@@ -331,6 +331,43 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
 
       </div>
 
+      {/* Rincian Keterlambatan Resmi TL 1 s/d TL 4 */}
+      {smartReport.totalTlCount > 0 && (
+        <div className="bg-amber-50/70 border border-amber-200/90 rounded-2xl p-3.5 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+              <div>
+                <span className="text-xs font-bold text-amber-950 block">
+                  Rincian Keterlambatan Bulan Ini: Total {smartReport.totalTlCount}x
+                </span>
+                <span className="text-[10px] text-amber-800/80">
+                  Klasifikasi resmi disiplin waktu berdasarkan jam masuk kerja
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+              <div className="bg-white/90 border border-amber-200/90 px-3 py-1 rounded-xl text-center shadow-2xs">
+                <span className="text-[9.5px] text-amber-800 block font-sans">TL 1 (1-30 mnt)</span>
+                <strong className="text-amber-900 text-sm font-mono">{smartReport.tl1Count}x</strong>
+              </div>
+              <div className="bg-white/90 border border-amber-200/90 px-3 py-1 rounded-xl text-center shadow-2xs">
+                <span className="text-[9.5px] text-amber-800 block font-sans">TL 2 (31-60 mnt)</span>
+                <strong className="text-amber-900 text-sm font-mono">{smartReport.tl2Count}x</strong>
+              </div>
+              <div className="bg-white/90 border border-amber-200/90 px-3 py-1 rounded-xl text-center shadow-2xs">
+                <span className="text-[9.5px] text-amber-800 block font-sans">TL 3 (61-90 mnt)</span>
+                <strong className="text-amber-900 text-sm font-mono">{smartReport.tl3Count}x</strong>
+              </div>
+              <div className="bg-white/90 border border-amber-200/90 px-3 py-1 rounded-xl text-center shadow-2xs">
+                <span className="text-[9.5px] text-amber-800 block font-sans">TL 4 (91-120 mnt)</span>
+                <strong className="text-rose-900 text-sm font-mono">{smartReport.tl4Count}x</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Official Legend Bar */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10.5px]">
@@ -345,7 +382,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
             <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 font-bold">I = Izin</span>
             <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 font-black">TK = Tanpa Keterangan</span>
             <span className="px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200 font-bold">P = Pemutihan (Hadir Sah)</span>
-            <span className="px-2 py-0.5 rounded bg-orange-50 text-orange-900 border border-orange-200 font-bold">TAP = Tanpa Pulang (Sanksi 4J)</span>
+            <span className="px-2 py-0.5 rounded bg-orange-50 text-orange-900 border border-orange-200 font-bold">PSW = Tanpa Absen Pulang (Sanksi 4J)</span>
             <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-medium">L = Libur</span>
           </div>
         </div>

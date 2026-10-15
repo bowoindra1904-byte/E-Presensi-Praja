@@ -166,6 +166,12 @@ export interface MonthlyEmployeeReport {
   totalMonthWorkDays?: number;
   hadirCount?: number;
   lateCount?: number;
+  // Rincian Keterlambatan Resmi: TL 1 (1-30m), TL 2 (31-60m), TL 3 (61-90m), TL 4 (91-120m)
+  tl1Count?: number;
+  tl2Count?: number;
+  tl3Count?: number;
+  tl4Count?: number;
+  totalTlCount?: number;
   sakitCount?: number;
   izinCount?: number;
   tanpaKeteranganCount?: number;

@@ -24,7 +24,11 @@ import {
   User,
   FileText,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Key
 } from 'lucide-react';
 
 interface LoginPortalProps {
@@ -37,6 +41,7 @@ interface LoginPortalProps {
   onUpdateEmployee?: (emp: Employee) => void;
   onAddSecurityLog?: (log: SecurityLog) => void;
   onAddNotification?: (notif: NotificationItem) => void;
+  onResetAdminPinToDefault?: (adminId: string, masterKey: string) => { success: boolean; message: string };
 }
 
 interface DeviceMismatchState {
@@ -57,6 +62,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   onUpdateEmployee,
   onAddSecurityLog,
   onAddNotification,
+  onResetAdminPinToDefault,
 }) => {
   const [activeTab, setActiveTab] = useState<'pegawai' | 'admin'>('pegawai');
   
@@ -81,6 +87,13 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   // Admin Login State
   const [adminPinInput, setAdminPinInput] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [showAdminPin, setShowAdminPin] = useState(false);
+
+  // Master Recovery Key State (Hanya Pimpinan / Kasatpol PP)
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [masterKeyInput, setMasterKeyInput] = useState('');
+  const [recoveryError, setRecoveryError] = useState('');
+  const [recoverySuccess, setRecoverySuccess] = useState('');
 
   const currentDevice = getOrCreateDeviceId();
 
@@ -374,36 +387,56 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
           </p>
         </div>
 
-        {/* Tab Switcher: Pegawai vs Admin */}
-        <div className="grid grid-cols-2 gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 mb-5 sm:mb-6 text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('pegawai');
-              setDeviceMismatchError(null);
-            }}
-            className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'pegawai'
-                ? 'bg-amber-600 text-white shadow-md font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Portal Pegawai (HP)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('admin')}
-            className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'admin'
-                ? 'bg-amber-600 text-white shadow-md font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Portal Admin</span>
-          </button>
-        </div>
+        {/* Tampilan Header Khusus Presensi Pegawai */}
+        {activeTab === 'pegawai' && (
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-amber-500" />
+                Portal Presensi Pegawai
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2.5 py-0.5 rounded-full">
+              Khusus Personel Lapangan
+            </span>
+          </div>
+        )}
+
+        {/* Tampilan Header Khusus Admin Kedinasan */}
+        {activeTab === 'admin' && (
+          <div className="space-y-3 pb-3 mb-4 border-b border-slate-800">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('pegawai');
+                  setAdminError('');
+                  setShowRecoveryModal(false);
+                }}
+                className="text-[11px] text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors py-1.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 cursor-pointer shadow-sm"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
+                <span>Kembali ke Presensi Pegawai</span>
+              </button>
+
+              <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                <ShieldCheck className="w-3 h-3 text-amber-400" />
+                Akses Terbatas
+              </span>
+            </div>
+
+            <div className="text-left bg-slate-950/90 p-3 rounded-xl border border-amber-500/20 shadow-inner">
+              <h2 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-amber-500" />
+                Portal Login Pimpinan & Komando
+              </h2>
+              <p className="text-[10.5px] text-slate-400 mt-0.5 leading-relaxed">
+                Akses khusus Kasatpol PP, Provost, dan Komandan Regu Operasional.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Tab 1: Pegawai Login */}
         {activeTab === 'pegawai' && (
@@ -626,11 +659,28 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
 
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
               Masuk ke Portal Absensi
             </button>
+
+            {/* Akses Khusus Admin & Pimpinan (Discreet Gate / Anti-Penyusupan) */}
+            <div className="pt-3.5 mt-2 border-t border-slate-800/80 flex flex-col items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('admin');
+                  setAdminError('');
+                  setShowRecoveryModal(false);
+                }}
+                className="group text-[11px] text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1.5 py-1 px-3 rounded-xl hover:bg-slate-800/50 border border-transparent hover:border-slate-800 cursor-pointer"
+                title="Akses khusus login pimpinan dan komandan regu"
+              >
+                <Lock className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                <span>Akses Khusus Pejabat & Admin Komando</span>
+              </button>
+            </div>
           </form>
         )}
 
@@ -720,26 +770,59 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                 </span>
               </label>
 
-              <input
-                type="password"
-                placeholder={`Masukkan PIN ${selectedAdmin?.name.split(' (')[0]}...`}
-                value={adminPinInput}
-                onChange={(e) => {
-                  setAdminPinInput(e.target.value);
-                  setAdminError('');
-                }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center text-sm"
-              />
+              <div className="relative">
+                <input
+                  type={showAdminPin ? "text" : "password"}
+                  placeholder={`Masukkan PIN ${selectedAdmin?.name.split(' (')[0]}...`}
+                  value={adminPinInput}
+                  onChange={(e) => {
+                    setAdminPinInput(e.target.value);
+                    setAdminError('');
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 pr-10 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono tracking-widest text-center text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPin(prev => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer p-1"
+                  title={showAdminPin ? "Sembunyikan PIN" : "Tampilkan PIN"}
+                >
+                  {showAdminPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
               {adminError && (
-                <p className="text-[11px] text-rose-400 font-medium">{adminError}</p>
+                <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-900/70 space-y-1">
+                  <p className="text-[11px] text-rose-300 font-medium">{adminError}</p>
+                </div>
               )}
+
+              {/* Bantuan Pemulihan PIN Terproteksi (Master Recovery Key) */}
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRecoveryModal(true);
+                    setMasterKeyInput('');
+                    setRecoveryError('');
+                    setRecoverySuccess('');
+                  }}
+                  className="text-[11px] text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Lupa Password / PIN? Pemulihan Terproteksi</span>
+                </button>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  Akses Terenkripsi
+                </span>
+              </div>
             </div>
 
             {/* Info Isolasi Akun & Prinsip Keamanan */}
             <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-[10.5px] text-slate-400 leading-relaxed flex items-start gap-2">
               <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
               <span>
-                <strong>Isolasi Akun Mandiri:</strong> Masing-masing admin memiliki login dan PIN terpisah. Admin Danru hanya mengelola akunnya sendiri dan tidak dapat mengubah data akun admin lainnya.
+                <strong>Keamanan Akun Kedinasan:</strong> Masing-masing admin memiliki login mandiri. Pemulihan akun dilindungi ketat oleh Kode Otoritas Komando Pusat.
               </span>
             </div>
 
@@ -814,6 +897,120 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-bold transition-all shadow-md"
                 >
                   Buka & Kunci HP Ini
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Master Recovery Key Verification Modal for Legitimate Admin Password Reset */}
+      {showRecoveryModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-sm bg-slate-900 border border-amber-500/50 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                <ShieldAlert className="w-5 h-5 text-amber-500" />
+                <span>Otorisasi Pemulihan Komando</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRecoveryModal(false);
+                  setMasterKeyInput('');
+                  setRecoveryError('');
+                  setRecoverySuccess('');
+                }}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs space-y-1.5 leading-relaxed">
+              <span className="font-bold flex items-center gap-1.5 text-amber-300">
+                <Key className="w-3.5 h-3.5 text-amber-400" />
+                Proteksi Akses Khusus Pimpinan
+              </span>
+              <p className="text-[11px] text-amber-100/90">
+                Pemulihan akun admin <strong>{selectedAdmin?.name.split(' (')[0]}</strong> hanya dapat dilakukan dengan <strong>Kode Otoritas Pemulihan Komando (Master Key)</strong> yang dipegang oleh Pimpinan/Kasatpol PP/Provost.
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setRecoveryError('');
+                setRecoverySuccess('');
+
+                if (!masterKeyInput.trim()) {
+                  setRecoveryError('Silakan masukkan Kode Otoritas Pemulihan Komando.');
+                  return;
+                }
+
+                if (onResetAdminPinToDefault && selectedAdmin) {
+                  const res = onResetAdminPinToDefault(selectedAdmin.id, masterKeyInput.trim());
+                  if (res.success) {
+                    setRecoverySuccess(res.message);
+                    setAdminPinInput('');
+                    setAdminError('');
+                  } else {
+                    setRecoveryError(res.message);
+                  }
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 block mb-1">
+                  Kode Otoritas Pemulihan Komando:
+                </label>
+                <input
+                  type="password"
+                  placeholder="Masukkan Kode Otoritas Master..."
+                  value={masterKeyInput}
+                  onChange={(e) => {
+                    setMasterKeyInput(e.target.value);
+                    setRecoveryError('');
+                    setRecoverySuccess('');
+                  }}
+                  autoFocus
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 text-center font-mono tracking-wider text-xs focus:outline-none focus:border-amber-500"
+                />
+                
+                {recoveryError && (
+                  <p className="text-[11px] text-rose-400 mt-2 font-medium leading-relaxed bg-rose-950/60 p-2.5 rounded-lg border border-rose-900/50">
+                    {recoveryError}
+                  </p>
+                )}
+
+                {recoverySuccess && (
+                  <div className="text-[11px] text-emerald-300 mt-2 font-medium leading-relaxed bg-emerald-950/60 p-2.5 rounded-lg border border-emerald-900/50 flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{recoverySuccess}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRecoveryModal(false);
+                    setMasterKeyInput('');
+                    setRecoveryError('');
+                    setRecoverySuccess('');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Verifikasi & Pulihkan</span>
                 </button>
               </div>
             </form>

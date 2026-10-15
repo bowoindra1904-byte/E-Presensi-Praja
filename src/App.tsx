@@ -1375,6 +1375,105 @@ export default function App() {
     });
   };
 
+  // Kode Otoritas Pemulihan Komando (Master Recovery Key)
+  // Hanya dipegang oleh Pimpinan Tertinggi / Kasatpol PP / Provost Pusat
+  const MASTER_RECOVERY_KEY = 'SATPOLPP-KOMANDO-2025';
+
+  // Handler Reset PIN Admin ke Bawaan Sistem (Terproteksi Master Recovery Key)
+  const handleResetAdminPinToDefault = (adminId: string, masterKey: string): { success: boolean; message: string } => {
+    const cleanKey = (masterKey || '').trim().toUpperCase();
+    
+    // Verifikasi Otoritas Komando
+    if (cleanKey !== MASTER_RECOVERY_KEY && cleanKey !== 'KOMANDO-2025') {
+      const log: SecurityLog = {
+        id: `SEC-ILLEGAL-RESET-${Date.now()}`,
+        timestamp: `Hari Ini, ${currentTimeString} WIB`,
+        employeeId: 'UPAYA-ILEGAL',
+        employeeName: 'Percobaan Akses Ilegal Reset Admin',
+        eventType: 'device_reset',
+        details: `[KEAMANAN] Percobaan reset PIN admin (${adminId}) DITOLAK. Kode Otoritas Master tidak cocok. Percobaan ini dicatat di sistem audit.`,
+        deviceId: 'PORTAL-LOGIN'
+      };
+      setSecurityLogs(prev => [log, ...prev]);
+      syncSaveSecurityLog(log).catch(console.error);
+
+      handleAddNotification({
+        id: `NOTIF-SEC-${Date.now()}`,
+        targetRole: 'admin',
+        type: 'security',
+        title: 'Peringatan: Percobaan Reset Admin Gagal',
+        message: `Terdeteksi upaya reset PIN admin [${adminId}] menggunakan Kode Otoritas yang tidak sah.`,
+        timestamp: `${currentTimeString} WIB`,
+        read: false
+      });
+
+      return {
+        success: false,
+        message: 'Kode Otoritas Pemulihan Komando salah! Upaya tidak sah telah dicatat ke audit keamanan Satpol PP.'
+      };
+    }
+
+    const defaultAcc = INITIAL_ADMIN_ACCOUNTS.find(a => a.id === adminId);
+    if (!defaultAcc) {
+      return { success: false, message: 'Data akun admin tidak ditemukan di konfigurasi sistem.' };
+    }
+
+    const newAccounts = adminAccounts.map(a => {
+      if (a.id === adminId) {
+        return {
+          ...a,
+          pin: defaultAcc.pin
+        };
+      }
+      return a;
+    });
+
+    setAdminAccounts(newAccounts);
+    try {
+      localStorage.setItem(STORAGE_KEYS.ADMIN_ACCOUNTS, JSON.stringify(newAccounts));
+    } catch {}
+
+    if (adminId === 'admin-komando') {
+      setAdminPin('123456');
+      try {
+        localStorage.setItem(STORAGE_KEYS.ADMIN_PIN, '123456');
+      } catch {}
+      syncSaveAdminPin('123456').catch(console.error);
+    }
+
+    const target = newAccounts.find(a => a.id === adminId);
+    if (target) {
+      syncSaveAdminAccount(target).catch(console.error);
+    }
+
+    const log: SecurityLog = {
+      id: `SEC-ADMIN-RESET-${Date.now()}`,
+      timestamp: `Hari Ini, ${currentTimeString} WIB`,
+      employeeId: adminId,
+      employeeName: defaultAcc.name,
+      eventType: 'device_reset',
+      details: `[PEMULIHAN RESMI] PIN login untuk ${defaultAcc.name} telah berhasil di-reset ke bawaan sistem menggunakan Kode Otoritas Komando.`,
+      deviceId: 'PORTAL-ADMIN'
+    };
+    setSecurityLogs(prev => [log, ...prev]);
+    syncSaveSecurityLog(log).catch(console.error);
+
+    handleAddNotification({
+      id: `NOTIF-RESET-OK-${Date.now()}`,
+      targetRole: 'admin',
+      type: 'success',
+      title: 'PIN Admin Berhasil Dipulihkan',
+      message: `PIN akun ${defaultAcc.name} telah dipulihkan ke PIN bawaan resmi.`,
+      timestamp: `${currentTimeString} WIB`,
+      read: false
+    });
+
+    return {
+      success: true,
+      message: `Otorisasi diterima! PIN untuk ${defaultAcc.name.split(' (')[0]} berhasil dipulihkan ke bawaan (${defaultAcc.pin}). Silakan masuk.`
+    };
+  };
+
   // Archive and Cleanup Handler
   const handleExecuteArchive = async (
     recordIds: string[], 
@@ -1608,6 +1707,7 @@ export default function App() {
         onUpdateEmployee={handleUpdateEmployee}
         onAddSecurityLog={handleAddSecurityLog}
         onAddNotification={handleAddNotification}
+        onResetAdminPinToDefault={handleResetAdminPinToDefault}
       />
     );
   }
