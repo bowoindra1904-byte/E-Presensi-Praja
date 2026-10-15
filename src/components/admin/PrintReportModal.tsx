@@ -391,7 +391,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
         "TL 1 (1-30m)", 
         "TL 2 (31-60m)", 
         "TL 3 (61-90m)", 
-        "TL 4 (91-120m)", 
+        "TL 4 (>90m)", 
         "PSW (Tidak Absen Pulang)", 
         "Izin (I)", 
         "Sakit (S)", 
@@ -1637,7 +1637,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <th className="p-1 border border-slate-300 text-center w-7" title="TL 1: Telat 1 - 30 Menit">TL 1</th>
                       <th className="p-1 border border-slate-300 text-center w-7" title="TL 2: Telat 31 - 60 Menit">TL 2</th>
                       <th className="p-1 border border-slate-300 text-center w-7" title="TL 3: Telat 61 - 90 Menit">TL 3</th>
-                      <th className="p-1 border border-slate-300 text-center w-7" title="TL 4: Telat 91 - 120 Menit">TL 4</th>
+                      <th className="p-1 border border-slate-300 text-center w-7" title="TL 4: Telat > 90 Menit">TL 4</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1735,7 +1735,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                     <span><strong>TL 1</strong> = Telat 1 - 30 Menit dari Jam Masuk</span>
                     <span><strong>TL 2</strong> = Telat 31 - 60 Menit dari Jam Masuk</span>
                     <span><strong>TL 3</strong> = Telat 61 - 90 Menit dari Jam Masuk</span>
-                    <span><strong>TL 4</strong> = Telat 91 - 120 Menit dari Jam Masuk</span>
+                    <span><strong>TL 4</strong> = Telat &gt; 90 Menit dari Jam Masuk</span>
                     <span><strong>PSW</strong> = Pegawai Tidak Melakukan Absensi Pulang</span>
                     <span><strong>I (Izin)</strong> = Izin Dinas / Pribadi Disetujui (Pengganti Cuti)</span>
                     <span><strong>S (Sakit)</strong> = Keterangan Sakit / Surat Dokter Sah</span>

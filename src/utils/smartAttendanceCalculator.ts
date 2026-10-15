@@ -112,7 +112,7 @@ export function getLateCategoryDetails(
   }
 
   // Parse checkInTime (format could be HH:mm:ss or HH:mm or HH.mm)
-  const parts = record.checkInTime.replace('.', ':').split(':');
+  const parts = record.checkInTime.replace(/\./g, ':').split(':');
   if (parts.length < 2) {
     return { minutesLate: 15, category: 'TL1', label: 'TL 1 (1-30 mnt)' };
   }
@@ -159,8 +159,9 @@ export function getLateCategoryDetails(
     category = 'TL3';
     label = 'TL 3 (61-90 mnt)';
   } else {
+    // Diatas 90 menit dikategorikan sebagai TL 4
     category = 'TL4';
-    label = 'TL 4 (91-120 mnt)';
+    label = 'TL 4 (>90 mnt)';
   }
 
   return { minutesLate, category, label };
@@ -750,7 +751,7 @@ export interface SmartMonthlyReportResult {
   // TL 1: 1 - 30 menit
   // TL 2: 31 - 60 menit
   // TL 3: 61 - 90 menit
-  // TL 4: 91 - 120 menit
+  // TL 4: > 90 menit (Keterlambatan di atas 90 menit)
   tl1Count: number;
   tl2Count: number;
   tl3Count: number;

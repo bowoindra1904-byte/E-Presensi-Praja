@@ -1014,7 +1014,7 @@ export const AdminTopFive: React.FC<AdminTopFiveProps> = ({
                     <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 1 (1-30m): <strong>{selectedEmployeeDetail.tl1Count || 0}</strong></span>
                     <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 2 (31-60m): <strong>{selectedEmployeeDetail.tl2Count || 0}</strong></span>
                     <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 3 (61-90m): <strong>{selectedEmployeeDetail.tl3Count || 0}</strong></span>
-                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 4 (91-120m): <strong>{selectedEmployeeDetail.tl4Count || 0}</strong></span>
+                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 4 (&gt;90m): <strong>{selectedEmployeeDetail.tl4Count || 0}</strong></span>
                   </div>
                 </div>
               </div>

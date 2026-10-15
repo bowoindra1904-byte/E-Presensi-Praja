@@ -360,7 +360,7 @@ export const EmployeeAttendanceRecap: React.FC<EmployeeAttendanceRecapProps> = (
                 <strong className="text-amber-900 text-sm font-mono">{smartReport.tl3Count}x</strong>
               </div>
               <div className="bg-white/90 border border-amber-200/90 px-3 py-1 rounded-xl text-center shadow-2xs">
-                <span className="text-[9.5px] text-amber-800 block font-sans">TL 4 (91-120 mnt)</span>
+                <span className="text-[9.5px] text-amber-800 block font-sans">TL 4 (&gt;90 mnt)</span>
                 <strong className="text-rose-900 text-sm font-mono">{smartReport.tl4Count}x</strong>
               </div>
             </div>

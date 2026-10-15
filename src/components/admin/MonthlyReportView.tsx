@@ -267,7 +267,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       "TL 1 (1-30m)",
       "TL 2 (31-60m)",
       "TL 3 (61-90m)",
-      "TL 4 (91-120m)",
+      "TL 4 (>90m)",
       "PSW (Tidak Absen Pulang)",
       "Izin (I)",
       "Sakit (S)",
@@ -976,7 +976,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                       <div>TL 1 (1-30m): <strong>{item.tl1Count || 0}</strong></div>
                       <div>TL 2 (31-60m): <strong>{item.tl2Count || 0}</strong></div>
                       <div>TL 3 (61-90m): <strong>{item.tl3Count || 0}</strong></div>
-                      <div>TL 4 (91-120m): <strong>{item.tl4Count || 0}</strong></div>
+                      <div>TL 4 (&gt;90m): <strong>{item.tl4Count || 0}</strong></div>
                     </div>
                   )}
 
@@ -1038,7 +1038,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     <th className="py-3 px-1.5 text-center text-amber-700 bg-amber-50/40 text-[9px]" title="TL 1: Terlambat 1 - 30 Menit">TL 1</th>
                     <th className="py-3 px-1.5 text-center text-amber-800 bg-amber-50/40 text-[9px]" title="TL 2: Terlambat 31 - 60 Menit">TL 2</th>
                     <th className="py-3 px-1.5 text-center text-amber-900 bg-amber-50/40 text-[9px]" title="TL 3: Terlambat 61 - 90 Menit">TL 3</th>
-                    <th className="py-3 px-1.5 text-center text-rose-800 bg-amber-50/40 text-[9px]" title="TL 4: Terlambat 91 - 120 Menit">TL 4</th>
+                    <th className="py-3 px-1.5 text-center text-rose-800 bg-amber-50/40 text-[9px]" title="TL 4: Terlambat > 90 Menit">TL 4</th>
                     <th className="py-3 px-2 text-center text-orange-950 bg-orange-100/70 font-bold" title="PSW: Pegawai Tidak Melakukan Absensi Pulang">PSW</th>
                     <th className="py-3 px-2 text-center text-indigo-800 bg-indigo-50/50" title="Izin (Termasuk Cuti Disetujui)">I</th>
                     <th className="py-3 px-2 text-center text-purple-800 bg-purple-50/50" title="Sakit Surat Dokter">S</th>
@@ -1136,7 +1136,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                           )}
                         </td>
 
-                        {/* TL 4 (91 - 120 Menit) */}
+                        {/* TL 4 (> 90 Menit) */}
                         <td className="py-3 px-1.5 text-center font-mono text-[11px] bg-amber-50/20">
                           {(item.tl4Count ?? 0) > 0 ? (
                             <span className="font-bold text-rose-700">{item.tl4Count}</span>
@@ -1506,7 +1506,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 1 (1-30m): <strong>{selectedEmpForCalendar.tl1Count || 0}</strong></span>
                     <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 2 (31-60m): <strong>{selectedEmpForCalendar.tl2Count || 0}</strong></span>
                     <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 3 (61-90m): <strong>{selectedEmpForCalendar.tl3Count || 0}</strong></span>
-                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 4 (91-120m): <strong>{selectedEmpForCalendar.tl4Count || 0}</strong></span>
+                    <span className="bg-white px-2 py-0.5 rounded-lg border border-amber-200">TL 4 (&gt;90m): <strong>{selectedEmpForCalendar.tl4Count || 0}</strong></span>
                   </div>
                 </div>
               </div>
