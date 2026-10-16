@@ -1622,7 +1622,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                       <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-14">Jadwal</th>
                       <th rowSpan={2} className="p-1.5 border border-slate-300 min-w-[100px]">Pos Penugasan</th>
                       <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-11 bg-slate-300/60" title="Target Hari Wajib Kerja">Wajib</th>
-                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-8 text-emerald-950 bg-emerald-100/60" title="Hadir (Tepat Waktu & Terlambat Sah)">H</th>
+                      <th rowSpan={2} className="p-1.5 border border-slate-300 text-center w-8 text-emerald-950 bg-emerald-100/60" title="Hadir: Total Kehadiran Dinas Resmi (Fisik & Pemutihan Sah)">H</th>
                       <th colSpan={4} className="p-1 border border-slate-300 text-center text-amber-950 bg-amber-100/80 font-bold">
                         Keterlambatan (TL)
                       </th>
@@ -1731,7 +1731,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({
                 <div className="p-2.5 bg-slate-50 border border-slate-300 rounded text-[9px] text-slate-700 space-y-1">
                   <div className="font-bold text-slate-900">Keterangan Format Rekapitulasi Absensi Pegawai:</div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
-                    <span><strong>H (Hadir)</strong> = Kehadiran Dinas Resmi</span>
+                    <span><strong>H (Hadir)</strong> = Total Kehadiran Dinas Resmi (Fisik & Pemutihan Sah)</span>
                     <span><strong>TL 1</strong> = Telat 1 - 30 Menit dari Jam Masuk</span>
                     <span><strong>TL 2</strong> = Telat 31 - 60 Menit dari Jam Masuk</span>
                     <span><strong>TL 3</strong> = Telat 61 - 90 Menit dari Jam Masuk</span>

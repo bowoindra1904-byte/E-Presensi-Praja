@@ -1241,6 +1241,13 @@ export default function App() {
     const defaultCheckOut = targetEmp.scheduleType === 'shift' ? '19:30' : '16:00';
 
     dates.forEach(dateStr => {
+      // Jika pegawai bersangkutan memiliki jadwal Harian, lewati hari Sabtu & Minggu (Libur Akhir Pekan)
+      if (targetEmp.scheduleType === 'harian') {
+        const d = new Date(dateStr + 'T00:00:00');
+        const dayOfWeek = d.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) return;
+      }
+
       const attendanceId = `ATT-DISP-${newRequest.id}-${dateStr}`;
       
       const checkInTime = sessionMode === 'check_out_only' ? '-' : defaultCheckIn;
@@ -1772,8 +1779,10 @@ export default function App() {
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
         locationsCount={locations.length}
         employeesCount={employees.length}
+        attendanceCount={attendanceRecords.length}
         pendingLeavesCount={pendingLeavesCount}
         customHolidaysCount={customHolidays.length}
+        onOpenArchiveModal={() => setActiveAdminTab('reports')}
         onOpenPrintModal={() => {
           const mapping: Record<string, PrintMenuType> = {
             monitoring: 'daily',

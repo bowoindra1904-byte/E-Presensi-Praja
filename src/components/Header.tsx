@@ -25,6 +25,7 @@ import {
 import { NotificationItem, Employee, AdminAccount } from '../types';
 import { NotificationCenter } from './NotificationCenter';
 import { SatpolPPLogo } from './SatpolPPLogo';
+import { StorageCapacityBadge } from './StorageCapacityBadge';
 
 export type AdminTabType = 'monitoring' | 'locations' | 'employees' | 'leaves' | 'holidays' | 'reports' | 'top_five' | 'security';
 
@@ -49,6 +50,8 @@ interface HeaderProps {
   employeesCount?: number;
   pendingLeavesCount?: number;
   customHolidaysCount?: number;
+  attendanceCount?: number;
+  onOpenArchiveModal?: () => void;
 }
 
 const HeaderClock: React.FC<{
@@ -109,6 +112,8 @@ export const Header: React.FC<HeaderProps> = ({
   employeesCount,
   pendingLeavesCount = 0,
   customHolidaysCount = 0,
+  attendanceCount = 0,
+  onOpenArchiveModal,
 }) => {
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false);
 
@@ -314,51 +319,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* Zone 3: Actions & Real-Time Clock */}
+          {/* Zone 3: Actions, Clock & Storage */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            
-            {/* Admin Quick Tools: Desktop view */}
-            {currentRole === 'admin' && (
-              <div className="hidden lg:flex items-center gap-1.5">
-                {onOpenPrintModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenPrintModal}
-                    title="Pusat Cetak Dokumen Kedinasan"
-                    className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex items-center gap-1.5 shadow-2xs"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-amber-600" />
-                    <span className="text-[11px]">Cetak</span>
-                  </button>
-                )}
-
-                {onOpenAdminPinModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenAdminPinModal}
-                    title="Atur PIN Keamanan Admin"
-                    className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex items-center gap-1.5 shadow-2xs"
-                  >
-                    <KeyRound className="w-3.5 h-3.5 text-amber-600" />
-                    <span className="text-[11px]">PIN</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={onOpenTimeSimulator}
-                  title="Ubah / Uji Jam Absensi (Simulasi Waktu)"
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border shrink-0 shadow-2xs ${
-                    simulatedTime
-                      ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                  }`}
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span className="text-[11px]">Simulasi</span>
-                </button>
-              </div>
-            )}
 
             {/* Real-time Notification Bell */}
             <NotificationCenter
@@ -372,6 +334,14 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Real-time Isolated Clock Display */}
             <HeaderClock simulatedTime={simulatedTime} fallbackTimeString={currentTimeString} />
+
+            {/* Kapasitas Penyimpanan Data Sistem */}
+            <StorageCapacityBadge
+              attendanceCount={attendanceCount}
+              employeeCount={employeesCount}
+              locationCount={locationsCount}
+              onOpenArchiveModal={onOpenArchiveModal}
+            />
 
             {/* Panduan Button (Desktop) */}
             {onOpenGuideModal && (
@@ -571,8 +541,19 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* Sidebar Footer info */}
-              <div className="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
+              <div className="p-4 border-t border-slate-200 bg-slate-50 space-y-2.5">
+                <StorageCapacityBadge
+                  variant="sidebar"
+                  attendanceCount={attendanceCount}
+                  employeeCount={employeesCount}
+                  locationCount={locationsCount}
+                  onOpenArchiveModal={() => {
+                    setIsAdminSidebarOpen(false);
+                    onOpenArchiveModal?.();
+                  }}
+                />
+
+                <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-1 border-t border-slate-200/60">
                   <span className="flex items-center gap-1.5">
                     <Cloud className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
                     <span>Cloud Firestore Live</span>

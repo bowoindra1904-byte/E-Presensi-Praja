@@ -969,6 +969,10 @@ export function calculateSmartMonthlyReport(
 
       totalWorkHours += status.workHours !== undefined ? status.workHours : (employee.scheduleType === 'shift' ? 12 : 8.5);
     } else if (status.code === 'P') {
+      // Pemutihan (P) adalah KEHADIRAN KEDINASAN SAH (resmi diakui masuk ke hadirCount H)
+      // agar tidak terjadi selisih antara Target Hari Wajib Kerja dengan Total Hari Absensi (H + I + S + TK = Wajib)
+      hadirCount++;
+      onTimeCount++;
       pemutihanCount++;
       totalWorkHours += status.workHours !== undefined ? status.workHours : (employee.scheduleType === 'shift' ? 12 : 8.5);
     } else if (status.code === 'S') {
@@ -982,8 +986,8 @@ export function calculateSmartMonthlyReport(
     }
   }
 
-  // Pemutihan menyesuaikan sebagai kehadiran sah
-  const totalHadirSah = hadirCount + pemutihanCount;
+  // Total hadir sah sama dengan hadirCount (sudah mencakup kehadiran fisik + pemutihan sah dinas)
+  const totalHadirSah = hadirCount;
 
   // Cek apakah bulan yang dipilih berada di masa depan
   const currentMonthYear = todayStr.substring(0, 7);

@@ -714,7 +714,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
           <div className="flex flex-wrap items-center gap-2 text-[10.5px]">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold">
               <span className="w-4 h-4 rounded bg-emerald-600 text-white font-bold flex items-center justify-center text-[9px]">H</span>
-              <span>Hadir (Tepat Waktu)</span>
+              <span>Hadir Sah (Fisik & Pemutihan)</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-semibold">
               <span className="w-4 h-4 rounded bg-amber-500 text-white font-bold flex items-center justify-center text-[9px]">T</span>
@@ -734,7 +734,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-900 font-semibold">
               <span className="w-4 h-4 rounded bg-cyan-600 text-white font-bold flex items-center justify-center text-[9px]">P</span>
-              <span>Pemutihan (Disp. HP / Lapangan)</span>
+              <span>P (Rincian Dispensasi Kantor Sah)</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-900 font-semibold">
               <span className="w-8 h-4 rounded bg-orange-600 text-white font-bold flex items-center justify-center text-[8.5px]">PSW</span>
@@ -1034,7 +1034,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     <th className="py-3 px-2 text-center bg-slate-100/70 border-x border-slate-200/60" title="Target Hari Kerja dari Awal Bulan s.d Hari Ini">
                       Wajib
                     </th>
-                    <th className="py-3 px-2 text-center text-emerald-800 bg-emerald-50/50" title="Hadir Tepat Waktu & Terlambat Sah">H</th>
+                    <th className="py-3 px-2 text-center text-emerald-800 bg-emerald-50/50" title="Total Hadir Sah (Kehadiran Fisik & Pemutihan Dinas)">H</th>
                     <th className="py-3 px-1.5 text-center text-amber-700 bg-amber-50/40 text-[9px]" title="TL 1: Terlambat 1 - 30 Menit">TL 1</th>
                     <th className="py-3 px-1.5 text-center text-amber-800 bg-amber-50/40 text-[9px]" title="TL 2: Terlambat 31 - 60 Menit">TL 2</th>
                     <th className="py-3 px-1.5 text-center text-amber-900 bg-amber-50/40 text-[9px]" title="TL 3: Terlambat 61 - 90 Menit">TL 3</th>
@@ -1043,7 +1043,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
                     <th className="py-3 px-2 text-center text-indigo-800 bg-indigo-50/50" title="Izin (Termasuk Cuti Disetujui)">I</th>
                     <th className="py-3 px-2 text-center text-purple-800 bg-purple-50/50" title="Sakit Surat Dokter">S</th>
                     <th className="py-3 px-2 text-center text-rose-800 bg-rose-50/60 font-black" title="Tanpa Keterangan / Alpha">TK</th>
-                    <th className="py-3 px-2 text-center text-cyan-800 bg-cyan-50/50" title="Pemutihan (Dispensasi HP Rusak / Penugasan Sah)">P</th>
+                    <th className="py-3 px-2 text-center text-cyan-800 bg-cyan-50/50" title="P (Pemutihan): Rincian Dispensasi Kantor Sah">P</th>
                     <th className="py-3 px-3 text-center min-w-[110px]">
                       % Hadir
                     </th>
