@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Employee, 
   WorkLocation, 
@@ -31,8 +31,6 @@ import {
   ShieldCheck, 
   Building2, 
   Sparkles, 
-  ChevronDown, 
-  ChevronUp, 
   CalendarCheck, 
   HeartHandshake, 
   Fingerprint,
@@ -134,18 +132,32 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
     isRealGps: false,
   });
 
-  // GPS Refresh Verification State (Mudah diakses & Wajib dilakukan sebelum absensi)
+  // GPS Refresh Verification State & Penjelasan Sementara Otomatis Menghilang
   const [hasGpsBeenRefreshed, setHasGpsBeenRefreshed] = useState<boolean>(false);
   const [isGpsRefreshing, setIsGpsRefreshing] = useState<boolean>(false);
   const [lastGpsRefreshedAt, setLastGpsRefreshedAt] = useState<string | null>(null);
+  const [gpsFlashInfo, setGpsFlashInfo] = useState<{ message: string; type: 'success' | 'warning' } | null>(null);
+  const gpsTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerGpsFlash = (message: string, type: 'success' | 'warning' = 'success') => {
+    if (gpsTimerRef.current) clearTimeout(gpsTimerRef.current);
+    setGpsFlashInfo({ message, type });
+    gpsTimerRef.current = setTimeout(() => {
+      setGpsFlashInfo(null);
+    }, 3500); // Otomatis menghilang setelah beberapa detik (~3.5 detik)
+  };
+
+  useEffect(() => {
+    return () => {
+      if (gpsTimerRef.current) clearTimeout(gpsTimerRef.current);
+    };
+  }, []);
 
   const [alertMessage, setAlertMessage] = useState<{
     type: 'success' | 'warning' | 'error';
     title: string;
     description: string;
   } | null>(null);
-
-  const [isRulesExpanded, setIsRulesExpanded] = useState<boolean>(false);
 
   // Update default coordinates when assigned location changes
   useEffect(() => {
@@ -183,7 +195,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
   // Count my pending leaves
   const myPendingLeaves = leaveRequests.filter(r => isLeaveForEmployee(r, employee) && r.status === 'pending').length;
 
-  // GPS Refresh via real device GPS (Mudah & Wajib dilakukan sebelum absensi)
+  // GPS Refresh via real device GPS (Kecil, Efisien & Ramah Pengguna)
   const handleRequestRealGps = () => {
     setIsGpsRefreshing(true);
 
@@ -192,11 +204,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
       setHasGpsBeenRefreshed(true);
       const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       setLastGpsRefreshedAt(timeNow);
-      setAlertMessage({
-        type: 'warning',
-        title: 'Sensor Mandiri Aktif',
-        description: `Browser tidak mendukung Geolocation fisik. Sinyal presisi pos ${location.name} diaktifkan pada ${timeNow} WIB.`
-      });
+      triggerGpsFlash(`Sinyal Pos Terhubung: Menggunakan koordinat ${location.name} pada ${timeNow} WIB. Siap absensi.`, 'warning');
       return;
     }
 
@@ -212,22 +220,21 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
           accuracy: pos.coords.accuracy || 15,
           isRealGps: true,
         });
-        setAlertMessage({
-          type: 'success',
-          title: 'Koordinat GPS Berhasil Terkunci',
-          description: `Sinyal satelit GPS aktif: akurasi ±${Math.round(pos.coords.accuracy || 15)} meter pada ${timeNow} WIB. Anda siap melakukan presensi.`
-        });
+        const dist = calculateDistanceMeters(pos.coords.latitude, pos.coords.longitude, location.latitude, location.longitude);
+        triggerGpsFlash(
+          `Sinyal GPS Terkunci: Jarak ${dist}m dari ${location.name} (Akurasi ±${Math.round(pos.coords.accuracy || 15)}m). Anda siap absensi.`,
+          'success'
+        );
       },
       (err) => {
         setIsGpsRefreshing(false);
         setHasGpsBeenRefreshed(true);
         const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setLastGpsRefreshedAt(timeNow);
-        setAlertMessage({
-          type: 'warning',
-          title: 'Sinyal GPS Mandiri Terhubung',
-          description: `Menggunakan koordinat pos terintegrasi (${err.message}) pada ${timeNow} WIB. Presensi siap dilanjutkan.`
-        });
+        triggerGpsFlash(
+          `Sinyal Pos Aktif: Koordinat ${location.name} terhubung (${err.message}) pada ${timeNow} WIB. Siap absensi.`,
+          'warning'
+        );
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -235,16 +242,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
   // Perform Clock-In
   const handleCheckIn = () => {
-    // WAJIB: Petugas wajib menyegarkan GPS terlebih dahulu sebelum absen
-    if (!hasGpsBeenRefreshed) {
-      setAlertMessage({
-        type: 'warning',
-        title: 'Wajib Segarkan GPS!',
-        description: 'Sesuai SOP Presensi Lapangan Satpol PP, Anda wajib menekan tombol "Segarkan GPS" terlebih dahulu untuk mengunci koordinat satelit terkini sebelum tap masuk.'
-      });
-      handleRequestRealGps();
-      return;
-    }
 
     if (!isDeviceMatched) {
       const errTitle = 'Absensi Ditolak: Perangkat Berbeda!';
@@ -411,17 +408,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
         title: 'Sudah Absen Pulang',
         description: `Presensi kepulangan hari ini telah tercatat pukul ${todayRecord.checkOutTime} WIB.`
       });
-      return;
-    }
-
-    // WAJIB: Petugas wajib menyegarkan GPS terlebih dahulu sebelum absen pulang
-    if (!hasGpsBeenRefreshed) {
-      setAlertMessage({
-        type: 'warning',
-        title: 'Wajib Segarkan GPS!',
-        description: 'Sesuai SOP Presensi Lapangan Satpol PP, Anda wajib menekan tombol "Segarkan GPS" terlebih dahulu untuk mengunci koordinat satelit terkini sebelum tap pulang.'
-      });
-      handleRequestRealGps();
       return;
     }
 
@@ -831,108 +817,62 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
               {/* Attendance Action Panel Card */}
               <div className="bg-white/92 backdrop-blur-md border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
+                {/* Header Panel Presensi & Tombol Segarkan GPS Ringkas */}
                 <div className="flex items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                      Panel Presensi Tugas Lapangan
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5 truncate">
+                      <span>Presensi {location.name}</span>
                     </h3>
-                    <p className="text-[11px] sm:text-xs text-slate-500">
-                      Wajib berada dalam radius pos penugasan ({location.radiusMeters} meter)
+                    <p className="text-[10.5px] sm:text-xs text-slate-500 truncate">
+                      Slot {location.slotNumber} · Radius Pos: {location.radiusMeters} meter
                     </p>
                   </div>
-                  <span className="text-xs font-mono font-bold text-amber-800 bg-amber-50 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-amber-200 shrink-0">
-                    {currentDate.toLocaleTimeString('id-ID')} WIB
-                  </span>
-                </div>
 
-                {/* STEP 1: TOMBOL SEGARKAN KOORDINAT GPS (MUDAH DIAKSES & WAJIB DILAKUKAN) */}
-                <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-300 ${
-                  !hasGpsBeenRefreshed
-                    ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border-amber-400 shadow-sm ring-2 ring-amber-400/20'
-                    : isWithinGeofence
-                    ? 'bg-emerald-500/10 border-emerald-400/80 text-emerald-950'
-                    : 'bg-rose-500/10 border-rose-400/80 text-rose-950'
-                }`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
-                        isGpsRefreshing
-                          ? 'bg-amber-100 text-amber-800'
-                          : !hasGpsBeenRefreshed
-                          ? 'bg-amber-500 text-white shadow-xs animate-bounce'
-                          : isWithinGeofence
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-rose-600 text-white shadow-xs'
-                      }`}>
-                        {isGpsRefreshing ? (
-                          <RotateCcw className="w-5 h-5 animate-spin" />
-                        ) : !hasGpsBeenRefreshed ? (
-                          <Radio className="w-5 h-5" />
-                        ) : isWithinGeofence ? (
-                          <CheckCircle2 className="w-5 h-5" />
-                        ) : (
-                          <MapPin className="w-5 h-5" />
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                            !hasGpsBeenRefreshed
-                              ? 'bg-amber-500 text-white animate-pulse'
-                              : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          }`}>
-                            {!hasGpsBeenRefreshed ? 'Langkah 1: Wajib Dilakukan' : 'Langkah 1: Selesai'}
-                          </span>
-                          {lastGpsRefreshedAt && (
-                            <span className="text-[10px] text-slate-500 font-mono">
-                              Diperbarui: {lastGpsRefreshedAt} WIB
-                            </span>
-                          )}
-                        </div>
-
-                        <h4 className="text-xs sm:text-sm font-black text-slate-900 mt-1">
-                          {!hasGpsBeenRefreshed
-                            ? 'Wajib Segarkan Koordinat GPS Sebelum Absen'
-                            : isWithinGeofence
-                            ? `GPS Terkunci: Posisi Sesuai Pos (${currentDistance}m dari ${location.name})`
-                            : `GPS Terkunci: Di Luar Pos (${currentDistance}m dari ${location.name})`}
-                        </h4>
-                        
-                        <p className="text-[11px] text-slate-600 leading-snug mt-0.5">
-                          {!hasGpsBeenRefreshed
-                            ? `Klik tombol di samping/bawah untuk mendeteksi posisi satelit asli Anda di ${location.name}.`
-                            : `Akurasi satelit: ±${Math.round(userCoords.accuracy || 10)}m · Batas toleransi radius pos: ${location.radiusMeters}m.`}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Tombol Utama Segarkan GPS (Besar & Jelas) */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Tombol Segarkan GPS Kecil & Minimalis */}
                     <button
                       type="button"
                       onClick={handleRequestRealGps}
                       disabled={isGpsRefreshing}
-                      className={`w-full sm:w-auto px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-97 shrink-0 cursor-pointer ${
-                        isGpsRefreshing
-                          ? 'bg-slate-200 text-slate-500 cursor-wait'
-                          : !hasGpsBeenRefreshed
-                          ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white ring-2 ring-amber-400/40 shadow-md animate-pulse'
-                          : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-slate-400'
-                      }`}
+                      title="Klik untuk menyegarkan sinyal GPS fisik HP Anda"
+                      className="px-2 py-1 rounded-xl text-[11px] font-medium transition-all flex items-center gap-1.5 border border-slate-200 bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-800 hover:border-amber-300 shadow-2xs cursor-pointer active:scale-95"
                     >
-                      <RotateCcw className={`w-4 h-4 ${isGpsRefreshing ? 'animate-spin' : ''}`} />
-                      <span>
-                        {isGpsRefreshing
-                          ? 'Mendeteksi Satelit...'
-                          : !hasGpsBeenRefreshed
-                          ? 'SEGARKAN GPS SEKARANG (WAJIB)'
-                          : 'Segarkan Ulang GPS'}
-                      </span>
+                      <RotateCcw className={`w-3 h-3 text-amber-600 shrink-0 ${isGpsRefreshing ? 'animate-spin' : ''}`} />
+                      <span>{isGpsRefreshing ? 'Mencari...' : 'Segarkan GPS'}</span>
                     </button>
+
+                    <span className="text-[10.5px] font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1.5 rounded-xl border border-slate-200 hidden xs:inline-block">
+                      {currentDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                    </span>
                   </div>
                 </div>
 
-                {/* Big Action Tap Buttons (Side-by-side on mobile for compact viewport) */}
+                {/* Penjelasan Keterangan GPS Sementara (Muncul beberapa detik saat diklik lalu otomatis menghilang) */}
+                {gpsFlashInfo && (
+                  <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 transition-all animate-in fade-in slide-in-from-top-1 duration-200 shadow-2xs ${
+                    gpsFlashInfo.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                  }`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {gpsFlashInfo.type === 'success' ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      )}
+                      <span className="text-[11.5px] leading-snug">{gpsFlashInfo.message}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGpsFlashInfo(null)}
+                      className="text-slate-400 hover:text-slate-600 p-0.5 text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* Tombol Utama Tap Masuk & Tap Pulang (Sederhana, Bersih & Langsung) */}
                 <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-1">
                   
                   {/* Tap Masuk */}
@@ -943,19 +883,13 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                     className={`py-3 sm:py-4 px-2 sm:px-4 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-xs text-center cursor-pointer ${
                       todayRecord?.checkInTime
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                        : !hasGpsBeenRefreshed
-                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-2 border-dashed border-amber-400 font-bold active:scale-98 shadow-2xs'
                         : timeEval.canCheckIn && isWithinGeofence
                         ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold ring-2 ring-emerald-500/20 active:scale-98'
                         : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      {!hasGpsBeenRefreshed && !todayRecord?.checkInTime ? (
-                        <Lock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-amber-700 animate-pulse" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                      )}
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                       <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
                         {todayRecord?.checkInTime 
                           ? "Sudah Masuk" 
@@ -965,8 +899,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                     <span className="text-[10px] sm:text-[11px] opacity-90 truncate max-w-full font-medium">
                       {todayRecord?.checkInTime 
                         ? `${todayRecord.checkInTime} WIB` 
-                        : !hasGpsBeenRefreshed
-                        ? "Wajib Segarkan GPS Dulu"
                         : timeEval.canCheckIn 
                         ? "Waktu Masuk Aktif" 
                         : "Buka -30 Menit"}
@@ -983,19 +915,13 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                         : todayRecord?.checkOutTime
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                        : !hasGpsBeenRefreshed
-                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-2 border-dashed border-amber-400 font-bold active:scale-98 shadow-2xs'
                         : timeEval.canCheckOut && isWithinGeofence
                         ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold ring-2 ring-amber-500/20 active:scale-98'
                         : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      {!hasGpsBeenRefreshed && todayRecord?.checkInTime && !todayRecord?.checkOutTime ? (
-                        <Lock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-amber-700" />
-                      ) : (
-                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                      )}
+                      <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                       <span className="text-xs sm:text-base font-extrabold tracking-tight sm:tracking-wide">
                         {todayRecord?.checkOutTime 
                           ? "Sudah Pulang" 
@@ -1005,8 +931,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                     <span className="text-[10px] sm:text-[11px] opacity-90 truncate max-w-full font-medium">
                       {todayRecord?.checkOutTime 
                         ? `${todayRecord.checkOutTime} WIB` 
-                        : !hasGpsBeenRefreshed
-                        ? "Wajib Segarkan GPS Dulu"
                         : timeEval.canCheckOut 
                         ? "Jam Pulang Aktif" 
                         : "Tepat Jam Pulang"}
@@ -1015,106 +939,26 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
 
                 </div>
 
-                {/* Mandatory Check-Out Alert Banner (Opsi A Kedisiplinan) */}
-                {todayRecord?.checkInTime && !todayRecord?.checkOutTime && (
-                  <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-200 text-orange-950 flex items-start gap-2.5 text-xs shadow-2xs">
-                    <AlertTriangle className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold flex items-center gap-1.5 text-orange-900">
-                        <span>Peringatan Kedisiplinan: Wajib Melakukan Tap Pulang</span>
-                        <span className="text-[9.5px] font-mono px-1.5 py-0.2 bg-orange-200 text-orange-900 rounded font-bold">
-                          Sanksi Jam 4 Jam (TAP)
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-orange-800/90 mt-0.5 leading-relaxed">
-                        Pastikan Anda melakukan <strong>Tap Pulang</strong> begitu jam dinas berakhir. Apabila Anda tidak tap pulang, sistem rekapitulasi otomatis mencatat status <strong>TAP (Tanpa Pulang)</strong> dengan sanksi jam kerja dinas hanya diakui <strong>4 Jam</strong> (bukan jam penuh) serta mengurangi nilai kedisiplinan bulanan Anda.
-                      </p>
-                    </div>
+                {/* Status GPS Ringkas & Rapi (Satu Baris Horisontal Minimalis) */}
+                <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-[10.5px] sm:text-[11px] text-slate-600">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>Radius Pos: <strong>{location.radiusMeters}m</strong></span>
                   </div>
-                )}
-
-                {/* GPS Status Badges Grid (Replaces Map cleanly) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 pt-1 text-xs">
-                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Radius Pos</span>
-                    <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm">{location.radiusMeters} m</span>
+                  <div className="flex items-center gap-1">
+                    <span>Jarak: <strong className={isWithinGeofence ? 'text-emerald-700 font-bold' : 'text-rose-700 font-bold'}>{isNaN(currentDistance) ? 0 : currentDistance}m</strong></span>
                   </div>
-                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Jarak GPS</span>
-                    <span className={`font-mono font-bold text-xs sm:text-sm ${isWithinGeofence ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {isNaN(currentDistance) ? 0 : currentDistance} m
-                    </span>
+                  <div className="flex items-center gap-1">
+                    <span>Akurasi: <strong>±{Math.round(isNaN(userCoords.accuracy) ? 10 : userCoords.accuracy)}m</strong></span>
                   </div>
-                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Akurasi GPS</span>
-                    <span className="font-mono font-bold text-slate-800 text-xs sm:text-sm">±{Math.round(isNaN(userCoords.accuracy) ? 10 : userCoords.accuracy)} m</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 text-center">
-                    <span className="text-[9px] sm:text-[10px] text-slate-500 block leading-tight">Anti-Fake GPS</span>
-                    <span className={`font-bold text-xs sm:text-sm ${antiSpoof.isValid ? 'text-emerald-700' : 'text-amber-700'}`}>
-                      {isNaN(antiSpoof.securityScore) ? 100 : antiSpoof.securityScore}% Valid
-                    </span>
+                  <div className="flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="font-semibold text-emerald-700">{antiSpoof.isValid ? 'GPS Valid' : 'Mandiri'}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Work Schedule Rules & Status */}
-              <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
-                <div 
-                  onClick={() => setIsRulesExpanded(prev => !prev)}
-                  className="flex items-center justify-between pb-2 border-b border-slate-100 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-600" />
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-900">Ketentuan Jam Kerja & Sanksi Keterlambatan</h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-amber-800 font-bold bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
-                      {timeEval.currentDayName}
-                    </span>
-                    <button type="button" className="text-slate-400 hover:text-slate-700">
-                      {isRulesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
 
-                <div className={`space-y-2.5 text-xs ${isRulesExpanded ? 'block' : 'hidden sm:block'}`}>
-                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5 text-slate-700">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Tipe Jam Kerja:</span>
-                      <span className="font-bold text-slate-900 uppercase">{employee.scheduleType === 'harian' ? 'Harian (Kantor)' : 'Shift Operasional (12 Jam)'}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Jam Dinas Resmi:</span>
-                      <span className="font-mono font-bold text-amber-700">{timeEval.workHoursLabel}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Jendela Waktu Masuk:</span>
-                      <span className="text-slate-800 font-medium">{timeEval.checkInWindowLabel}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500">Ketentuan Absen Pulang:</span>
-                      <span className="text-slate-800 font-medium">{timeEval.checkOutWindowLabel}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                    <div className={`p-2.5 rounded-xl border ${
-                      timeEval.canCheckIn ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}>
-                      <span className="font-bold block mb-0.5">Status Masuk:</span>
-                      <span>{timeEval.checkInReason}</span>
-                    </div>
-
-                    <div className={`p-2.5 rounded-xl border ${
-                      timeEval.canCheckOut ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}>
-                      <span className="font-bold block mb-0.5">Status Pulang:</span>
-                      <span>{timeEval.checkOutReason}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Today's Record Summary Card */}
               {todayRecord && (

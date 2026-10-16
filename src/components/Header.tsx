@@ -78,10 +78,10 @@ const HeaderClock: React.FC<{
 
   return (
     <div
-      className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] sm:text-xs font-mono font-bold text-amber-700 shadow-2xs shrink-0"
+      className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[10px] sm:text-xs font-mono font-bold text-amber-700 shadow-2xs shrink-0"
       title={simulatedTime ? "Mode Simulasi Waktu Absensi Aktif" : "Waktu Nyata Terverifikasi (WIB)"}
     >
-      <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0 animate-pulse" />
+      <Clock className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-600 shrink-0 animate-pulse" />
       <span className="tracking-tight">{timeStr}</span>
       <span className="text-[9px] text-slate-500 font-sans hidden sm:inline">WIB</span>
       {simulatedTime && (
@@ -210,15 +210,15 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-16 flex items-center justify-between gap-2">
           
           {/* Zone 1: Tombol Tiga Garis (Side Board) + Brand Wordmark */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0 max-w-[50%] sm:max-w-none">
             {currentRole === 'admin' && (
               <button
                 type="button"
                 onClick={() => setIsAdminSidebarOpen(true)}
                 title="Buka Menu Dashboard (Side Board)"
-                className="p-2 sm:px-3 sm:py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 transition-all flex items-center gap-2 shadow-xs group cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                className="p-1.5 sm:px-3 sm:py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 transition-all flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
               >
-                <Menu className="w-5 h-5 text-amber-700 group-hover:scale-110 transition-transform" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-700 group-hover:scale-110 transition-transform" />
                 <span className="hidden sm:inline text-xs font-black tracking-tight text-amber-950">
                   MENU
                 </span>
@@ -228,21 +228,21 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            <div className="flex items-center gap-2.5 shrink-0 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-500/10 p-0.5 border border-amber-500/30 shadow-xs flex items-center justify-center shrink-0">
-                <SatpolPPLogo className="w-full h-full rounded-xl object-contain drop-shadow-xs" />
+            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/10 p-0.5 border border-amber-500/30 shadow-xs flex items-center justify-center shrink-0">
+                <SatpolPPLogo className="w-full h-full rounded-lg sm:rounded-xl object-contain drop-shadow-xs" />
               </div>
-              <div className="truncate">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-sm sm:text-base tracking-tight text-slate-900">
+              <div className="truncate min-w-0">
+                <div className="flex items-center gap-1">
+                  <span className="font-extrabold text-xs sm:text-base tracking-tight text-slate-900">
                     SI-PRAJA
                   </span>
-                  <span className="text-amber-800 font-extrabold text-[9px] sm:text-[10px] uppercase px-1.5 py-0.2 rounded-md bg-amber-100 border border-amber-300">
+                  <span className="text-amber-800 font-extrabold text-[8px] sm:text-[10px] uppercase px-1 py-0.1 sm:px-1.5 sm:py-0.2 rounded-md bg-amber-100 border border-amber-300">
                     POL PP
                   </span>
                 </div>
-                <span className="text-[10px] sm:text-xs text-slate-500 block -mt-0.5 font-medium truncate max-w-[120px] sm:max-w-none">
-                  {currentRole === 'admin' ? "Komando Admin Satpol PP" : "Portal Presensi Personel"}
+                <span className="text-[9.5px] sm:text-xs text-slate-500 block -mt-0.5 font-medium truncate">
+                  {currentRole === 'admin' ? "Admin" : "Portal"}
                 </span>
               </div>
             </div>
@@ -320,7 +320,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Zone 3: Actions, Clock & Storage */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
 
             {/* Real-time Notification Bell */}
             <NotificationCenter
@@ -335,13 +335,15 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Real-time Isolated Clock Display */}
             <HeaderClock simulatedTime={simulatedTime} fallbackTimeString={currentTimeString} />
 
-            {/* Kapasitas Penyimpanan Data Sistem */}
-            <StorageCapacityBadge
-              attendanceCount={attendanceCount}
-              employeeCount={employeesCount}
-              locationCount={locationsCount}
-              onOpenArchiveModal={onOpenArchiveModal}
-            />
+            {/* Kapasitas Penyimpanan Data Sistem: Tampil di layar sm/desktop, di HP ada di drawer */}
+            <div className="hidden sm:inline-block">
+              <StorageCapacityBadge
+                attendanceCount={attendanceCount}
+                employeeCount={employeesCount}
+                locationCount={locationsCount}
+                onOpenArchiveModal={onOpenArchiveModal}
+              />
+            </div>
 
             {/* Panduan Button (Desktop) */}
             {onOpenGuideModal && (
@@ -356,15 +358,16 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Logout Button */}
+            {/* Logout Button: SELALU TAMPIL JELAS DI HP MAUPUN DESKTOP */}
             <button
               type="button"
               onClick={onLogout}
               title="Keluar / Ganti Akun"
-              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all flex items-center gap-1 shrink-0 shadow-2xs"
+              aria-label="Keluar / Ganti Akun"
+              className="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all flex items-center gap-1 shrink-0 shadow-2xs cursor-pointer active:scale-95 ml-0.5"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Keluar</span>
+              <LogOut className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              <span className="text-[11px] font-bold">Keluar</span>
             </button>
 
           </div>
@@ -542,6 +545,19 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Sidebar Footer info */}
               <div className="p-4 border-t border-slate-200 bg-slate-50 space-y-2.5">
+                {/* Tombol Logout Menu Drawer (Sangat mudah diakses di HP) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAdminSidebarOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-98"
+                >
+                  <LogOut className="w-4 h-4 text-white shrink-0" />
+                  <span>Keluar dari Akun (Logout)</span>
+                </button>
+
                 <StorageCapacityBadge
                   variant="sidebar"
                   attendanceCount={attendanceCount}
