@@ -599,35 +599,23 @@ export function evaluateEmployeeDayAttendanceFast(
     };
   }
 
-  if (approvedLeave?.type === 'sakit' || record?.checkInStatus === 'sakit') {
-    return {
-      ...schedule,
-      code: 'S',
-      codeLabel: 'Sakit (Surat Dokter / Izin Sakit Resmi)',
-      record,
-      leaveRequest: approvedLeave,
-      notes: approvedLeave?.reason || 'Surat Keterangan Dokter',
-      workHours: 0
-    };
-  }
+  // Cek apakah ada record absensi hadir fisik nyata (tepat waktu / terlambat) dengan jam masuk riil
+  const hasPhysicalAttendance = Boolean(
+    record && 
+    (record.checkInStatus === 'tepat_waktu' || record.checkInStatus === 'terlambat') && 
+    record.checkInTime && 
+    record.checkInTime !== '-' && 
+    record.checkInTime !== 'IZIN' && 
+    record.checkInTime !== 'SAKIT' && 
+    record.checkInTime !== 'DISPENSASI'
+  );
 
-  if (approvedLeave?.type === 'izin' || record?.checkInStatus === 'izin') {
-    return {
-      ...schedule,
-      code: 'I',
-      codeLabel: 'Izin (Permohonan Izin Kedinasan / Pribadi Disetujui)',
-      record,
-      leaveRequest: approvedLeave,
-      notes: approvedLeave?.reason || 'Izin Resmi Disetujui',
-      workHours: 0
-    };
-  }
-
-  // Jika ada record absensi hadir
-  if (record && (record.checkInTime || record.checkInStatus === 'tepat_waktu' || record.checkInStatus === 'terlambat')) {
+  // Jika ada record absensi hadir fisik nyata:
+  // Hak hadir & jam kerja pegawai diakui penuh agar tidak merugikan pegawai yang tetap hadir berdinas
+  if (hasPhysicalAttendance && record) {
     const isLate = record.checkInStatus === 'terlambat';
 
-    // Evaluasi Kedisiplinan Opsi A: Apakah dinas sudah selesai dan pegawai tidak absen pulang?
+    // Evaluasi Kedisiplinan: Apakah dinas sudah selesai dan pegawai tidak absen pulang?
     let isDutyEnded = dateStr < todayStr;
     if (dateStr === todayStr) {
       const totalM = currentTotalMinutes !== undefined ? currentTotalMinutes : (new Date().getHours() * 60 + new Date().getMinutes());
@@ -647,7 +635,10 @@ export function evaluateEmployeeDayAttendanceFast(
 
     let notes = isLate ? `Terlambat (Masuk ${record.checkInTime || '-'})` : `Tepat Waktu (${record.checkInTime || '-'})`;
     if (isMissingCheckOut) {
-      notes += ' · TAP (Tanpa Tap Pulang - Sanksi Jam: 4 Jam)';
+      notes += ' · PSW (Tanpa Tap Pulang - Sanksi Jam: 4 Jam)';
+    }
+    if (approvedLeave?.type === 'izin') {
+      notes += ' · (Tetap Hadir Berdinas Resmi)';
     }
 
     return {
@@ -657,9 +648,36 @@ export function evaluateEmployeeDayAttendanceFast(
         ? `${isLate ? 'Hadir Terlambat' : 'Hadir Tepat Waktu'} (Tanpa Pulang - Sanksi 4 Jam)`
         : (isLate ? 'Hadir Terlambat' : 'Hadir Tepat Waktu'),
       record,
+      leaveRequest: approvedLeave,
       notes,
       workHours,
       isMissingCheckOut
+    };
+  }
+
+  // Jika TIDAK ADA presensi fisik, periksa Izin Sakit
+  if (approvedLeave?.type === 'sakit' || record?.checkInStatus === 'sakit') {
+    return {
+      ...schedule,
+      code: 'S',
+      codeLabel: 'Sakit (Surat Dokter / Izin Sakit Resmi)',
+      record,
+      leaveRequest: approvedLeave,
+      notes: approvedLeave?.reason || 'Surat Keterangan Dokter',
+      workHours: 0
+    };
+  }
+
+  // Jika TIDAK ADA presensi fisik, periksa Izin Resmi Disetujui
+  if (approvedLeave?.type === 'izin' || record?.checkInStatus === 'izin') {
+    return {
+      ...schedule,
+      code: 'I',
+      codeLabel: 'Izin (Permohonan Izin Kedinasan / Pribadi Disetujui)',
+      record,
+      leaveRequest: approvedLeave,
+      notes: approvedLeave?.reason || 'Izin Resmi Disetujui',
+      workHours: 0
     };
   }
 
@@ -835,9 +853,24 @@ export function calculateSmartMonthlyReport(
   );
 
   // Pre-index empRecords by date for O(1) instant lookup
+  // Prioritas Cerdas: Jika terdapat lebih dari 1 record di tanggal yang sama (misal izin vs hadir nyata),
+  // utamakan record fisik hadir agar hak jam kerja & kehadiran pegawai diakui.
   const recordByDate = new Map<string, AttendanceRecord>();
   for (let i = 0; i < empRecords.length; i++) {
-    recordByDate.set(empRecords[i].date, empRecords[i]);
+    const rec = empRecords[i];
+    const existing = recordByDate.get(rec.date);
+    if (!existing) {
+      recordByDate.set(rec.date, rec);
+    } else {
+      const isExistingPhysical = (existing.checkInStatus === 'tepat_waktu' || existing.checkInStatus === 'terlambat') &&
+        existing.checkInTime && existing.checkInTime !== '-' && existing.checkInTime !== 'IZIN' && existing.checkInTime !== 'SAKIT';
+      const isNewPhysical = (rec.checkInStatus === 'tepat_waktu' || rec.checkInStatus === 'terlambat') &&
+        rec.checkInTime && rec.checkInTime !== '-' && rec.checkInTime !== 'IZIN' && rec.checkInTime !== 'SAKIT';
+      
+      if (!isExistingPhysical && isNewPhysical) {
+        recordByDate.set(rec.date, rec);
+      }
+    }
   }
 
   // Pre-index empLeaves by date for O(1) instant lookup

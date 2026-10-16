@@ -132,6 +132,8 @@ export function filterLeavesForEmployee(
 
 /**
  * Mencari catatan presensi seorang pegawai pada tanggal spesifik.
+ * Prioritas Cerdas: Jika terdapat lebih dari satu rekaman (misal rekaman izin otomatis dan
+ * rekaman presensi fisik hadir), utamakan rekaman fisik agar jam dinas & kehadiran pegawai tidak hangus.
  */
 export function findRecordForEmployeeAndDate(
   records: AttendanceRecord[],
@@ -139,5 +141,20 @@ export function findRecordForEmployeeAndDate(
   dateStr: string
 ): AttendanceRecord | undefined {
   if (!records || !employee) return undefined;
-  return records.find(r => r.date === dateStr && isRecordForEmployee(r, employee));
+  const matching = records.filter(r => r.date === dateStr && isRecordForEmployee(r, employee));
+  if (matching.length === 0) return undefined;
+  if (matching.length === 1) return matching[0];
+
+  // 1. Utamakan presensi fisik nyata (tepat waktu / terlambat) dengan jam masuk riil
+  const physicalRecord = matching.find(r => 
+    (r.checkInStatus === 'tepat_waktu' || r.checkInStatus === 'terlambat') &&
+    r.checkInTime && r.checkInTime !== '-' && r.checkInTime !== 'IZIN' && r.checkInTime !== 'SAKIT'
+  );
+  if (physicalRecord) return physicalRecord;
+
+  // 2. Utamakan dispensasi resmi kantor
+  const dispRecord = matching.find(r => r.checkInStatus === 'dispensasi_kantor' || r.isOfficeDispensation);
+  if (dispRecord) return dispRecord;
+
+  return matching[0];
 }
