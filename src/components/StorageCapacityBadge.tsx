@@ -139,62 +139,66 @@ export const StorageCapacityBadge: React.FC<StorageCapacityBadgeProps> = ({
           </div>
 
           {/* Persentase Utama */}
-          <div className="py-3">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-2xl font-black font-mono text-slate-900">
-                {stats.percentage}%
+          <div className="py-2.5">
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-xl font-black font-mono text-slate-900">
+                {stats.usedFormatted}
               </span>
-              <span className="text-xs font-mono text-slate-500">
-                {stats.usedFormatted} / {stats.maxFormatted}
+              <span className="text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                Cloud: &lt; {stats.firestoreQuotaPercent}% / 1 GB
               </span>
             </div>
 
             {/* Gauge Bar */}
-            <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200">
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden p-0.5 border border-slate-200">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${colors.bar}`}
-                style={{ width: `${Math.max(4, stats.percentage)}%` }}
+                style={{ width: `${Math.max(3, stats.percentage)}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
-              <span>0%</span>
-              <span className="font-semibold text-emerald-700">Status: {stats.healthStatus === 'optimal' ? 'Sangat Aman' : stats.healthStatus === 'warning' ? 'Waspada' : 'Kritis'}</span>
-              <span>100%</span>
+            <div className="flex items-center justify-between text-[9.5px] text-slate-500 mt-1">
+              <span>Data Akumulatif Aktif</span>
+              <span className="font-semibold text-emerald-700">Estimasi Tahan: 5 - 10 Tahun</span>
             </div>
           </div>
 
           {/* Rincian Dokumen & Kuota */}
-          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 text-[11px] space-y-1.5 mb-3">
+          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 text-[11px] space-y-1.5 mb-2.5">
             <div className="flex items-center justify-between text-slate-600">
               <span className="flex items-center gap-1.5">
                 <Cloud className="w-3.5 h-3.5 text-blue-600" />
-                <span>Basis Data Cloud</span>
+                <span>Basis Data Server</span>
               </span>
-              <span className="font-bold text-slate-800">Firestore (Live)</span>
+              <span className="font-bold text-slate-800">Cloud Firestore (1 GB)</span>
             </div>
             <div className="flex items-center justify-between text-slate-600">
-              <span>Kuota Cloud Firestore (1 GB)</span>
-              <span className="font-mono font-bold text-emerald-700">&lt; {stats.firestoreQuotaPercent}%</span>
+              <span>Pemakaian Server Cloud</span>
+              <span className="font-mono font-bold text-emerald-700">&lt; 0.05% (Sisa 99.95%)</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-600">
+              <span>Cache Memori Browser</span>
+              <span className="font-mono text-slate-700">{stats.percentage}% (Batas 10 MB)</span>
             </div>
             <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-slate-200/60">
               <span>Catatan Absensi</span>
-              <span className="font-mono font-bold text-slate-900">{stats.attendanceCount} dokumen</span>
+              <span className="font-mono font-bold text-slate-900">{stats.attendanceCount} rekaman</span>
             </div>
             <div className="flex items-center justify-between text-slate-600">
-              <span>Personel Terdaftar</span>
+              <span>Personel Satpol PP</span>
               <span className="font-mono font-bold text-slate-900">{stats.employeeCount} personel</span>
             </div>
-            <div className="flex items-center justify-between text-slate-600">
-              <span>Pos Penugasan</span>
-              <span className="font-mono font-bold text-slate-900">{stats.locationCount} pos</span>
-            </div>
+          </div>
+
+          {/* Edukasi Keamanan Kapasitas */}
+          <div className="p-2 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-[10px] text-emerald-900 leading-snug mb-2.5">
+            💡 <strong>Penyimpanan Sangat Aman:</strong> Data presensi berbasis teks sangat ringan (~1 KB/absen). Sistem tidak akan cepat penuh. Tersedia menu <em>"Arsip & Bersihkan &gt; 6 Bulan"</em> untuk mengunduh cadangan CSV dinas setiap semester.
           </div>
 
           {/* Footer Note / Action */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10.5px]">
             <span className="text-slate-500 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Sistem Optimal</span>
+              <span>Status: Sangat Aman</span>
             </span>
 
             {onOpenArchiveModal && (
